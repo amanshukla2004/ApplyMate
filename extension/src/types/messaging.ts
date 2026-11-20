@@ -51,6 +51,7 @@ export type ExtensionMessage =
   | { type: 'OPEN_SIDE_PANEL' }
   | { type: 'OPEN_OPTIONS' }
   | { type: 'RELOAD_ACTIVE_TAB' }
+  | { type: 'HIGHLIGHT_FIELD'; fieldId: string; highlight: boolean; tabId?: number }
   | { type: 'GET_USER_PROFILE' }
   | { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string } };
 

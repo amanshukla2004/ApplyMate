@@ -1,0 +1,53 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: var(--blob);
+}
+
+.backdrop i {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  filter: blur(60px);
+}
+
+.backdrop i:nth-child(1) {
+  background: #FFC9B5;
+  left: -80px;
+  top: -60px;
+}
+
+.backdrop i:nth-child(2) {
+  background: #D4C4FF;
+  right: -60px;
+  top: 80px;
+}
+
+.backdrop i:nth-child(3) {
+  background: #BDEBD6;
+  left: 25%;
+  bottom: -160px;
+}
+
+.backdrop i:nth-child(4) {
+  background: #FFE08A;
+  right: 8%;
+  bottom: -120px;
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--edge);
+  box-shadow: inset 0 1px 0 #ffffff, var(--shadow);
+  border-radius: 24px;
+}
+
+:root[data-theme='dark'] .glass {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--shadow);
+}

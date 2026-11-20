@@ -1,20 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Briefcase,
-  ExternalLink,
-  Settings,
-  Sparkles,
-  CheckCircle2,
-  FileText,
-  Layers,
-} from 'lucide-react';
+import { Backdrop } from '../components/ui/Backdrop';
+import { Button } from '../components/ui/Button';
+import { Pill } from '../components/ui/Pill';
+import { Ring } from '../components/ui/Ring';
 import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
 
 export const Popup: React.FC = () => {
-  const [completeness, setCompleteness] = useState<number>(0);
-  const [profileName, setProfileName] = useState<string>('Job Seeker');
-  const [activeTabTitle, setActiveTabTitle] = useState<string>('');
+  const [readiness, setReadiness] = useState<number>(70);
+  const [activeTabTitle, setActiveTabTitle] = useState<string>('Frontend Application');
+  const [detectedCount, setDetectedCount] = useState<number>(0);
+  const [hasResume, setHasResume] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadData() {
@@ -27,10 +23,6 @@ export const Popup: React.FC = () => {
           resumeService.getResumes(),
         ]);
 
-        if (profile.personal.fullName) {
-          setProfileName(profile.personal.fullName);
-        }
-
         const score = profileService.calculateCompleteness(
           profile,
           education,
@@ -38,13 +30,27 @@ export const Popup: React.FC = () => {
           skills,
           resumes.length
         );
-        setCompleteness(score);
+        setReadiness(score);
+        setHasResume(resumes.length > 0);
 
-        // Get current tab title if in Chrome
         if (typeof chrome !== 'undefined' && chrome.tabs) {
           chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]?.title) {
-              setActiveTabTitle(tabs[0].title);
+            const current = tabs[0];
+            if (current?.title) {
+              setActiveTabTitle(current.title.split(/[-|–•]/)[0].trim());
+            }
+
+            // Ping active tab for detected field count if content script is alive
+            if (current?.id) {
+              chrome.tabs.sendMessage(current.id, { type: 'PING' }, (pong) => {
+                if (pong) {
+                  chrome.tabs.sendMessage(current.id!, { type: 'SCAN_FORM' }, (res) => {
+                    if (res?.data?.fields) {
+                      setDetectedCount(res.data.fields.length);
+                    }
+                  });
+                }
+              });
             }
           });
         }
@@ -76,101 +82,52 @@ export const Popup: React.FC = () => {
     }
   };
 
+  const nextStep = !hasResume
+    ? 'Next: upload a resume'
+    : readiness < 80
+    ? 'Next: add more skills'
+    : 'Ready for autofill';
+
   return (
-    <div className="w-80 bg-white font-sans text-slate-800 shadow-xl border border-slate-100 flex flex-col">
-      {/* Header */}
-      <div className="bg-indigo-600 px-4 py-3.5 text-white flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="bg-white/20 p-1.5 rounded-lg backdrop-blur-sm">
-            <Briefcase className="w-4 h-4 text-white" />
-          </div>
+    <div style={{ position: 'relative', width: '320px', minHeight: '380px', padding: '18px' }}>
+      <Backdrop />
+
+      <div className="popup glass" style={{ width: '100%', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div className="brand">
+          <span className="logo" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
+              <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+            </svg>
+          </span>
+          JobMate
+        </div>
+
+        <div className="row" style={{ gap: '16px' }}>
+          <Ring percentage={readiness} size={84} strokeWidth={9} />
           <div>
-            <h1 className="text-sm font-bold tracking-tight">JobMate</h1>
-            <p className="text-[10px] text-indigo-100 font-medium leading-none">Application Assistant</p>
+            <b>Profile {readiness}% ready</b>
+            <p className="hint">{nextStep}</p>
           </div>
         </div>
-        <button
-          onClick={openOptions}
-          title="Open Settings & Profile"
-          className="p-1.5 hover:bg-white/20 rounded-lg text-indigo-100 hover:text-white transition-colors"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
-      </div>
 
-      {/* Profile Overview Card */}
-      <div className="p-4 space-y-3.5">
-        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-xs font-semibold text-slate-700 truncate max-w-[170px]">
-              {profileName}
-            </span>
-            <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
-              {completeness}% Complete
-            </span>
-          </div>
-
-          {/* Progress bar */}
-          <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-indigo-600 h-full rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${completeness}%` }}
-            />
-          </div>
-
-          <p className="text-[10px] text-slate-500 mt-2">
-            {completeness === 100
-              ? 'Profile fully configured for autofill.'
-              : 'Complete your profile to maximize autofill accuracy.'}
-          </p>
+        <div className="card glass" style={{ padding: '14px', borderRadius: '20px' }}>
+          <p className="hint" style={{ margin: '0 0 4px' }}>On this page</p>
+          <b style={{ display: 'block', marginBottom: '8px', fontSize: '14px' }}>
+            {activeTabTitle || 'Application Page'}
+          </b>
+          {detectedCount > 0 ? (
+            <Pill variant="m">Form detected · {detectedCount} fields</Pill>
+          ) : (
+            <Pill variant="i">Click side panel to scan</Pill>
+          )}
         </div>
 
-        {/* Active Page Card */}
-        {activeTabTitle && (
-          <div className="text-[11px] bg-indigo-50/60 border border-indigo-100/80 rounded-lg p-2.5 text-indigo-900 flex items-start gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <span className="font-semibold block text-[10px] uppercase tracking-wider text-indigo-500">
-                Active Page
-              </span>
-              <p className="truncate text-[11px] text-slate-700 font-medium">{activeTabTitle}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Main Actions */}
-        <div className="space-y-2 pt-1">
-          <button
-            onClick={openSidePanel}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs py-2.5 px-3 rounded-lg shadow-sm flex items-center justify-center gap-2 transition active:scale-[0.98]"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Open Side Panel Copilot</span>
-            <ExternalLink className="w-3 h-3 ml-auto opacity-75" />
-          </button>
-
-          <button
-            onClick={openOptions}
-            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition"
-          >
-            <Layers className="w-3.5 h-3.5 text-slate-500" />
-            <span>Manage Profile & Documents</span>
-          </button>
-        </div>
-
-        {/* Quick Highlights */}
-        <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-center text-[10px] text-slate-500">
-          <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mx-auto mb-1" />
-            <span className="font-medium text-slate-700 block">Local-First</span>
-            Data in your browser
-          </div>
-          <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-            <FileText className="w-3.5 h-3.5 text-indigo-500 mx-auto mb-1" />
-            <span className="font-medium text-slate-700 block">Review First</span>
-            No auto-submits
-          </div>
-        </div>
+        <Button onClick={openSidePanel}>
+          Open side panel
+        </Button>
+        <Button variant="soft" onClick={openOptions}>
+          Manage profile and documents
+        </Button>
       </div>
     </div>
   );

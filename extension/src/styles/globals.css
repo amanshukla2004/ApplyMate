@@ -1,14 +1,54 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import './tokens.css';
+@import './glass.css';
+@import './components.css';
 
-@layer base {
-  body {
-    @apply font-sans text-slate-900 bg-slate-50;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
 }
 
-/* Custom scrollbars */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font: 400 15px/1.5 var(--f-b);
+  color: var(--ink);
+  background: var(--base);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--f-h);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #ffffff;
+}
+
+/* Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -19,10 +59,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: var(--line);
+  border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--muted);
 }

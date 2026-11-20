@@ -9,8 +9,10 @@ export class GoogleFormsAdapter implements FormAdapter {
     return (
       url.includes('docs.google.com/forms') ||
       url.includes('/forms/d/e/') ||
+      url.includes('/forms/u/') ||
+      url.includes('forms.gle') ||
       (url.includes('google.com') &&
-        !!doc.querySelector('.freebirdFormviewerViewFormCard, [role="listitem"] .M7eMe, form[action*="forms/d/e"]'))
+        !!doc.querySelector('.freebirdFormviewerViewFormCard, [role="listitem"] .M7eMe, .geS5n, form[action*="forms/d/e"]'))
     );
   }
 
@@ -141,12 +143,6 @@ export class GoogleFormsAdapter implements FormAdapter {
     );
 
     for (const card of questionCards) {
-      // Skip if this card already contains a text input/textarea that was scanned
-      const hasStandardInput = card.querySelector(
-        'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), textarea, select'
-      );
-      if (hasStandardInput) continue;
-
       const radioOptions = Array.from(card.querySelectorAll<HTMLElement>('[role="radio"]'));
       const checkboxOptions = Array.from(card.querySelectorAll<HTMLElement>('[role="checkbox"]'));
 

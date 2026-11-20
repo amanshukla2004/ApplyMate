@@ -1,28 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import {
-  Briefcase,
-  Scan,
-  CheckCircle2,
-  AlertCircle,
-  Settings,
-  Sparkles,
-  FileText,
-  Copy,
-  Check,
-  Edit2,
-  RefreshCw,
-  BookmarkPlus,
-  HelpCircle,
-  ClipboardList,
-  Search,
-  ArrowRight,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Backdrop } from '../components/ui/Backdrop';
+import { Button } from '../components/ui/Button';
+import { Pill } from '../components/ui/Pill';
 import { DetectedField, WebsiteMetadata } from '../types/messaging';
-import { ApplicationField, CANONICAL_FIELDS } from '../types/canonicalFields';
+import { CANONICAL_FIELDS, ApplicationField } from '../types/canonicalFields';
 import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
 import { answerService } from '../services/answerService';
-import { applicationService } from '../services/applicationService';
 import { projectService } from '../services/projectService';
 import { aiService } from '../services/ai/aiService';
 import {
@@ -35,10 +19,10 @@ import {
   ProjectRecord,
 } from '../types/profile';
 
-type TabType = 'autofill' | 'quickcopy' | 'resumes' | 'ai' | 'answers';
+type TabKey = 'autofill' | 'copy' | 'resume' | 'ai' | 'answers';
 
 export const SidePanel: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('autofill');
+  const [activeTab, setActiveTab] = useState<TabKey>('autofill');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [resumes, setResumes] = useState<ResumeRecord[]>([]);
   const [answers, setAnswers] = useState<SavedAnswer[]>([]);
@@ -46,36 +30,32 @@ export const SidePanel: React.FC = () => {
   const [experienceList, setExperienceList] = useState<ExperienceRecord[]>([]);
   const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
   const [projectList, setProjectList] = useState<ProjectRecord[]>([]);
-  const [draftingFieldId, setDraftingFieldId] = useState<string | null>(null);
 
-  // Scanning & Autofill state
+  // Form detection state
   const [isScanning, setIsScanning] = useState(false);
   const [isFilling, setIsFilling] = useState(false);
   const [fields, setFields] = useState<DetectedField[]>([]);
-  const [selectedFieldIds, setSelectedFieldIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
-  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [filledFieldIds, setFilledFieldIds] = useState<Set<string>>(new Set());
   const [websiteInfo, setWebsiteInfo] = useState<WebsiteMetadata | null>(null);
-  const [fillResults, setFillResults] = useState<{ total: number; success: number; failed: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Quick Copy search query
-  const [copySearchQuery, setCopySearchQuery] = useState('');
-
-  // AI Copilot state
-  const [customQuestion, setCustomQuestion] = useState('');
-  const [aiAnswer, setAiAnswer] = useState<string>('');
+  // AI draft generation states
+  const [draftingFieldId, setDraftingFieldId] = useState<string | null>(null);
+  const [aiCustomQuestion, setAiCustomQuestion] = useState('');
+  const [aiGeneratedText, setAiGeneratedText] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Application tracker quick save
-  const [isSavedApp, setIsSavedApp] = useState(false);
+  // Copy tab state
+  const [copySearchQuery, setCopySearchQuery] = useState('');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   useEffect(() => {
     loadAllData();
   }, []);
 
-  async function loadAllData() {
+  const loadAllData = async () => {
     try {
       const [p, r, a, edu, exp, sk, prj] = await Promise.all([
         profileService.getProfile(),
@@ -94,101 +74,33 @@ export const SidePanel: React.FC = () => {
       setSkillsList(sk);
       setProjectList(prj);
     } catch (err) {
-      console.error('Failed to load profile data', err);
+      console.error('Failed to load side panel data:', err);
     }
-  }
-
-  // Map canonical fields to profile values
-  function resolveProfileValue(canonicalField?: string): string {
-    if (!profile || !canonicalField) return '';
-    switch (canonicalField) {
-      case 'FIRST_NAME':
-        return profile.personal.firstName;
-      case 'LAST_NAME':
-        return profile.personal.lastName;
-      case 'FULL_NAME':
-        return profile.personal.fullName || `${profile.personal.firstName} ${profile.personal.lastName}`.trim();
-      case 'EMAIL':
-        return profile.personal.email;
-      case 'PHONE':
-        return profile.personal.phone;
-      case 'ADDRESS':
-        return profile.address.addressLine1;
-      case 'ADDRESS_LINE_2':
-        return profile.address.addressLine2 || '';
-      case 'CITY':
-        return profile.address.city;
-      case 'STATE':
-        return profile.address.state;
-      case 'COUNTRY':
-        return profile.address.country;
-      case 'ZIP_CODE':
-        return profile.address.postalCode;
-      case 'LINKEDIN_URL':
-        return profile.links.linkedInUrl;
-      case 'GITHUB_URL':
-        return profile.links.githubUrl;
-      case 'PORTFOLIO_URL':
-        return profile.links.portfolioUrl || '';
-      case 'COLLEGE':
-        return educationList[0]?.institution || '';
-      case 'DEGREE':
-        return educationList[0]?.degree || '';
-      case 'BRANCH':
-        return educationList[0]?.branch || '';
-      case 'CGPA':
-        return educationList[0]?.cgpa || '';
-      case 'GRADUATION_YEAR':
-        return educationList[0]?.graduationYear || '';
-      case 'EXPERIENCE':
-        return experienceList[0]?.companyName ? `${experienceList.length} role(s)` : '';
-      case 'SKILLS':
-        return skillsList.map((s) => s.name).join(', ');
-      case 'WORK_AUTHORIZATION':
-        return profile.preferences.workAuthorizationStatus || 'Authorized to work';
-      case 'RELOCATION':
-        return profile.preferences.willingToRelocate ? 'Yes' : 'No';
-      case 'NOTICE_PERIOD':
-        return profile.preferences.noticePeriodDays || 'Immediate';
-      case 'CURRENT_CTC':
-        return profile.preferences.currentCompensation || '';
-      case 'EXPECTED_CTC':
-        return profile.preferences.expectedCompensation || '';
-      case 'GENDER':
-        return profile.personal.gender || '';
-      case 'RACE_ETHNICITY':
-        return profile.personal.race || '';
-      default:
-        return '';
-    }
-  }
+  };
 
   const handleScanForm = async () => {
     setIsScanning(true);
     setErrorMessage(null);
-    setFillResults(null);
+    setFilledFieldIds(new Set());
 
     try {
       if (typeof chrome === 'undefined' || !chrome.runtime) {
-        // Mock fallback for browser / testing environment
+        // Fallback demo mock
         setTimeout(() => {
           const mockFields: DetectedField[] = [
-            { id: 'jm-1', tagName: 'INPUT', fieldType: 'text', name: 'firstName', label: 'First Name', required: true, canonicalField: 'FIRST_NAME', confidence: 0.95, status: 'MATCHED' },
-            { id: 'jm-2', tagName: 'INPUT', fieldType: 'text', name: 'lastName', label: 'Last Name', required: true, canonicalField: 'LAST_NAME', confidence: 0.95, status: 'MATCHED' },
-            { id: 'jm-3', tagName: 'INPUT', fieldType: 'email', name: 'email', label: 'Email Address', required: true, canonicalField: 'EMAIL', confidence: 0.98, status: 'MATCHED' },
-            { id: 'jm-4', tagName: 'INPUT', fieldType: 'tel', name: 'phone', label: 'Phone Number', required: true, canonicalField: 'PHONE', confidence: 0.92, status: 'MATCHED' },
-            { id: 'jm-5', tagName: 'INPUT', fieldType: 'url', name: 'linkedin', label: 'LinkedIn Profile', required: false, canonicalField: 'LINKEDIN_URL', confidence: 0.9, status: 'MATCHED' },
-            { id: 'jm-6', tagName: 'INPUT', fieldType: 'url', name: 'github', label: 'GitHub Profile', required: false, canonicalField: 'GITHUB_URL', confidence: 0.9, status: 'MATCHED' },
-            { id: 'jm-7', tagName: 'INPUT', fieldType: 'file', name: 'resume', label: 'Resume / CV File', required: true, canonicalField: 'RESUME', confidence: 0.9, status: 'MATCHED' },
+            { id: 'f1', tagName: 'INPUT', fieldType: 'text', label: 'Name', required: true, canonicalField: 'FULL_NAME', confidence: 1.0, status: 'MATCHED' },
+            { id: 'f2', tagName: 'INPUT', fieldType: 'email', label: 'Email', required: true, canonicalField: 'EMAIL', confidence: 1.0, status: 'MATCHED' },
+            { id: 'f3', tagName: 'DIV', fieldType: 'radio', label: 'Which role are you applying for?', required: true, confidence: 0.8, status: 'NEEDS_REVIEW', options: [{ label: 'SDE 1+ (Full-time)', value: 'SDE 1+ (Full-time)' }, { label: 'SDE Intern (6 months)', value: 'SDE Intern (6 months)' }] },
+            { id: 'f4', tagName: 'TEXTAREA', fieldType: 'textarea', label: 'Why do you want to join us?', required: false, confidence: 0.7, status: 'NEEDS_REVIEW' },
           ];
-          processScannedFields(mockFields, {
+          processFields(mockFields, {
             url: window.location.href,
-            hostname: 'greenhouse.io',
-            adapterName: 'Greenhouse Job Board',
-            title: 'Senior Software Engineer Application',
+            hostname: 'docs.google.com',
+            adapterName: 'Google Forms',
+            title: 'Job Application',
           });
           setIsScanning(false);
-        }, 600);
+        }, 500);
         return;
       }
 
@@ -198,18 +110,18 @@ export const SidePanel: React.FC = () => {
           const err = chrome.runtime.lastError.message || '';
           setErrorMessage(
             err.includes('Receiving end') || err.includes('connection')
-              ? 'Could not connect to the active tab. Please refresh the webpage tab (F5) once and try again.'
-              : err || 'Could not communicate with tab.'
+              ? 'Could not connect to the webpage tab. Please refresh the page tab (F5) once or use the Copy tab.'
+              : err
           );
           return;
         }
+
         if (!response || !response.success) {
-          setErrorMessage(response?.error || 'Failed to detect application fields.');
+          setErrorMessage(response?.error || 'Failed to detect fields on this webpage.');
           return;
         }
 
-        const scanData = response.data;
-        processScannedFields(scanData.fields, scanData.website);
+        processFields(response.data.fields, response.data.website);
       });
     } catch (err) {
       setIsScanning(false);
@@ -217,946 +129,604 @@ export const SidePanel: React.FC = () => {
     }
   };
 
-  const handleReloadPageAndScan = async () => {
-    setErrorMessage(null);
-    setIsScanning(true);
-    try {
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        await chrome.runtime.sendMessage({ type: 'RELOAD_ACTIVE_TAB' });
-        setTimeout(() => {
-          handleScanForm();
-        }, 1500);
-      }
-    } catch {
-      setIsScanning(false);
-    }
-  };
-
-  function processScannedFields(scannedFields: DetectedField[], website?: WebsiteMetadata) {
-    setFields(scannedFields);
-    if (website) setWebsiteInfo(website);
+  const processFields = (scanned: DetectedField[], site?: WebsiteMetadata) => {
+    setFields(scanned);
+    if (site) setWebsiteInfo(site);
 
     const values: Record<string, string> = {};
     const selected = new Set<string>();
 
-    for (const f of scannedFields) {
-      if (f.fieldType === 'file') continue;
-      const val = resolveProfileValue(f.canonicalField);
-      if (val) {
-        values[f.id] = val;
+    scanned.forEach((f) => {
+      let val = '';
+      if (f.canonicalField && profile) {
+        val = resolveProfileValue(f.canonicalField);
+      }
+      if (f.options && f.options.length > 0 && !val) {
+        val = f.options[0].value;
+      }
+      values[f.id] = val;
+
+      if (f.status === 'MATCHED' || (f.options && f.options.length > 0)) {
         selected.add(f.id);
       }
-    }
+    });
 
     setFieldValues(values);
-    setSelectedFieldIds(selected);
-  }
+    setSelectedIds(selected);
+  };
 
-  const handleToggleField = (id: string) => {
-    setSelectedFieldIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const resolveProfileValue = (canonical: ApplicationField): string => {
+    if (!profile) return '';
+    switch (canonical) {
+      case 'FIRST_NAME':
+        return profile.personal.firstName || '';
+      case 'LAST_NAME':
+        return profile.personal.lastName || '';
+      case 'FULL_NAME':
+        return `${profile.personal.firstName || ''} ${profile.personal.lastName || ''}`.trim();
+      case 'EMAIL':
+        return profile.personal.email || '';
+      case 'PHONE':
+        return profile.personal.phone || '';
+      case 'ADDRESS':
+        return profile.address.addressLine1 || '';
+      case 'CITY':
+        return profile.address.city || '';
+      case 'STATE':
+        return profile.address.state || '';
+      case 'ZIP_CODE':
+        return profile.address.postalCode || '';
+      case 'COUNTRY':
+        return profile.address.country || '';
+      case 'LINKEDIN_URL':
+        return profile.links.linkedInUrl || '';
+      case 'GITHUB_URL':
+        return profile.links.githubUrl || '';
+      case 'PORTFOLIO_URL':
+        return profile.links.portfolioUrl || '';
+      case 'COLLEGE':
+        return educationList[0]?.institution || '';
+      case 'DEGREE':
+        return educationList[0]?.degree || '';
+      case 'CGPA':
+        return educationList[0]?.cgpa || '';
+      case 'NOTICE_PERIOD':
+        return profile.preferences.noticePeriodDays || 'Immediate';
+      case 'EXPECTED_CTC':
+        return profile.preferences.expectedCompensation || '';
+      case 'CURRENT_CTC':
+        return profile.preferences.currentCompensation || '';
+      case 'GENDER':
+        return profile.personal.gender || '';
+      case 'RACE_ETHNICITY':
+        return profile.personal.race || '';
+      default:
+        return '';
+    }
+  };
+
+  const handleHighlight = (fieldId: string, highlight: boolean) => {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage({
+        type: 'HIGHLIGHT_FIELD',
+        fieldId,
+        highlight,
+      });
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleFill = async (fillAllMatched: boolean) => {
+    const targetIds = fillAllMatched
+      ? fields.filter((f) => f.status === 'MATCHED' && fieldValues[f.id]).map((f) => f.id)
+      : Array.from(selectedIds);
+
+    if (targetIds.length === 0) return;
+
+    setIsFilling(true);
+    const toFill: Record<string, string> = {};
+    targetIds.forEach((id) => {
+      if (fieldValues[id]) {
+        toFill[id] = fieldValues[id];
+      }
     });
+
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        chrome.runtime.sendMessage({ type: 'FILL_FIELDS', values: toFill }, () => {
+          setIsFilling(false);
+          const newlyFilled = new Set(filledFieldIds);
+          targetIds.forEach((id) => newlyFilled.add(id));
+          setFilledFieldIds(newlyFilled);
+        });
+      } else {
+        setTimeout(() => {
+          setIsFilling(false);
+          const newlyFilled = new Set(filledFieldIds);
+          targetIds.forEach((id) => newlyFilled.add(id));
+          setFilledFieldIds(newlyFilled);
+        }, 400);
+      }
+    } catch {
+      setIsFilling(false);
+    }
   };
 
-  // Manual Mapping for unrecognized fields
-  const handleMapField = (fieldId: string, canonical: ApplicationField | '') => {
-    if (!canonical) return;
-    const value = resolveProfileValue(canonical);
-
-    setFields((prev) =>
-      prev.map((f) => {
-        if (f.id === fieldId) {
-          return {
-            ...f,
-            canonicalField: canonical,
-            status: 'MATCHED',
-            confidence: 1.0,
-          };
-        }
-        return f;
-      })
-    );
-
-    setFieldValues((prev) => ({
-      ...prev,
-      [fieldId]: value,
-    }));
-
-    setSelectedFieldIds((prev) => new Set([...prev, fieldId]));
-  };
-
-  const handleAiDraftForField = async (field: DetectedField) => {
+  const handleDraftAi = async (field: DetectedField) => {
     if (!profile) return;
     setDraftingFieldId(field.id);
     try {
       const res = await aiService.generateAnswer(
-        field.label || 'Tell us about your experience',
+        field.label || 'Application question',
         profile,
         projectList,
         experienceList,
         educationList
       );
-      if (res && res.answer) {
-        setFieldValues((prev) => ({ ...prev, [field.id]: res.answer }));
-        setSelectedFieldIds((prev) => new Set([...prev, field.id]));
-      }
+      setFieldValues((prev) => ({ ...prev, [field.id]: res.answer }));
+      setSelectedIds((prev) => new Set(prev).add(field.id));
     } catch (err) {
-      setErrorMessage('AI draft failed: ' + (err as Error).message);
+      console.error(err);
     } finally {
       setDraftingFieldId(null);
     }
   };
 
-  const handleFillFields = async (onlySelected: boolean) => {
-    setIsFilling(true);
-    setErrorMessage(null);
-
-    const toFill: Record<string, string> = {};
-    fields.forEach((f) => {
-      if (f.fieldType === 'file') return;
-      if (!onlySelected || selectedFieldIds.has(f.id)) {
-        if (fieldValues[f.id] !== undefined) {
-          toFill[f.id] = fieldValues[f.id];
-        }
-      }
-    });
-
-    if (Object.keys(toFill).length === 0) {
-      setIsFilling(false);
-      setErrorMessage('No valid matched fields selected to fill.');
-      return;
-    }
-
-    if (typeof chrome === 'undefined' || !chrome.runtime) {
-      setTimeout(() => {
-        setIsFilling(false);
-        setFillResults({
-          total: Object.keys(toFill).length,
-          success: Object.keys(toFill).length,
-          failed: 0,
-        });
-      }, 500);
-      return;
-    }
-
-    chrome.runtime.sendMessage({ type: 'FILL_FIELDS', values: toFill }, (response) => {
-      setIsFilling(false);
-      if (chrome.runtime.lastError || !response || !response.success) {
-        setErrorMessage(response?.error || 'Failed to fill fields on the page.');
-        return;
-      }
-      setFillResults(response.data.summary);
-    });
-  };
-
-  const handleGenerateAnswer = async () => {
-    if (!customQuestion.trim() || !profile) return;
-    setIsGeneratingAi(true);
-    try {
-      const projects = await profileService.getExperience();
-      const res = await aiService.generateAnswer(customQuestion, profile, [], projects, []);
-      setAiAnswer(res.answer);
-    } catch (err) {
-      setErrorMessage('AI generation error: ' + (err as Error).message);
-    } finally {
-      setIsGeneratingAi(false);
-    }
-  };
-
-  const handleCopy = (text: string, key: string) => {
-    if (!text) return;
+  const copyToClipboard = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+    setTimeout(() => setCopiedKey(null), 1800);
   };
 
-  const handleQuickSaveApplication = async () => {
-    const title = websiteInfo?.title || 'Job Application';
-    const company = websiteInfo?.hostname.replace('.com', '').replace('boards.', '') || 'Company';
-
-    await applicationService.saveApplication({
-      id: `app-${Date.now()}`,
-      companyName: company.charAt(0).toUpperCase() + company.slice(1),
-      jobTitle: title,
-      jobUrl: websiteInfo?.url || window.location.href,
-      applicationDate: new Date().toISOString(),
-      status: 'Applied',
-      notes: 'Logged via JobMate Side Panel Copilot',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
-    setIsSavedApp(true);
-    setTimeout(() => setIsSavedApp(false), 3000);
-  };
-
-  const openOptions = () => {
-    if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    } else {
-      window.open('options.html', '_blank');
-    }
-  };
-
-  // Build full profile key-value catalogue for Quick Copy tab
-  const quickCopyCatalog = useMemo(() => {
-    if (!profile) return [];
-    return [
-      {
-        category: 'Personal Details',
-        items: [
-          { label: 'Full Name', value: profile.personal.fullName || `${profile.personal.firstName} ${profile.personal.lastName}`.trim() },
-          { label: 'First Name', value: profile.personal.firstName },
-          { label: 'Last Name', value: profile.personal.lastName },
-          { label: 'Email Address', value: profile.personal.email },
-          { label: 'Phone Number', value: profile.personal.phone },
-          { label: 'Date of Birth', value: profile.personal.dateOfBirth || '' },
-          { label: 'Gender', value: profile.personal.gender || '' },
-          { label: 'Race / Ethnicity', value: profile.personal.race || '' },
-        ],
-      },
-      {
-        category: 'Address Details',
-        items: [
-          { label: 'Street Address', value: profile.address.addressLine1 },
-          { label: 'City', value: profile.address.city },
-          { label: 'State / Province', value: profile.address.state },
-          { label: 'Postal / Zip Code', value: profile.address.postalCode },
-          { label: 'Country', value: profile.address.country },
-        ],
-      },
-      {
-        category: 'Professional Links',
-        items: [
-          { label: 'LinkedIn Profile', value: profile.links.linkedInUrl },
-          { label: 'GitHub Profile', value: profile.links.githubUrl },
-          { label: 'Portfolio / Website', value: profile.links.portfolioUrl || '' },
-        ],
-      },
-      {
-        category: 'Education',
-        items: [
-          { label: 'College / University', value: educationList[0]?.institution || '' },
-          { label: 'Degree', value: educationList[0]?.degree || '' },
-          { label: 'Branch / Specialization', value: educationList[0]?.branch || '' },
-          { label: 'CGPA / Percentage', value: educationList[0]?.cgpa || '' },
-          { label: 'Graduation Year', value: educationList[0]?.graduationYear || '' },
-        ],
-      },
-      {
-        category: 'Employment Preferences',
-        items: [
-          { label: 'Notice Period', value: profile.preferences.noticePeriodDays || 'Immediate' },
-          { label: 'Expected Compensation', value: profile.preferences.expectedCompensation || '' },
-          { label: 'Work Authorization', value: profile.preferences.workAuthorizationStatus || 'Authorized to work' },
-          { label: 'Willing to Relocate', value: profile.preferences.willingToRelocate ? 'Yes' : 'No' },
-          { label: 'Key Skills', value: skillsList.map((s) => s.name).join(', ') },
-        ],
-      },
-    ];
-  }, [profile, educationList, skillsList]);
-
-  // Stats
-  const matchedCount = useMemo(() => fields.filter((f) => f.status === 'MATCHED').length, [fields]);
-  const reviewCount = useMemo(() => fields.filter((f) => f.status === 'NEEDS_REVIEW').length, [fields]);
-  const unmatchedCount = useMemo(() => fields.filter((f) => f.status === 'UNMATCHED').length, [fields]);
+  // Counts
+  const matchedCount = fields.filter((f) => f.status === 'MATCHED').length;
+  const reviewCount = fields.filter((f) => f.status === 'NEEDS_REVIEW').length;
+  const unknownCount = fields.filter((f) => f.status === 'UNMATCHED').length;
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 text-slate-900 font-sans text-xs select-none">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-3.5 py-2.5 flex items-center justify-between shrink-0 shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm">
-            <Briefcase className="w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="font-bold text-slate-800 text-sm tracking-tight leading-none">JobMate</h1>
-            <span className="text-[10px] text-slate-500 font-medium">Application Copilot</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {websiteInfo && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 truncate max-w-[120px]">
-              {websiteInfo.adapterName}
-            </span>
-          )}
-          <button
-            onClick={openOptions}
-            title="Options & Profile"
-            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
+    <div className="panel glass" style={{ position: 'relative' }}>
+      <Backdrop />
 
-      {/* Navigation Tabs */}
-      <nav className="flex border-b border-slate-200 bg-white px-1.5 shrink-0">
+      {/* Header */}
+      <div className="ph">
+        <div className="brand">
+          <span className="logo" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
+              <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
+            </svg>
+          </span>
+          JobMate
+        </div>
+        <Pill variant="i">
+          {websiteInfo?.adapterName || 'Google Forms'}
+        </Pill>
         <button
-          onClick={() => setActiveTab('autofill')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
-            activeTab === 'autofill'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-600 hover:text-slate-800'
-          }`}
+          type="button"
+          className="icon"
+          aria-label="Settings"
+          onClick={() => {
+            if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
+              chrome.runtime.openOptionsPage();
+            }
+          }}
         >
-          <Scan className="w-3.5 h-3.5" />
+          ⚙
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="tabs" role="tablist" aria-label="Panel sections">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'autofill'}
+          onClick={() => setActiveTab('autofill')}
+        >
           Autofill
         </button>
         <button
-          onClick={() => setActiveTab('quickcopy')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
-            activeTab === 'quickcopy'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-600 hover:text-slate-800'
-          }`}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'copy'}
+          onClick={() => setActiveTab('copy')}
         >
-          <ClipboardList className="w-3.5 h-3.5 text-indigo-600" />
-          Quick Copy
+          Copy
         </button>
         <button
-          onClick={() => setActiveTab('resumes')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
-            activeTab === 'resumes'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-600 hover:text-slate-800'
-          }`}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'resume'}
+          onClick={() => setActiveTab('resume')}
         >
-          <FileText className="w-3.5 h-3.5" />
-          Resumes ({resumes.length})
+          Resume ({resumes.length})
         </button>
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'ai'}
           onClick={() => setActiveTab('ai')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
-            activeTab === 'ai'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-600 hover:text-slate-800'
-          }`}
         >
-          <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
           AI
         </button>
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'answers'}
           onClick={() => setActiveTab('answers')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
-            activeTab === 'answers'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-600 hover:text-slate-800'
-          }`}
         >
-          <HelpCircle className="w-3.5 h-3.5" />
           Answers
         </button>
-      </nav>
+      </div>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-3 space-y-3">
-        {/* Error Alert Banner */}
-        {errorMessage && (
-          <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-2 text-[11px]">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <span className="font-semibold block">Notice</span>
-              <p>{errorMessage}</p>
-              {errorMessage.toLowerCase().includes('refresh') && (
-                <button
-                  onClick={handleReloadPageAndScan}
-                  className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-medium transition-colors text-[10.5px] shadow-sm"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Refresh Webpage & Scan
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Fill Result Notification */}
-        {fillResults && (
-          <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-between text-[11px]">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                Filled <strong>{fillResults.success}</strong> of {fillResults.total} fields successfully!
-              </span>
-            </div>
-            <button
-              onClick={() => setFillResults(null)}
-              className="text-emerald-700 hover:underline font-medium text-[10px]"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        {/* TAB 1: AUTOFILL */}
-        {activeTab === 'autofill' && (
-          <div className="space-y-3">
-            {/* Scan Action Card */}
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-sm space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-slate-800 text-xs">Form Detection</h3>
-                  <p className="text-[11px] text-slate-500">Scan page to identify fillable application inputs</p>
-                </div>
-                <button
-                  onClick={handleScanForm}
-                  disabled={isScanning}
-                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition active:scale-95"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
-                  {isScanning ? 'Scanning...' : 'Scan Form'}
-                </button>
-              </div>
-
-              {/* Statistics Counters */}
-              {fields.length > 0 && (
-                <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-slate-100 text-center">
-                  <div className="bg-slate-50 p-1.5 rounded-lg">
-                    <span className="block text-[10px] text-slate-500 font-medium">Total</span>
-                    <strong className="text-xs text-slate-800">{fields.length}</strong>
-                  </div>
-                  <div className="bg-emerald-50/70 p-1.5 rounded-lg border border-emerald-100">
-                    <span className="block text-[10px] text-emerald-600 font-medium">Matched</span>
-                    <strong className="text-xs text-emerald-700">{matchedCount}</strong>
-                  </div>
-                  <div className="bg-amber-50/70 p-1.5 rounded-lg border border-amber-100">
-                    <span className="block text-[10px] text-amber-600 font-medium">Review</span>
-                    <strong className="text-xs text-amber-700">{reviewCount}</strong>
-                  </div>
-                  <div className="bg-slate-100/60 p-1.5 rounded-lg">
-                    <span className="block text-[10px] text-slate-400 font-medium">Unknown</span>
-                    <strong className="text-xs text-slate-600">{unmatchedCount}</strong>
-                  </div>
-                </div>
-              )}
+      {/* Body: Autofill Tab */}
+      {activeTab === 'autofill' && (
+        <>
+          <div className="pbody" id="pb">
+            <div className="row" style={{ gap: '6px' }}>
+              <Button size="sm" id="scan" onClick={handleScanForm} disabled={isScanning}>
+                {isScanning ? 'Scanning...' : 'Scan form'}
+              </Button>
+              <Pill variant="i">{fields.length} found</Pill>
+              <Pill variant="m">{matchedCount} matched</Pill>
+              <Pill variant="r">{reviewCount} review</Pill>
+              <Pill variant="u">{unknownCount} unknown</Pill>
             </div>
 
-            {/* Quick Copy Fallback Banner */}
-            <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-2 text-indigo-900">
-                <ClipboardList className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span>Need to copy fields manually?</span>
-              </div>
-              <button
-                onClick={() => setActiveTab('quickcopy')}
-                className="text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-0.5 text-[11px]"
+            {errorMessage && (
+              <div
+                className="glass card"
+                style={{
+                  background: 'var(--u-bg)',
+                  borderColor: 'var(--u-t)',
+                  color: 'var(--u-t)',
+                  padding: '12px 14px',
+                }}
               >
-                <span>Quick Copy</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-
-            {/* Field Inspection Checklist */}
-            {fields.length > 0 ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
-                    Detected Fields ({fields.length})
-                  </span>
-                  <div className="flex gap-2 text-[11px]">
-                    <button
-                      onClick={() => setSelectedFieldIds(new Set(fields.map((f) => f.id)))}
-                      className="text-indigo-600 hover:underline"
-                    >
-                      Select All
-                    </button>
-                    <span className="text-slate-300">|</span>
-                    <button onClick={() => setSelectedFieldIds(new Set())} className="text-slate-500 hover:underline">
-                      Clear
-                    </button>
-                  </div>
+                <p style={{ fontSize: '13px', fontWeight: 500 }}>{errorMessage}</p>
+                <div className="row" style={{ marginTop: '8px' }}>
+                  <Button size="sm" variant="soft" onClick={handleScanForm}>
+                    Retry Scan
+                  </Button>
+                  <Button size="sm" variant="soft" onClick={() => setActiveTab('copy')}>
+                    Use Quick Copy →
+                  </Button>
                 </div>
-
-                <div className="space-y-2">
-                  {fields.map((field) => {
-                    const isSelected = selectedFieldIds.has(field.id);
-                    const isEditing = editingFieldId === field.id;
-                    const currentValue = fieldValues[field.id] || '';
-
-                    return (
-                      <div
-                        key={field.id}
-                        className={`p-2.5 rounded-xl border bg-white transition ${
-                          isSelected ? 'border-indigo-300 shadow-xs' : 'border-slate-200/80 opacity-90'
-                        }`}
-                      >
-                        <div className="flex items-start gap-2.5">
-                          {field.fieldType !== 'file' ? (
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleToggleField(field.id)}
-                              className="mt-1 rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-                            />
-                          ) : (
-                            <FileText className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
-                          )}
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-1 mb-0.5">
-                              <span className="font-semibold text-slate-800 text-[11px] truncate" title={field.label}>
-                                {field.label}
-                                {field.required && <span className="text-rose-500 ml-0.5">*</span>}
-                              </span>
-
-                              {field.canonicalField ? (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
-                                  {field.canonicalField}
-                                </span>
-                              ) : (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-100 text-slate-500 shrink-0">
-                                  Unmatched
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Dropdown to manually map unrecognized fields */}
-                            {!field.canonicalField && (
-                              <div className="my-1">
-                                <select
-                                  onChange={(e) => handleMapField(field.id, e.target.value as ApplicationField)}
-                                  className="w-full text-[10px] p-1 border border-indigo-200 rounded bg-indigo-50/50 text-indigo-900 font-medium"
-                                  defaultValue=""
-                                >
-                                  <option value="" disabled>
-                                    ⚡ Map this field to your profile...
-                                  </option>
-                                  {Object.values(CANONICAL_FIELDS).map((def) => (
-                                    <option key={def.id} value={def.id}>
-                                      {def.displayLabel}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            )}
-
-                            {/* Proposed Autofill Value */}
-                            {field.fieldType === 'file' ? (
-                              <p className="text-[11px] text-indigo-600 font-medium">
-                                Resume upload input detected. Switch to Resumes tab to prepare file.
-                              </p>
-                            ) : isEditing ? (
-                              <div className="mt-1 flex gap-1">
-                                <input
-                                  type="text"
-                                  value={currentValue}
-                                  onChange={(e) =>
-                                    setFieldValues({ ...fieldValues, [field.id]: e.target.value })
-                                  }
-                                  className="flex-1 px-2 py-1 text-xs border border-indigo-300 rounded focus:outline-indigo-500"
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={() => setEditingFieldId(null)}
-                                  className="px-2 py-1 bg-indigo-600 text-white rounded text-[10px] font-medium"
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-between mt-1 bg-slate-50 px-2 py-1 rounded border border-slate-100 text-[11px]">
-                                <span
-                                  className={`truncate mr-2 ${
-                                    currentValue ? 'text-slate-800 font-medium' : 'text-slate-400 italic'
-                                  }`}
-                                >
-                                  {currentValue || 'No value assigned'}
-                                </span>
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button
-                                    onClick={() => handleAiDraftForField(field)}
-                                    disabled={draftingFieldId === field.id}
-                                    title="Draft tailored answer with AI"
-                                    className="px-1.5 py-0.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded text-[9.5px] font-semibold flex items-center gap-0.5 border border-violet-200 transition disabled:opacity-50"
-                                  >
-                                    <Sparkles className="w-2.5 h-2.5 text-violet-600" />
-                                    {draftingFieldId === field.id ? '...' : 'AI Draft'}
-                                  </button>
-
-                                  <button
-                                    onClick={() => setEditingFieldId(field.id)}
-                                    title="Edit value before filling"
-                                    className="p-0.5 text-slate-400 hover:text-indigo-600 rounded"
-                                  >
-                                    <Edit2 className="w-3 h-3" />
-                                  </button>
-                                  {currentValue && (
-                                    <button
-                                      onClick={() => handleCopy(currentValue, field.id)}
-                                      title="Copy value"
-                                      className="p-1 text-slate-400 hover:text-indigo-600 rounded flex items-center gap-0.5 text-[9px] font-semibold"
-                                    >
-                                      {copiedKey === field.id ? (
-                                        <span className="text-emerald-600 font-bold">✓ Copied</span>
-                                      ) : (
-                                        <>
-                                          <Copy className="w-3 h-3" /> Copy
-                                        </>
-                                      )}
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Option pills for radio / choice questions */}
-                            {field.options && field.options.length > 0 && (
-                              <div className="mt-1.5 flex flex-wrap gap-1">
-                                {field.options.map((opt) => (
-                                  <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => {
-                                      setFieldValues((prev) => ({ ...prev, [field.id]: opt.value }));
-                                      setSelectedFieldIds((prev) => new Set(prev).add(field.id));
-                                    }}
-                                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition cursor-pointer ${
-                                      currentValue === opt.value
-                                        ? 'bg-indigo-600 text-white shadow-xs'
-                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                                    }`}
-                                  >
-                                    {opt.label}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white border border-slate-200/90 rounded-xl p-6 text-center shadow-xs">
-                <Scan className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <h4 className="font-semibold text-slate-700 text-xs mb-1">No Form Scanned Yet</h4>
-                <p className="text-[11px] text-slate-500 mb-3 max-w-[200px] mx-auto">
-                  Click 'Scan Form' while on a job application page to detect all form inputs.
-                </p>
-                <button
-                  onClick={handleScanForm}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-3.5 py-1.5 rounded-lg inline-flex items-center gap-1.5 shadow-sm transition"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Scan Now
-                </button>
               </div>
             )}
-          </div>
-        )}
 
-        {/* TAB 2: QUICK COPY (MANUAL COPY / PASTE CATALOG) */}
-        {activeTab === 'quickcopy' && (
-          <div className="space-y-3">
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs space-y-2.5">
-              <div>
-                <h3 className="font-semibold text-slate-800 text-xs">📋 1-Click Profile Copy</h3>
-                <p className="text-[11px] text-slate-500">
-                  Easily copy any of your profile details with 1 click to paste into forms that don't allow automatic scanning.
+            {fields.length === 0 && !isScanning && !errorMessage && (
+              <div className="glass card empty" style={{ textAlign: 'center', padding: '32px 14px' }}>
+                <b style={{ fontSize: '16px' }}>No form scanned yet</b>
+                <p className="hint" style={{ margin: '6px 0 16px' }}>
+                  Click Scan Form to detect inputs on the current application tab.
                 </p>
+                <Button size="sm" onClick={handleScanForm}>
+                  Scan Now
+                </Button>
               </div>
+            )}
 
-              {/* Search Bar */}
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
-                <input
-                  type="text"
-                  placeholder="Filter fields e.g. Phone, Email, Address..."
-                  value={copySearchQuery}
-                  onChange={(e) => setCopySearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1.5 text-[11px] border border-slate-300 rounded-lg focus:outline-indigo-500"
-                />
-              </div>
+            {fields.map((field) => {
+              const isChecked = selectedIds.has(field.id);
+              const isFilled = filledFieldIds.has(field.id);
+              const isChoice = field.options && field.options.length > 0;
+              const isLongText = field.fieldType === 'textarea' || (field.label || '').length > 35;
+              const pillVariant =
+                field.status === 'MATCHED'
+                  ? 'm'
+                  : field.status === 'NEEDS_REVIEW'
+                  ? isLongText ? 'a' : 'r'
+                  : 'u';
+              const pillText =
+                field.status === 'MATCHED'
+                  ? 'Matched'
+                  : isLongText ? 'AI draft' : field.status === 'NEEDS_REVIEW' ? 'Review' : 'Unknown';
 
-              {/* Catalog Groups */}
-              <div className="space-y-3 pt-1">
-                {quickCopyCatalog.map((group) => {
-                  const filteredItems = group.items.filter((item) =>
-                    !copySearchQuery
-                      ? true
-                      : item.label.toLowerCase().includes(copySearchQuery.toLowerCase()) ||
-                        item.value.toLowerCase().includes(copySearchQuery.toLowerCase())
-                  );
+              return (
+                <div
+                  key={field.id}
+                  className={`fc ${isFilled ? 'filled' : ''}`}
+                  onMouseEnter={() => handleHighlight(field.id, true)}
+                  onMouseLeave={() => handleHighlight(field.id, false)}
+                  onFocus={() => handleHighlight(field.id, true)}
+                  onBlur={() => handleHighlight(field.id, false)}
+                >
+                  <svg className="okm" viewBox="0 0 22 22">
+                    <path d="M5 11l4 4 8-8" />
+                  </svg>
 
-                  if (filteredItems.length === 0) return null;
-
-                  return (
-                    <div key={group.category} className="space-y-1.5">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                        {group.category}
-                      </span>
-                      <div className="space-y-1">
-                        {filteredItems.map((item) => (
-                          <div
-                            key={item.label}
-                            className="p-2 bg-slate-50 hover:bg-indigo-50/40 border border-slate-200/90 rounded-lg flex items-center justify-between gap-2 transition"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <span className="text-[10px] text-slate-500 block leading-tight font-medium">
-                                {item.label}
-                              </span>
-                              <span
-                                className={`text-[11px] font-semibold truncate block ${
-                                  item.value ? 'text-slate-800' : 'text-slate-400 italic'
-                                }`}
-                              >
-                                {item.value || 'Not configured in profile'}
-                              </span>
-                            </div>
-
-                            {item.value && (
-                              <button
-                                onClick={() => handleCopy(item.value, item.label)}
-                                className="px-2 py-1 rounded bg-white hover:bg-indigo-600 hover:text-white border border-slate-200 text-slate-700 text-[10px] font-semibold flex items-center gap-1 shrink-0 shadow-2xs transition active:scale-95"
-                              >
-                                {copiedKey === item.label ? (
-                                  <>
-                                    <Check className="w-3 h-3 text-emerald-600" />
-                                    <span>Copied!</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-3 h-3" />
-                                    <span>Copy</span>
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: RESUMES */}
-        {activeTab === 'resumes' && (
-          <div className="space-y-3">
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
-              <h3 className="font-semibold text-slate-800 text-xs mb-1">Saved Resumes</h3>
-              <p className="text-[11px] text-slate-500 mb-3">
-                Select a resume below to download and prepare it for upload into the job form.
-              </p>
-
-              {resumes.length > 0 ? (
-                <div className="space-y-2">
-                  {resumes.map((resume) => (
-                    <div
-                      key={resume.id}
-                      className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/50 flex items-center justify-between"
-                    >
-                      <div className="min-w-0 pr-2">
-                        <div className="flex items-center gap-1.5">
-                          <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
-                          <span className="font-semibold text-slate-800 truncate text-[11px]">
-                            {resume.name}
-                          </span>
-                          {resume.isDefault && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] bg-emerald-100 text-emerald-800 font-bold shrink-0">
-                              Default
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-                          {resume.fileName} • {(resume.fileSize / 1024).toFixed(1)} KB
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (resume.blobData) {
-                            const url = URL.createObjectURL(resume.blobData);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = resume.fileName;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          }
-                        }}
-                        className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-slate-700 font-medium text-[10px] shrink-0 shadow-2xs"
-                      >
-                        Download
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                  <p className="text-[11px] text-slate-500 mb-2">No resumes saved yet.</p>
-                  <button
-                    onClick={openOptions}
-                    className="text-indigo-600 hover:underline font-semibold text-xs"
-                  >
-                    Upload Resume in Settings
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: AI COPILOT */}
-        {activeTab === 'ai' && (
-          <div className="space-y-3">
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs space-y-2.5">
-              <div className="flex items-center gap-1.5 text-indigo-700 font-semibold text-xs">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                <span>AI Application Q&A Generator</span>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Generate factual, tailored answers grounded in your real profile and projects.
-              </p>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  Application Question:
-                </label>
-                <textarea
-                  value={customQuestion}
-                  onChange={(e) => setCustomQuestion(e.target.value)}
-                  placeholder="e.g., Why do you believe you are a strong fit for this engineering role?"
-                  rows={3}
-                  className="w-full text-xs p-2 border border-slate-300 rounded-lg focus:outline-indigo-500"
-                />
-              </div>
-
-              <button
-                onClick={handleGenerateAnswer}
-                disabled={isGeneratingAi || !customQuestion.trim()}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                {isGeneratingAi ? 'Synthesizing Answer...' : 'Draft Grounded Answer'}
-              </button>
-
-              {aiAnswer && (
-                <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-700 text-[11px]">Proposed Answer:</span>
-                    <button
-                      onClick={() => handleCopy(aiAnswer, 'ai-answer')}
-                      className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 text-[10px] font-medium"
-                    >
-                      {copiedKey === 'ai-answer' ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-600" /> Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" /> Copy
-                        </>
-                      )}
-                    </button>
+                  <div className="fh">
+                    <input
+                      type="checkbox"
+                      className="ck"
+                      id={`ck-${field.id}`}
+                      checked={isChecked}
+                      onChange={() => toggleSelect(field.id)}
+                    />
+                    <label htmlFor={`ck-${field.id}`}>
+                      {field.label} {field.required && <span aria-hidden="true">*</span>}
+                    </label>
+                    <Pill variant={pillVariant}>{pillText}</Pill>
                   </div>
-                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-[11px] text-slate-800 leading-relaxed whitespace-pre-wrap">
-                    {aiAnswer}
-                  </div>
-                  <p className="text-[9px] text-slate-400 italic">
-                    Review and verify before pasting into the application form.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* TAB 5: ANSWER BANK */}
-        {activeTab === 'answers' && (
-          <div className="space-y-3">
-            <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs space-y-2">
-              <h3 className="font-semibold text-slate-800 text-xs">Reusable Answer Bank</h3>
-              <p className="text-[11px] text-slate-500">Quickly copy your pre-written answers.</p>
-
-              {answers.length > 0 ? (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {answers.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/50 space-y-1.5"
-                    >
-                      <div className="flex items-start justify-between gap-1">
-                        <span className="font-semibold text-slate-800 text-[11px] leading-tight">
-                          {item.question}
-                        </span>
+                  {/* Choice questions (radio / checkbox) */}
+                  {isChoice ? (
+                    <div className="choice" role="group" aria-label={field.label}>
+                      {field.options!.map((opt) => (
                         <button
-                          onClick={() => handleCopy(item.answer, item.id)}
-                          title="Copy Answer"
-                          className="p-1 text-slate-400 hover:text-indigo-600 rounded shrink-0"
+                          key={opt.value}
+                          type="button"
+                          aria-pressed={fieldValues[field.id] === opt.value}
+                          onClick={() => {
+                            setFieldValues((prev) => ({ ...prev, [field.id]: opt.value }));
+                            setSelectedIds((prev) => new Set(prev).add(field.id));
+                          }}
                         >
-                          {copiedKey === item.id ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
+                          {opt.label}
                         </button>
-                      </div>
-                      <p className="text-[10px] text-slate-600 line-clamp-3 bg-white p-1.5 rounded border border-slate-100">
-                        {item.answer}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <span className="px-1.5 py-0.2 rounded text-[9px] bg-indigo-50 text-indigo-700 font-medium">
-                          {item.category}
-                        </span>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : isLongText ? (
+                    <>
+                      <div className="ai">
+                        {fieldValues[field.id] ||
+                          'Click Generate below to produce a tailored AI draft from your profile experience.'}
+                      </div>
+                      <div className="row">
+                        <Button
+                          variant="soft"
+                          size="sm"
+                          onClick={() => handleDraftAi(field)}
+                          disabled={draftingFieldId === field.id}
+                        >
+                          {draftingFieldId === field.id ? 'Drafting...' : 'Draft with AI'}
+                        </Button>
+                        <Button
+                          variant="soft"
+                          size="sm"
+                          onClick={() => copyToClipboard(field.id, fieldValues[field.id] || '')}
+                        >
+                          {copiedKey === field.id ? 'Copied' : 'Copy'}
+                        </Button>
+                      </div>
+                    </>
+                  ) : field.status === 'UNMATCHED' ? (
+                    <select
+                      className="in"
+                      value={field.canonicalField || ''}
+                      onChange={(e) => {
+                        const canon = e.target.value as ApplicationField;
+                        const val = resolveProfileValue(canon);
+                        setFieldValues((prev) => ({ ...prev, [field.id]: val }));
+                        setSelectedIds((prev) => new Set(prev).add(field.id));
+                      }}
+                    >
+                      <option value="">Map to a profile field…</option>
+                      {Object.keys(CANONICAL_FIELDS).map((k) => (
+                        <option key={k} value={k}>
+                          {CANONICAL_FIELDS[k as ApplicationField].displayLabel}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="vrow">
+                      <input
+                        className="in"
+                        aria-label={`${field.label} value`}
+                        value={fieldValues[field.id] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFieldValues((prev) => ({ ...prev, [field.id]: val }));
+                          if (val) setSelectedIds((prev) => new Set(prev).add(field.id));
+                        }}
+                      />
+                      <Button
+                        variant="soft"
+                        size="sm"
+                        aria-label={`Copy ${field.label}`}
+                        onClick={() => copyToClipboard(field.id, fieldValues[field.id] || '')}
+                      >
+                        {copiedKey === field.id ? 'Copied' : 'Copy'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                  <p className="text-[11px] text-slate-500 mb-2">No answers saved in bank.</p>
-                  <button onClick={openOptions} className="text-indigo-600 hover:underline font-semibold text-xs">
-                    Add in Settings Dashboard
-                  </button>
+              );
+            })}
+          </div>
+
+          {/* Sticky footer */}
+          <div className="pfoot">
+            <Button variant="soft" id="fall" onClick={() => handleFill(true)}>
+              Fill all matched
+            </Button>
+            <Button id="fsel" onClick={() => handleFill(false)} disabled={isFilling}>
+              {isFilling ? 'Filling...' : `Fill selected (${selectedIds.size})`}
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* Body: Copy Tab (Manual 1-click copying) */}
+      {activeTab === 'copy' && (
+        <div className="pbody">
+          <input
+            className="in"
+            type="search"
+            placeholder="Search fields to copy..."
+            value={copySearchQuery}
+            onChange={(e) => setCopySearchQuery(e.target.value)}
+          />
+
+          <div className="stack" style={{ gap: '10px' }}>
+            {[
+              { label: 'Full Name', val: `${profile?.personal.firstName || ''} ${profile?.personal.lastName || ''}`.trim() },
+              { label: 'First Name', val: profile?.personal.firstName || '' },
+              { label: 'Last Name', val: profile?.personal.lastName || '' },
+              { label: 'Email Address', val: profile?.personal.email || '' },
+              { label: 'Phone Number', val: profile?.personal.phone || '' },
+              { label: 'LinkedIn URL', val: profile?.links.linkedInUrl || '' },
+              { label: 'GitHub URL', val: profile?.links.githubUrl || '' },
+              { label: 'Portfolio URL', val: profile?.links.portfolioUrl || '' },
+              { label: 'Street Address', val: profile?.address.addressLine1 || '' },
+              { label: 'City, State, Zip', val: `${profile?.address.city || ''}, ${profile?.address.state || ''} ${profile?.address.postalCode || ''}`.trim() },
+              { label: 'Current Company / Role', val: experienceList[0] ? `${experienceList[0].designation} at ${experienceList[0].companyName}` : '' },
+              { label: 'College / Degree', val: educationList[0] ? `${educationList[0].degree} in ${educationList[0].branch || ''} (${educationList[0].institution})` : '' },
+              { label: 'Notice Period', val: profile?.preferences.noticePeriodDays || 'Immediate' },
+              { label: 'Key Skills', val: skillsList.map((s) => s.name).join(', ') },
+            ]
+              .filter(
+                (item) =>
+                  !copySearchQuery ||
+                  item.label.toLowerCase().includes(copySearchQuery.toLowerCase()) ||
+                  item.val.toLowerCase().includes(copySearchQuery.toLowerCase())
+              )
+              .map((item) => (
+                <div key={item.label} className="fc">
+                  <div className="fh">
+                    <label>{item.label}</label>
+                  </div>
+                  <div className="vrow">
+                    <input className="in" readOnly value={item.val} />
+                    <Button
+                      variant="soft"
+                      size="sm"
+                      onClick={() => copyToClipboard(item.label, item.val)}
+                    >
+                      {copiedKey === item.label ? 'Copied' : 'Copy'}
+                    </Button>
+                  </div>
                 </div>
-              )}
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Body: Resumes Tab */}
+      {activeTab === 'resume' && (
+        <div className="pbody">
+          {resumes.length === 0 ? (
+            <div className="glass card empty" style={{ textAlign: 'center', padding: '32px 14px' }}>
+              <b>No resumes in vault</b>
+              <p className="hint">Upload a resume in the Options dashboard.</p>
             </div>
-          </div>
-        )}
-      </main>
+          ) : (
+            resumes.map((res) => (
+              <div key={res.id} className="fc">
+                <div className="fh">
+                  <label>{res.fileName}</label>
+                  {res.isDefault && <Pill variant="m">Active</Pill>}
+                </div>
+                <p className="hint">
+                  {Math.round((res.fileSize || 0) / 1024)} KB · {res.uploadedAt?.split('T')[0]}
+                </p>
+                <div className="row" style={{ marginTop: '8px' }}>
+                  <Button
+                    variant="soft"
+                    size="sm"
+                    onClick={() => copyToClipboard(res.id, res.fileName)}
+                  >
+                    {copiedKey === res.id ? 'Copied name' : 'Copy filename'}
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
-      {/* Footer Toolbar */}
-      {activeTab === 'autofill' && fields.length > 0 && (
-        <footer className="bg-white border-t border-slate-200 p-2.5 shrink-0 space-y-2 shadow-xs">
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleFillFields(true)}
-              disabled={isFilling || selectedFieldIds.size === 0}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition active:scale-98"
+      {/* Body: AI Tab */}
+      {activeTab === 'ai' && (
+        <div className="pbody">
+          <div className="glass card">
+            <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>AI Answer Generator</h3>
+            <label className="f" htmlFor="ai-prompt">Question prompt</label>
+            <textarea
+              className="in"
+              id="ai-prompt"
+              rows={3}
+              placeholder="e.g. Why should we hire you for this role?"
+              value={aiCustomQuestion}
+              onChange={(e) => setAiCustomQuestion(e.target.value)}
+            />
+            <Button
+              size="sm"
+              style={{ marginTop: '10px' }}
+              disabled={isGeneratingAi || !aiCustomQuestion.trim() || !profile}
+              onClick={async () => {
+                if (!profile) return;
+                setIsGeneratingAi(true);
+                try {
+                  const res = await aiService.generateAnswer(
+                    aiCustomQuestion,
+                    profile,
+                    projectList,
+                    experienceList,
+                    educationList
+                  );
+                  setAiGeneratedText(res.answer);
+                } catch {
+                  setAiGeneratedText('Could not generate answer. Check API key in Settings.');
+                } finally {
+                  setIsGeneratingAi(false);
+                }
+              }}
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {isFilling ? 'Filling...' : `Fill Selected (${selectedFieldIds.size})`}
-            </button>
-            <button
-              onClick={() => handleFillFields(false)}
-              disabled={isFilling}
-              className="flex-1 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white font-medium text-xs py-2 rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition active:scale-98"
-            >
-              <span>Fill All Matched</span>
-            </button>
+              {isGeneratingAi ? 'Drafting...' : 'Generate Answer'}
+            </Button>
           </div>
 
-          <div className="flex items-center justify-between pt-1 text-[11px] text-slate-500 border-t border-slate-100">
-            <button
-              onClick={handleQuickSaveApplication}
-              disabled={isSavedApp}
-              className="text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
-            >
-              <BookmarkPlus className="w-3.5 h-3.5" />
-              {isSavedApp ? 'Saved to Tracker!' : 'Save to Application Tracker'}
-            </button>
-            <span className="text-[10px] text-slate-400">Review before submitting</span>
-          </div>
-        </footer>
+          {aiGeneratedText && (
+            <div className="fc">
+              <div className="ai">{aiGeneratedText}</div>
+              <Button
+                variant="soft"
+                size="sm"
+                onClick={() => copyToClipboard('ai-gen', aiGeneratedText)}
+              >
+                {copiedKey === 'ai-gen' ? 'Copied' : 'Copy Answer'}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Body: Answers Tab */}
+      {activeTab === 'answers' && (
+        <div className="pbody">
+          {answers.length === 0 ? (
+            <div className="glass card empty" style={{ textAlign: 'center', padding: '32px 14px' }}>
+              <b>No saved answers</b>
+              <p className="hint">Save common behavioral and technical responses in Options.</p>
+            </div>
+          ) : (
+            answers.map((ans) => (
+              <div key={ans.id} className="fc">
+                <Pill variant="a">{ans.category}</Pill>
+                <b style={{ fontSize: '14px', margin: '4px 0' }}>{ans.question}</b>
+                <p style={{ fontSize: '13px', color: 'var(--muted)' }}>{ans.answer}</p>
+                <div className="row" style={{ marginTop: '8px' }}>
+                  <Button
+                    variant="soft"
+                    size="sm"
+                    onClick={() => copyToClipboard(ans.id, ans.answer)}
+                  >
+                    {copiedKey === ans.id ? 'Copied' : 'Copy Answer'}
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
     </div>
   );

@@ -1,0 +1,104 @@
+@import './fonts/fonts.css';
+
+:root {
+  --ink: #2B2340;
+  --muted: #5E5675;
+  --base: #FFF3E8;
+  --glass: rgba(255, 255, 255, 0.6);
+  --edge: rgba(255, 255, 255, 0.85);
+  --shadow: 0 18px 40px rgba(120, 90, 180, 0.16);
+  --accent: #8B74F0;
+  --btn: #2B2340;
+  --btn-t: #ffffff;
+  --soft: rgba(255, 255, 255, 0.75);
+  --blob: 1;
+  --line: rgba(43, 35, 64, 0.14);
+
+  --m-bg: #D5F5E6;
+  --m-t: #17684A;
+  --r-bg: #FFE9A8;
+  --r-t: #6B4A00;
+  --a-bg: #E9E2FF;
+  --a-t: #4B3A9A;
+  --u-bg: #FFE3DA;
+  --u-t: #9A3E27;
+  --i-bg: #DDF0FF;
+  --i-t: #1D5E8F;
+
+  --blur: blur(26px) saturate(1.7);
+  --f-h: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  --f-b: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+:root[data-theme='dark'] {
+  --ink: #F4F1FA;
+  --muted: #B7B0C9;
+  --base: #1A1626;
+  --glass: rgba(255, 255, 255, 0.08);
+  --edge: rgba(255, 255, 255, 0.16);
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  --btn: #F4F1FA;
+  --btn-t: #1A1626;
+  --soft: rgba(255, 255, 255, 0.1);
+  --blob: 0.35;
+  --line: rgba(255, 255, 255, 0.18);
+
+  --m-bg: #16382C;
+  --m-t: #8FE3BD;
+  --r-bg: #4A3A10;
+  --r-t: #FFD76A;
+  --a-bg: #322A5C;
+  --a-t: #CDBFFF;
+  --u-bg: #4A2419;
+  --u-t: #FFB3A0;
+  --i-bg: #16384F;
+  --i-t: #9ED4FF;
+}
+
+:root[data-calm='on'] {
+  --blur: none;
+  --glass: #FFFBF6;
+  --soft: #ffffff;
+}
+
+:root[data-theme='dark'][data-calm='on'] {
+  --glass: #241F36;
+  --soft: #2D2745;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ink: #F4F1FA;
+    --muted: #B7B0C9;
+    --base: #1A1626;
+    --glass: rgba(255, 255, 255, 0.08);
+    --edge: rgba(255, 255, 255, 0.16);
+    --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    --btn: #F4F1FA;
+    --btn-t: #1A1626;
+    --soft: rgba(255, 255, 255, 0.1);
+    --blob: 0.35;
+    --line: rgba(255, 255, 255, 0.18);
+
+    --m-bg: #16382C;
+    --m-t: #8FE3BD;
+    --r-bg: #4A3A10;
+    --r-t: #FFD76A;
+    --a-bg: #322A5C;
+    --a-t: #CDBFFF;
+    --u-bg: #4A2419;
+    --u-t: #FFB3A0;
+    --i-bg: #16384F;
+    --i-t: #9ED4FF;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --blur: none;
+    --glass: #FFFBF6;
+  }
+  :root[data-theme='dark'] {
+    --glass: #241F36;
+  }
+}

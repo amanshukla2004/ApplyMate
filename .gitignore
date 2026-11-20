@@ -1,5 +1,6 @@
 # ==============================================================================
 # ApplyMate / JobMate .gitignore
+# Senior Engineering Standard Git Ignore Rules
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -28,6 +29,7 @@ out/
 **/.vite/
 .parcel-cache/
 .turbo/
+.wireit/
 
 # Chrome Extension Packaged Archives
 *.crx
@@ -84,7 +86,7 @@ config.local.json
 *.sql.dump
 
 # ------------------------------------------------------------------------------
-# Backend Artifacts (Java / Spring Boot / Maven - Future Phase)
+# Backend Artifacts (Java / Spring Boot / Maven - Future Cloud Phase)
 # ------------------------------------------------------------------------------
 target/
 **/target/
@@ -96,9 +98,8 @@ target/
 .gradle/
 
 # ------------------------------------------------------------------------------
-# Editor, IDE & System Files
+# Visual Studio Code & Editors
 # ------------------------------------------------------------------------------
-# Visual Studio Code
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
@@ -111,13 +112,14 @@ target/
 *.iws
 *.ipr
 
-# Other Editors & System
+# Other Editors & System Cache
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 *~
+*.bak
 .DS_Store
 Thumbs.db
 Thumbs.db:encryptable
@@ -139,6 +141,4 @@ scratch/
 # Specification & Private Prompts
 # ------------------------------------------------------------------------------
 prompt.md
-*.prompt.md
-
 *.prompt.md

@@ -21,10 +21,14 @@ export class LabelExtractor {
       }
     }
 
-    // 2b. Check Google Forms and ATS question container (role="listitem" or .Qr7Oae)
-    const formItem = element.closest('[role="listitem"], .Qr7Oae, .freebirdFormviewerViewNumberedItemContainer');
+    // 2b. Check Google Forms and ATS question container (role="listitem", .Qr7Oae, .geS5n, etc.)
+    const formItem = element.closest(
+      '[role="listitem"], .Qr7Oae, .geS5n, [data-item-id], .freebirdFormviewerViewNumberedItemContainer, .freebirdFormviewerViewItemsItemItem'
+    );
     if (formItem) {
-      const heading = formItem.querySelector('[role="heading"], .M7eMe, .HoGqGc');
+      const heading = formItem.querySelector(
+        '[role="heading"], .M7eMe, .FwR7Pc, .HoGqGc, .freebirdFormviewerViewItemsItemItemTitle, [aria-level="3"]'
+      );
       if (heading && heading.textContent && heading.textContent.trim()) {
         return this.cleanLabel(heading.textContent);
       }

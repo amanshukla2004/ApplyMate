@@ -128,6 +128,14 @@ export class MessageRouter {
         }
       }
 
+      case 'HIGHLIGHT_FIELD': {
+        const tab = await TabManager.getActiveTab();
+        if (tab && tab.id) {
+          chrome.tabs.sendMessage(tab.id, message).catch(() => {});
+        }
+        return { success: true };
+      }
+
       case 'RECORD_APPLICATION': {
         try {
           const payload = (message as { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string } }).data;
