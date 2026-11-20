@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Backdrop } from '../components/ui/Backdrop';
 import { Button } from '../components/ui/Button';
 import { Pill } from '../components/ui/Pill';
+import { ApplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { DetectedField, WebsiteMetadata } from '../types/messaging';
 import { CANONICAL_FIELDS, ApplicationField } from '../types/canonicalFields';
 import { profileService } from '../services/profileService';
@@ -73,12 +74,15 @@ export const SidePanel: React.FC = () => {
       setExperienceList(exp);
       setSkillsList(sk);
       setProjectList(prj);
+
+      // Auto-scan on load so detected fields appear immediately
+      handleScanForm(p, edu);
     } catch (err) {
       console.error('Failed to load side panel data:', err);
     }
   };
 
-  const handleScanForm = async () => {
+  const handleScanForm = async (customProfile?: UserProfile, customEdu?: EducationRecord[]) => {
     setIsScanning(true);
     setErrorMessage(null);
     setFilledFieldIds(new Set());
@@ -98,7 +102,7 @@ export const SidePanel: React.FC = () => {
             hostname: 'docs.google.com',
             adapterName: 'Google Forms',
             title: 'Job Application',
-          });
+          }, customProfile, customEdu);
           setIsScanning(false);
         }, 500);
         return;
@@ -121,7 +125,7 @@ export const SidePanel: React.FC = () => {
           return;
         }
 
-        processFields(response.data.fields, response.data.website);
+        processFields(response.data.fields, response.data.website, customProfile, customEdu);
       });
     } catch (err) {
       setIsScanning(false);
@@ -129,17 +133,25 @@ export const SidePanel: React.FC = () => {
     }
   };
 
-  const processFields = (scanned: DetectedField[], site?: WebsiteMetadata) => {
+  const processFields = (
+    scanned: DetectedField[],
+    site?: WebsiteMetadata,
+    customProfile?: UserProfile,
+    customEdu?: EducationRecord[]
+  ) => {
     setFields(scanned);
     if (site) setWebsiteInfo(site);
+
+    const activeProfile = customProfile || profile;
+    const activeEdu = customEdu || educationList;
 
     const values: Record<string, string> = {};
     const selected = new Set<string>();
 
     scanned.forEach((f) => {
       let val = '';
-      if (f.canonicalField && profile) {
-        val = resolveProfileValue(f.canonicalField);
+      if (f.canonicalField && activeProfile) {
+        val = resolveProfileValue(f.canonicalField, activeProfile, activeEdu);
       }
       if (f.options && f.options.length > 0 && !val) {
         val = f.options[0].value;
@@ -155,51 +167,55 @@ export const SidePanel: React.FC = () => {
     setSelectedIds(selected);
   };
 
-  const resolveProfileValue = (canonical: ApplicationField): string => {
-    if (!profile) return '';
+  const resolveProfileValue = (
+    canonical: ApplicationField,
+    p: UserProfile | null = profile,
+    edu: EducationRecord[] = educationList
+  ): string => {
+    if (!p) return '';
     switch (canonical) {
       case 'FIRST_NAME':
-        return profile.personal.firstName || '';
+        return p.personal.firstName || '';
       case 'LAST_NAME':
-        return profile.personal.lastName || '';
+        return p.personal.lastName || '';
       case 'FULL_NAME':
-        return `${profile.personal.firstName || ''} ${profile.personal.lastName || ''}`.trim();
+        return `${p.personal.firstName || ''} ${p.personal.lastName || ''}`.trim();
       case 'EMAIL':
-        return profile.personal.email || '';
+        return p.personal.email || '';
       case 'PHONE':
-        return profile.personal.phone || '';
+        return p.personal.phone || '';
       case 'ADDRESS':
-        return profile.address.addressLine1 || '';
+        return p.address.addressLine1 || '';
       case 'CITY':
-        return profile.address.city || '';
+        return p.address.city || '';
       case 'STATE':
-        return profile.address.state || '';
+        return p.address.state || '';
       case 'ZIP_CODE':
-        return profile.address.postalCode || '';
+        return p.address.postalCode || '';
       case 'COUNTRY':
-        return profile.address.country || '';
+        return p.address.country || '';
       case 'LINKEDIN_URL':
-        return profile.links.linkedInUrl || '';
+        return p.links.linkedInUrl || '';
       case 'GITHUB_URL':
-        return profile.links.githubUrl || '';
+        return p.links.githubUrl || '';
       case 'PORTFOLIO_URL':
-        return profile.links.portfolioUrl || '';
+        return p.links.portfolioUrl || '';
       case 'COLLEGE':
-        return educationList[0]?.institution || '';
+        return edu[0]?.institution || '';
       case 'DEGREE':
-        return educationList[0]?.degree || '';
+        return edu[0]?.degree || '';
       case 'CGPA':
-        return educationList[0]?.cgpa || '';
+        return edu[0]?.cgpa || '';
       case 'NOTICE_PERIOD':
-        return profile.preferences.noticePeriodDays || 'Immediate';
+        return p.preferences.noticePeriodDays || 'Immediate';
       case 'EXPECTED_CTC':
-        return profile.preferences.expectedCompensation || '';
+        return p.preferences.expectedCompensation || '';
       case 'CURRENT_CTC':
-        return profile.preferences.currentCompensation || '';
+        return p.preferences.currentCompensation || '';
       case 'GENDER':
-        return profile.personal.gender || '';
+        return p.personal.gender || '';
       case 'RACE_ETHNICITY':
-        return profile.personal.race || '';
+        return p.personal.race || '';
       default:
         return '';
     }
@@ -299,12 +315,8 @@ export const SidePanel: React.FC = () => {
       {/* Header */}
       <div className="ph">
         <div className="brand">
-          <span className="logo" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
-              <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
-            </svg>
-          </span>
-          JobMate
+          <ApplyMateLogo size={28} />
+          <span style={{ fontWeight: 700, fontSize: '17px' }}>ApplyMate</span>
         </div>
         <Pill variant="i">
           {websiteInfo?.adapterName || 'Google Forms'}
@@ -371,14 +383,24 @@ export const SidePanel: React.FC = () => {
       {activeTab === 'autofill' && (
         <>
           <div className="pbody" id="pb">
-            <div className="row" style={{ gap: '6px' }}>
-              <Button size="sm" id="scan" onClick={handleScanForm} disabled={isScanning}>
-                {isScanning ? 'Scanning...' : 'Scan form'}
-              </Button>
-              <Pill variant="i">{fields.length} found</Pill>
-              <Pill variant="m">{matchedCount} matched</Pill>
-              <Pill variant="r">{reviewCount} review</Pill>
-              <Pill variant="u">{unknownCount} unknown</Pill>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Button size="sm" id="scan" onClick={() => handleScanForm()} disabled={isScanning}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  {isScanning ? 'Scanning...' : 'Scan form'}
+                </Button>
+                <Pill variant="i">{fields.length} detected</Pill>
+              </div>
+              {fields.length > 0 && (
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <Pill variant="m">{matchedCount} matched</Pill>
+                  <Pill variant="r">{reviewCount} review</Pill>
+                  <Pill variant="u">{unknownCount} unknown</Pill>
+                </div>
+              )}
             </div>
 
             {errorMessage && (
@@ -393,7 +415,7 @@ export const SidePanel: React.FC = () => {
               >
                 <p style={{ fontSize: '13px', fontWeight: 500 }}>{errorMessage}</p>
                 <div className="row" style={{ marginTop: '8px' }}>
-                  <Button size="sm" variant="soft" onClick={handleScanForm}>
+                  <Button size="sm" variant="soft" onClick={() => handleScanForm()}>
                     Retry Scan
                   </Button>
                   <Button size="sm" variant="soft" onClick={() => setActiveTab('copy')}>
@@ -409,7 +431,7 @@ export const SidePanel: React.FC = () => {
                 <p className="hint" style={{ margin: '6px 0 16px' }}>
                   Click Scan Form to detect inputs on the current application tab.
                 </p>
-                <Button size="sm" onClick={handleScanForm}>
+                <Button size="sm" onClick={() => handleScanForm()}>
                   Scan Now
                 </Button>
               </div>

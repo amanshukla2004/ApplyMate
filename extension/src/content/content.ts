@@ -2,7 +2,7 @@ import { adapterRegistry } from '../adapters/adapterRegistry';
 import { ExtensionMessage } from '../types/messaging';
 import { domScanner } from './domScanner';
 
-console.log('[JobMate] Content script loaded on:', window.location.href);
+console.log('[ApplyMate] Content script loaded on:', window.location.href);
 
 // Listen for messages from background worker or side panel
 chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
@@ -109,10 +109,10 @@ let shadowToastTimeout: any = null;
 
 function initFloatingWidget() {
   if (typeof document === 'undefined') return;
-  if (document.getElementById('jobmate-shadow-host')) return;
+  if (document.getElementById('applymate-shadow-host')) return;
 
   const host = document.createElement('div');
-  host.id = 'jobmate-shadow-host';
+  host.id = 'applymate-shadow-host';
   host.style.all = 'initial';
   host.style.position = 'fixed';
   host.style.right = '20px';
@@ -198,10 +198,12 @@ function initFloatingWidget() {
   const fab = document.createElement('button');
   fab.className = 'fab';
   fab.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true">
-      <path d="M13 2 4 14h6l-1 8 9-12h-6z"/>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3L3 21H7.5L9.5 16.5H14.5L16.5 21H21L12 3Z" fill="#ffffff"/>
+      <path d="M12 8.5L13.8 13.5H10.2L12 8.5Z" fill="#8B74F0"/>
+      <path d="M9.5 14.5L14.5 14.5L12 9.5Z" fill="#ffffff" opacity="0.9"/>
     </svg>
-    <span>JobMate Autofill</span>
+    <span>ApplyMate Autofill</span>
   `;
 
   const triggerToast = (msg: string, isError = false, onRetry?: () => void) => {

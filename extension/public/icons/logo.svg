@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="applymate-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B74F0"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#8B74F0" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#applymate-grad)" filter="url(#shadow)"/>
+  <!-- Modern Geometric "A" with upward launch trajectory -->
+  <path d="M64 24 L34 94 H48 L55 76 H73 L80 94 H94 Z M64 45 L70 64 H58 Z" fill="#ffffff"/>
+  <!-- Dynamic Launch Accent -->
+  <path d="M52 64 L78 64 L64 36 Z" fill="#8B74F0" opacity="0.3"/>
+  <path d="M66 58 L76 74 L58 74 Z" fill="#ffffff"/>
+</svg>

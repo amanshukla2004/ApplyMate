@@ -147,7 +147,7 @@ export class MessageRouter {
             jobUrl: payload?.jobUrl || (await TabManager.getActiveTab())?.url || '',
             applicationDate: now.toISOString().split('T')[0],
             status: 'Applied',
-            notes: 'Auto-recorded by JobMate on form submission',
+            notes: 'Auto-recorded by ApplyMate on form submission',
             createdAt: now.toISOString(),
             updatedAt: now.toISOString(),
           };

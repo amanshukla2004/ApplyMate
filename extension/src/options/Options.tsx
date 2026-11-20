@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Backdrop } from '../components/ui/Backdrop';
 import { Button } from '../components/ui/Button';
 import { Toast } from '../components/ui/Toast';
+import { ApplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { useTheme } from '../hooks/useTheme';
 
 import { OverviewView } from './views/OverviewView';
@@ -237,12 +238,8 @@ export const Options: React.FC = () => {
       {/* Top Header */}
       <header className="top">
         <div className="brand">
-          <span className="logo" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffffff">
-              <path d="M13 2 4 14h6l-1 8 9-12h-6z" />
-            </svg>
-          </span>
-          JobMate
+          <ApplyMateLogo size={32} />
+          <span>ApplyMate</span>
         </div>
         <div className="row">
           <Button variant="soft" size="sm" onClick={toggleCalm} aria-pressed={isCalm}>
@@ -590,7 +587,7 @@ export const Options: React.FC = () => {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = `jobmate-backup-${new Date().toISOString().split('T')[0]}.json`;
+                  a.download = `applymate-backup-${new Date().toISOString().split('T')[0]}.json`;
                   a.click();
                   URL.revokeObjectURL(url);
                   showToast('Backup exported');

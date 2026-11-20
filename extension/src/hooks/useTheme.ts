@@ -23,8 +23,14 @@ export function useTheme() {
         }
       });
     } else {
-      const savedTheme = (localStorage.getItem('jobmate_theme') as ThemeMode) || 'system';
-      const savedCalm = (localStorage.getItem('jobmate_calm') as CalmMode) || 'off';
+      const savedTheme =
+        (localStorage.getItem('applymate_theme') as ThemeMode) ||
+        (localStorage.getItem('jobmate_theme') as ThemeMode) ||
+        'system';
+      const savedCalm =
+        (localStorage.getItem('applymate_calm') as CalmMode) ||
+        (localStorage.getItem('jobmate_calm') as CalmMode) ||
+        'off';
       setThemeState(savedTheme);
       setCalmState(savedCalm);
       applyTheme(savedTheme);
@@ -56,7 +62,7 @@ export function useTheme() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set({ theme: mode });
     } else {
-      localStorage.setItem('jobmate_theme', mode);
+      localStorage.setItem('applymate_theme', mode);
     }
   };
 
@@ -76,7 +82,7 @@ export function useTheme() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.set({ calm: nextCalm });
     } else {
-      localStorage.setItem('jobmate_calm', nextCalm);
+      localStorage.setItem('applymate_calm', nextCalm);
     }
   };
 

@@ -66,7 +66,7 @@ export class TabManager {
       await new Promise((r) => setTimeout(r, 150));
       return true;
     } catch (err) {
-      console.warn('[JobMate] Script injection warning:', err);
+      console.warn('[ApplyMate] Script injection warning:', err);
       return false;
     }
   }
