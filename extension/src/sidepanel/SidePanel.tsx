@@ -189,7 +189,12 @@ export const SidePanel: React.FC = () => {
       chrome.runtime.sendMessage({ type: 'SCAN_FORM' }, (response) => {
         setIsScanning(false);
         if (chrome.runtime.lastError) {
-          setErrorMessage(chrome.runtime.lastError.message || 'Could not communicate with tab.');
+          const err = chrome.runtime.lastError.message || '';
+          setErrorMessage(
+            err.includes('Receiving end') || err.includes('connection')
+              ? 'Could not connect to the active tab. Please refresh the webpage tab (F5) once and try again.'
+              : err || 'Could not communicate with tab.'
+          );
           return;
         }
         if (!response || !response.success) {
@@ -203,6 +208,21 @@ export const SidePanel: React.FC = () => {
     } catch (err) {
       setIsScanning(false);
       setErrorMessage((err as Error).message);
+    }
+  };
+
+  const handleReloadPageAndScan = async () => {
+    setErrorMessage(null);
+    setIsScanning(true);
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        await chrome.runtime.sendMessage({ type: 'RELOAD_ACTIVE_TAB' });
+        setTimeout(() => {
+          handleScanForm();
+        }, 1500);
+      }
+    } catch {
+      setIsScanning(false);
     }
   };
 
@@ -513,6 +533,15 @@ export const SidePanel: React.FC = () => {
             <div className="flex-1">
               <span className="font-semibold block">Notice</span>
               <p>{errorMessage}</p>
+              {errorMessage.toLowerCase().includes('refresh') && (
+                <button
+                  onClick={handleReloadPageAndScan}
+                  className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-medium transition-colors text-[10.5px] shadow-sm"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Refresh Webpage & Scan
+                </button>
+              )}
             </div>
           </div>
         )}

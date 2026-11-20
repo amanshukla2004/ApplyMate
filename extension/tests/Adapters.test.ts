@@ -22,6 +22,16 @@ describe('AdapterRegistry', () => {
     expect(adapter.name).toBe('LinkedIn Easy Apply');
   });
 
+  it('detects Google Forms adapter on docs.google.com/forms', () => {
+    const adapter = adapterRegistry.getActiveAdapter('https://docs.google.com/forms/d/e/1FAIpQLSc0_xyz/viewform', document);
+    expect(adapter.name).toBe('Google Forms');
+  });
+
+  it('detects Google Forms adapter with /forms/d/e/ URL pattern', () => {
+    const adapter = adapterRegistry.getActiveAdapter('https://docs.google.com/forms/d/e/1FAIpQLSc0_buiBdUrJIDbNYwYeUzXM9US9TzAy1PQxMdd1DEU_cJGCA/viewform', document);
+    expect(adapter.name).toBe('Google Forms');
+  });
+
   it('falls back to Generic Web Form for unlisted portal domains', () => {
     const adapter = adapterRegistry.getActiveAdapter('https://startup.io/careers/apply', document);
     expect(adapter.name).toBe('Generic Web Form');

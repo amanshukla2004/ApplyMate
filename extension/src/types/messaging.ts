@@ -49,7 +49,8 @@ export type ExtensionMessage =
   | { type: 'GET_ACTIVE_TAB_INFO' }
   | { type: 'ACTIVE_TAB_INFO_RESULT'; tabId?: number; url?: string; title?: string }
   | { type: 'OPEN_SIDE_PANEL' }
-  | { type: 'OPEN_OPTIONS' };
+  | { type: 'OPEN_OPTIONS' }
+  | { type: 'RELOAD_ACTIVE_TAB' };
 
 export type MessageResponse<T = unknown> = {
   success: boolean;

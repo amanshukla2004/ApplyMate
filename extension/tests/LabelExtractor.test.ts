@@ -45,4 +45,29 @@ describe('LabelExtractor', () => {
     const label = LabelExtractor.extractLabel(input);
     expect(label).toBe('Postal Code');
   });
+
+  it('extracts label in Google Forms with space-separated aria-labelledby IDs', () => {
+    document.body.innerHTML = `
+      <div id="i1">Full Name</div>
+      <span id="i4">*</span>
+      <input id="name-input" type="text" aria-labelledby="i1 i4" />
+    `;
+    const input = document.getElementById('name-input')!;
+    const label = LabelExtractor.extractLabel(input);
+    expect(label).toBe('Full Name');
+  });
+
+  it('extracts label from Google Forms role="listitem" question card', () => {
+    document.body.innerHTML = `
+      <div role="listitem" class="Qr7Oae">
+        <div role="heading" class="M7eMe">Phone number *</div>
+        <div class="AgroD">
+          <input id="phone-gf" type="text" />
+        </div>
+      </div>
+    `;
+    const input = document.getElementById('phone-gf')!;
+    const label = LabelExtractor.extractLabel(input);
+    expect(label).toBe('Phone number');
+  });
 });

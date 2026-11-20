@@ -30,15 +30,26 @@ export class TabManager {
     }
 
     try {
-      // Test ping first
+      // Test ping first with a timeout
       const isAlive = await new Promise<boolean>((resolve) => {
-        chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
-          if (chrome.runtime.lastError || !response) {
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        });
+        let responded = false;
+        const timer = setTimeout(() => {
+          if (!responded) resolve(false);
+        }, 500);
+
+        try {
+          chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+            responded = true;
+            clearTimeout(timer);
+            if (chrome.runtime.lastError || !response) {
+              resolve(false);
+            } else {
+              resolve(true);
+            }
+          });
+        } catch {
+          resolve(false);
+        }
       });
 
       if (isAlive) {
@@ -50,8 +61,12 @@ export class TabManager {
         target: { tabId },
         files: ['content.js'],
       });
+
+      // Brief delay to allow the content script to execute and register listeners
+      await new Promise((r) => setTimeout(r, 150));
       return true;
-    } catch {
+    } catch (err) {
+      console.warn('[JobMate] Script injection warning:', err);
       return false;
     }
   }

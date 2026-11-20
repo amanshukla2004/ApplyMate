@@ -34,7 +34,7 @@ export class MessageRouter {
         if (!tab || !tab.id) {
           return {
             success: false,
-            error: 'No active job application tab found. Please open a job posting page.',
+            error: 'No active job application tab found. Please open or switch to a job posting tab.',
           };
         }
 
@@ -45,7 +45,7 @@ export class MessageRouter {
             if (chrome.runtime.lastError) {
               resolve({
                 success: false,
-                error: chrome.runtime.lastError.message || 'Failed to communicate with page',
+                error: 'Could not connect to the webpage tab. Please refresh the webpage tab (F5) once and try again.',
               });
             } else {
               resolve(response);
@@ -63,18 +63,29 @@ export class MessageRouter {
           };
         }
 
+        await TabManager.ensureContentScriptInjected(tab.id);
+
         return new Promise((resolve) => {
           chrome.tabs.sendMessage(tab.id!, message, (response) => {
             if (chrome.runtime.lastError) {
               resolve({
                 success: false,
-                error: chrome.runtime.lastError.message || 'Failed to fill fields on page',
+                error: 'Could not connect to the webpage tab. Please refresh the webpage tab (F5) once and try again.',
               });
             } else {
               resolve(response);
             }
           });
         });
+      }
+
+      case 'RELOAD_ACTIVE_TAB': {
+        const tab = await TabManager.getActiveTab();
+        if (tab && tab.id) {
+          await chrome.tabs.reload(tab.id);
+          return { success: true };
+        }
+        return { success: false, error: 'No active tab found to reload' };
       }
 
       case 'OPEN_OPTIONS': {
