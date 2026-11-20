@@ -24,8 +24,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   // Real application status counts matching ApplicationStatus
   const savedCount = applications.filter((a) => a.status === 'Saved').length;
   const appliedCount = applications.filter((a) => a.status === 'Applied').length;
-  const interviewCount = applications.filter((a) => a.status === 'Interview').length;
-  const offerCount = applications.filter((a) => a.status === 'Offer').length;
 
   const hasPersonal = Boolean(profile?.personal?.firstName && profile?.personal?.email);
 
@@ -83,10 +81,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           Applied<b>{appliedCount}</b>
         </div>
         <div className="stat" style={{ background: '#FFE9A8' }}>
-          Interview<b>{interviewCount}</b>
+          Total Tracked<b>{applications.length}</b>
         </div>
         <div className="stat" style={{ background: '#D5F5E6' }}>
-          Offer<b>{offerCount}</b>
+          Profile Ready<b>{readiness}%</b>
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ import { EducationView } from './views/EducationView';
 import { ExperienceView } from './views/ExperienceView';
 import { SkillsView } from './views/SkillsView';
 import { ProjectsView } from './views/ProjectsView';
+import { CertificatesView } from './views/CertificatesView';
 import { ResumeVaultView } from './views/ResumeVaultView';
 import { AnswerBankView } from './views/AnswerBankView';
 import { PipelineView } from './views/PipelineView';
@@ -42,6 +43,7 @@ import {
   AddressInfo,
   ProfessionalLinks,
   JobPreferences,
+  CertificateRecord,
 } from '../types/profile';
 
 type SectionId =
@@ -54,6 +56,7 @@ type SectionId =
   | 'exp'
   | 'skills'
   | 'proj'
+  | 'certs'
   | 'vault'
   | 'answers'
   | 'pipeline'
@@ -72,6 +75,7 @@ export const Options: React.FC = () => {
   const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
   const [resumeList, setResumeList] = useState<ResumeRecord[]>([]);
   const [projectList, setProjectList] = useState<ProjectRecord[]>([]);
+  const [certificateList, setCertificateList] = useState<CertificateRecord[]>([]);
   const [answerList, setAnswerList] = useState<SavedAnswer[]>([]);
   const [applicationList, setApplicationList] = useState<ApplicationRecord[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -111,6 +115,24 @@ export const Options: React.FC = () => {
       setAnswerList(ans);
       setApplicationList(apps);
       setSettings(setts);
+
+      // Load certificates from local storage
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get(['applymate_certificates'], (res) => {
+          if (res.applymate_certificates) {
+            setCertificateList(res.applymate_certificates);
+          }
+        });
+      } else {
+        const saved = localStorage.getItem('applymate_certificates');
+        if (saved) {
+          try {
+            setCertificateList(JSON.parse(saved));
+          } catch {
+            // ignore
+          }
+        }
+      }
 
       if (p.personal.phone) {
         if (p.personal.phone.startsWith('+')) {
@@ -337,6 +359,14 @@ export const Options: React.FC = () => {
             >
               Projects
             </button>
+            <button
+              type="button"
+              className="nav"
+              aria-current={activeSection === 'certs' ? 'page' : undefined}
+              onClick={() => setActiveSection('certs')}
+            >
+              Certificates
+            </button>
 
             <h3>Documents</h3>
             <button
@@ -516,6 +546,32 @@ export const Options: React.FC = () => {
                   await projectService.deleteProject(id);
                   setProjectList(await projectService.getProjects());
                   showToast('Project removed');
+                }}
+              />
+            )}
+
+            {activeSection === 'certs' && (
+              <CertificatesView
+                certificates={certificateList}
+                onSave={async (record) => {
+                  const updated = certificateList.filter((c) => c.id !== record.id).concat(record);
+                  setCertificateList(updated);
+                  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                    chrome.storage.local.set({ applymate_certificates: updated });
+                  } else {
+                    localStorage.setItem('applymate_certificates', JSON.stringify(updated));
+                  }
+                  showToast('Certificate saved');
+                }}
+                onDelete={async (id) => {
+                  const updated = certificateList.filter((c) => c.id !== id);
+                  setCertificateList(updated);
+                  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+                    chrome.storage.local.set({ applymate_certificates: updated });
+                  } else {
+                    localStorage.setItem('applymate_certificates', JSON.stringify(updated));
+                  }
+                  showToast('Certificate removed');
                 }}
               />
             )}

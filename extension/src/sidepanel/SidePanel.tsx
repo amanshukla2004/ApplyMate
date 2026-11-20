@@ -51,6 +51,29 @@ export const SidePanel: React.FC = () => {
   // Copy tab state
   const [copySearchQuery, setCopySearchQuery] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [savedToBankId, setSavedToBankId] = useState<string | null>(null);
+
+  const handleSaveToBank = async (field: DetectedField) => {
+    const val = fieldValues[field.id];
+    if (!field.label || !val) return;
+    try {
+      const category = await aiService.classifyQuestion(field.label);
+      await answerService.saveAnswer({
+        id: `ans-${Date.now()}`,
+        question: field.label,
+        answer: val,
+        category: (category as any) || 'Other',
+        tags: ['Auto-saved'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      setSavedToBankId(field.id);
+      setTimeout(() => setSavedToBankId(null), 2500);
+      setAnswers(await answerService.getAnswers());
+    } catch (err) {
+      console.warn('Failed to save to answer bank:', err);
+    }
+  };
 
   useEffect(() => {
     loadAllData();
@@ -153,6 +176,41 @@ export const SidePanel: React.FC = () => {
       if (f.canonicalField && activeProfile) {
         val = resolveProfileValue(f.canonicalField, activeProfile, activeEdu);
       }
+
+      // Intelligent Degree option mapper
+      if (f.canonicalField === 'DEGREE' && f.options && f.options.length > 0 && activeEdu[0]?.degree) {
+        const userDeg = activeEdu[0].degree.toLowerCase();
+        for (const opt of f.options) {
+          const optText = (opt.label || opt.value || '').toLowerCase();
+          if (
+            (userDeg.includes('bachelor') ||
+              userDeg.includes('b.tech') ||
+              userDeg.includes('b.e') ||
+              userDeg.includes('btech') ||
+              userDeg.includes('b.s') ||
+              userDeg.includes('bca') ||
+              userDeg.includes('undergraduate')) &&
+            optText.includes('bachelor')
+          ) {
+            val = opt.value || opt.label;
+            break;
+          }
+          if (
+            (userDeg.includes('master') ||
+              userDeg.includes('m.tech') ||
+              userDeg.includes('mtech') ||
+              userDeg.includes('mba') ||
+              userDeg.includes('mca') ||
+              userDeg.includes('m.s') ||
+              userDeg.includes('postgraduate')) &&
+            optText.includes('master')
+          ) {
+            val = opt.value || opt.label;
+            break;
+          }
+        }
+      }
+
       if (f.options && f.options.length > 0 && !val) {
         val = f.options[0].value;
       }
@@ -204,14 +262,26 @@ export const SidePanel: React.FC = () => {
         return edu[0]?.institution || '';
       case 'DEGREE':
         return edu[0]?.degree || '';
+      case 'BRANCH':
+        return edu[0]?.branch || '';
+      case 'SKILLS':
+        return skillsList.map((s) => s.name).join(', ');
       case 'CGPA':
         return edu[0]?.cgpa || '';
+      case 'GRADUATION_YEAR':
+        return edu[0]?.graduationYear?.toString() || '';
+      case 'EXPERIENCE':
+        return experienceList[0] ? `${experienceList[0].designation} at ${experienceList[0].companyName}` : '';
       case 'NOTICE_PERIOD':
         return p.preferences.noticePeriodDays || 'Immediate';
       case 'EXPECTED_CTC':
         return p.preferences.expectedCompensation || '';
       case 'CURRENT_CTC':
         return p.preferences.currentCompensation || '';
+      case 'WORK_AUTHORIZATION':
+        return p.preferences.workAuthorizationStatus || 'Authorized';
+      case 'RELOCATION':
+        return p.preferences.willingToRelocate ? 'Yes' : 'No';
       case 'GENDER':
         return p.personal.gender || '';
       case 'RACE_ETHNICITY':
@@ -441,7 +511,11 @@ export const SidePanel: React.FC = () => {
               const isChecked = selectedIds.has(field.id);
               const isFilled = filledFieldIds.has(field.id);
               const isChoice = field.options && field.options.length > 0;
-              const isLongText = field.fieldType === 'textarea' || (field.label || '').length > 35;
+              const isCheckOrRadio = field.fieldType === 'checkbox' || field.fieldType === 'radio';
+              const isNarrativePrompt = Boolean(
+                (field.label || '').toLowerCase().match(/(why|describe|tell us|about yourself|statement|cover letter|experience with|summary)/i)
+              );
+              const isLongText = (field.fieldType === 'textarea' || isNarrativePrompt) && !isCheckOrRadio && !isChoice;
               const pillVariant =
                 field.status === 'MATCHED'
                   ? 'm'
@@ -559,6 +633,27 @@ export const SidePanel: React.FC = () => {
                       >
                         {copiedKey === field.id ? 'Copied' : 'Copy'}
                       </Button>
+                    </div>
+                  )}
+
+                  {fieldValues[field.id] && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+                      <button
+                        type="button"
+                        style={{
+                          background: 'transparent',
+                          border: 0,
+                          fontSize: '11.5px',
+                          color: savedToBankId === field.id ? 'var(--m-t)' : 'var(--muted)',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          fontWeight: 600,
+                        }}
+                        onClick={() => handleSaveToBank(field)}
+                        title="Save this question and answer into your permanent Answer Bank"
+                      >
+                        {savedToBankId === field.id ? '✓ Saved to Answer Bank' : '+ Save to Bank'}
+                      </button>
                     </div>
                   )}
                 </div>

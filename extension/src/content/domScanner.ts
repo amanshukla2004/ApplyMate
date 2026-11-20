@@ -106,14 +106,16 @@ export class DOMScanner {
       }
     }
 
-    // Skip csrf/security token fields
+    // Skip csrf/security token fields and container token inputs
     const name = (el.getAttribute('name') || '').toLowerCase();
     const id = (el.getAttribute('id') || '').toLowerCase();
     if (
       name.includes('csrf') ||
       id.includes('csrf') ||
       name.includes('authenticity_token') ||
-      name.includes('captcha')
+      name.includes('captcha') ||
+      name.includes('primary questionnaire') ||
+      id.includes('primary questionnaire')
     ) {
       return true;
     }

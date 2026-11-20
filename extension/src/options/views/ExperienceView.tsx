@@ -22,14 +22,18 @@ export const ExperienceView: React.FC<ExperienceViewProps> = ({
 
   const [companyName, setCompanyName] = useState('');
   const [designation, setDesignation] = useState('');
-  const [duration, setDuration] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [currentlyWorking, setCurrentlyWorking] = useState(false);
   const [description, setDescription] = useState('');
 
   const openAdd = () => {
     setEditingItem(null);
     setCompanyName('');
     setDesignation('');
-    setDuration('');
+    setStartDate('');
+    setEndDate('');
+    setCurrentlyWorking(false);
     setDescription('');
     setFormError('');
     setModalOpen(true);
@@ -39,7 +43,9 @@ export const ExperienceView: React.FC<ExperienceViewProps> = ({
     setEditingItem(exp);
     setCompanyName(exp.companyName);
     setDesignation(exp.designation);
-    setDuration(exp.startDate ? `${exp.startDate} – ${exp.endDate || 'Present'}` : '');
+    setStartDate(exp.startDate || '');
+    setEndDate(exp.endDate || '');
+    setCurrentlyWorking(Boolean(exp.currentlyWorking || (!exp.endDate && exp.startDate)));
     setDescription(exp.description || '');
     setFormError('');
     setModalOpen(true);
@@ -52,16 +58,14 @@ export const ExperienceView: React.FC<ExperienceViewProps> = ({
       return;
     }
 
-    const parts = duration.split('–').map((s) => s.trim());
-    const isPresent = !parts[1] || parts[1].toLowerCase() === 'present';
     const record: ExperienceRecord = {
       id: editingItem?.id || `exp-${Date.now()}`,
       companyName: companyName.trim(),
       designation: designation.trim(),
       employmentType: 'Full-time',
-      startDate: parts[0] || '',
-      endDate: isPresent ? undefined : parts[1],
-      currentlyWorking: isPresent,
+      startDate: startDate.trim(),
+      endDate: currentlyWorking ? undefined : endDate.trim(),
+      currentlyWorking,
       description: description.trim(),
       technologies: editingItem?.technologies || [],
     };
@@ -146,14 +150,39 @@ export const ExperienceView: React.FC<ExperienceViewProps> = ({
               />
             </div>
             <div>
-              <label className="f" htmlFor="exp-dur">Duration</label>
-              <input
-                className="in"
-                id="exp-dur"
-                placeholder="e.g. Jun 2025 – Present"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-              />
+              <label className="f">Duration (Date Range)</label>
+              <div className="grid2" style={{ gap: '10px' }}>
+                <div>
+                  <input
+                    className="in"
+                    placeholder="Start (e.g. Jun 2022)"
+                    aria-label="Start Date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <input
+                    className="in"
+                    placeholder={currentlyWorking ? 'Present' : 'End (e.g. Jul 2024)'}
+                    aria-label="End Date"
+                    disabled={currentlyWorking}
+                    value={currentlyWorking ? 'Present' : endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '13.5px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={currentlyWorking}
+                  onChange={(e) => {
+                    setCurrentlyWorking(e.target.checked);
+                    if (e.target.checked) setEndDate('');
+                  }}
+                />
+                I currently work here
+              </label>
             </div>
             <div>
               <label className="f" htmlFor="exp-desc">Responsibilities / Highlights</label>

@@ -8,12 +8,9 @@ export interface PipelineViewProps {
   onUpdateStatus: (id: string, newStatus: ApplicationStatus) => Promise<void>;
 }
 
-const COLUMNS: { key: ApplicationStatus; label: string; pillVariant: 'i' | 'a' | 'r' | 'm' | 'u' }[] = [
+const COLUMNS: { key: ApplicationStatus; label: string; pillVariant: 'i' | 'a' }[] = [
   { key: 'Saved', label: 'Saved', pillVariant: 'i' },
   { key: 'Applied', label: 'Applied', pillVariant: 'a' },
-  { key: 'Interview', label: 'Interview', pillVariant: 'r' },
-  { key: 'Offer', label: 'Offer', pillVariant: 'm' },
-  { key: 'Rejected', label: 'Rejected', pillVariant: 'u' },
 ];
 
 export const PipelineView: React.FC<PipelineViewProps> = ({
@@ -97,7 +94,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
       </div>
 
       {viewMode === 'board' ? (
-        <div className="board">
+        <div className="board" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           {COLUMNS.map((col) => {
             const colApps = filteredApps.filter((a) => a.status === col.key);
             const isOver = overCol === col.key;

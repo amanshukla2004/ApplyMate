@@ -769,19 +769,25 @@ table.table-view th {
 
 /* Native dialog */
 dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
   border: 0;
-  padding: 24px;
-  max-width: 520px;
+  padding: 28px;
+  max-width: 540px;
   width: calc(100% - 32px);
+  max-height: 90vh;
+  overflow-y: auto;
   color: var(--ink);
   background: var(--base);
   border-radius: 24px;
   box-shadow: 0 30px 70px rgba(60, 40, 120, 0.35);
+  z-index: 1000;
 }
 
 dialog::backdrop {
-  background: rgba(43, 35, 64, 0.4);
-  backdrop-filter: blur(4px);
+  background: rgba(43, 35, 64, 0.45);
+  backdrop-filter: blur(8px);
 }
 
 @media (max-width: 980px) {

@@ -93,6 +93,15 @@ export interface ProjectRecord {
   achievements?: string;
 }
 
+export interface CertificateRecord {
+  id: string;
+  name: string;
+  issuer: string;
+  issueDate?: string;
+  credentialId?: string;
+  credentialUrl?: string;
+}
+
 export type AnswerCategory =
   | 'Personal'
   | 'Introduction'

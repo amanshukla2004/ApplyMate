@@ -71,7 +71,7 @@ export const PreferencesView: React.FC<PreferencesViewProps> = ({ preferences, o
           </div>
 
           <div>
-            <p className="f" id="wm-label">Work model preference</p>
+            <p className="f" id="wm-label">Workplace preference</p>
             <div className="choice" role="group" aria-labelledby="wm-label">
               {WORK_MODELS.map((model) => (
                 <button
@@ -84,6 +84,24 @@ export const PreferencesView: React.FC<PreferencesViewProps> = ({ preferences, o
                 </button>
               ))}
             </div>
+            <p className="hint">Fills workplace model questions (Remote / Hybrid / On-site).</p>
+          </div>
+
+          <div>
+            <label className="f" htmlFor="pref-loc">Preferred workplace locations</label>
+            <input
+              className="in"
+              id="pref-loc"
+              placeholder="e.g. Bengaluru, Remote, San Francisco"
+              value={(preferences.preferredLocations || []).join(', ')}
+              onChange={(e) =>
+                onChange(
+                  'preferredLocations',
+                  e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                )
+              }
+            />
+            <p className="hint">Comma-separated target cities or countries.</p>
           </div>
 
           <div>

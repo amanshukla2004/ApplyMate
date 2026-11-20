@@ -113,14 +113,54 @@ export const PersonalView: React.FC<PersonalViewProps> = ({
           </div>
           <div>
             <label className="f" htmlFor="race">EEO Race / Ethnicity</label>
-            <input
-              className="in"
-              id="race"
-              placeholder="e.g. Asian, Hispanic, Two or More Races"
-              value={personal.race || ''}
-              onChange={(e) => onChange('race', e.target.value)}
-            />
-            <p className="hint">Optional. Filled only when requested for US Equal Opportunity questions.</p>
+            <div className="stack" style={{ gap: '8px' }}>
+              <select
+                className="in"
+                id="race-select"
+                aria-label="Select Race or Ethnicity"
+                value={
+                  [
+                    'Asian',
+                    'Black or African American',
+                    'Hispanic or Latino',
+                    'White / Caucasian',
+                    'Native American / Alaska Native',
+                    'Native Hawaiian / Pacific Islander',
+                    'Two or More Races',
+                    'Prefer not to say',
+                  ].includes(personal.race || '')
+                    ? personal.race
+                    : personal.race
+                    ? 'Other'
+                    : ''
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val !== 'Other') {
+                    onChange('race', val);
+                  }
+                }}
+              >
+                <option value="">Select or type your own...</option>
+                <option value="Asian">Asian (Indian, Asian-American, Chinese, etc.)</option>
+                <option value="Black or African American">Black or African American</option>
+                <option value="Hispanic or Latino">Hispanic or Latino</option>
+                <option value="White / Caucasian">White / Caucasian</option>
+                <option value="Native American / Alaska Native">Native American / Alaska Native</option>
+                <option value="Native Hawaiian / Pacific Islander">Native Hawaiian / Pacific Islander</option>
+                <option value="Two or More Races">Two or More Races</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+                <option value="Other">Other / Self-describe</option>
+              </select>
+              <input
+                className="in"
+                id="race"
+                placeholder="Or type your own ethnicity (e.g. South Asian, Punjabi, etc.)"
+                value={personal.race || ''}
+                onChange={(e) => onChange('race', e.target.value)}
+              />
+            </div>
+            <p className="hint">Choose from standard EEO categories or enter your own.</p>
           </div>
         </form>
       </Card>

@@ -146,14 +146,15 @@ export const EducationView: React.FC<EducationViewProps> = ({
               />
             </div>
             <div>
-              <label className="f" htmlFor="branch">Branch / Major</label>
+              <label className="f" htmlFor="branch">Field of Study / Branch</label>
               <input
                 className="in"
                 id="branch"
-                placeholder="e.g. Computer Science"
+                placeholder="e.g. Computer Science, Information Technology"
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
               />
+              <p className="hint">Used for "Field of Study" on Workday and application forms.</p>
             </div>
             <div className="grid2">
               <div>
