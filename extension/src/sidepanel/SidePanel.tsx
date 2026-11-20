@@ -329,6 +329,10 @@ export const SidePanel: React.FC = () => {
     try {
       if (typeof chrome !== 'undefined' && chrome.runtime) {
         chrome.runtime.sendMessage({ type: 'FILL_FIELDS', values: toFill }, () => {
+          if (chrome.runtime?.lastError) {
+            // Read to prevent unchecked runtime.lastError
+            console.warn('Fill fields warning:', chrome.runtime.lastError.message);
+          }
           setIsFilling(false);
           const newlyFilled = new Set(filledFieldIds);
           targetIds.forEach((id) => newlyFilled.add(id));

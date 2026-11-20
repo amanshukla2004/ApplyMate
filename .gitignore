@@ -142,3 +142,7 @@ scratch/
 # ------------------------------------------------------------------------------
 prompt.md
 *.prompt.md
+
+# Store Publishing Guide
+CHROME_STORE_GUIDE.md
+CHROME_WEB_STORE_GUIDE.md

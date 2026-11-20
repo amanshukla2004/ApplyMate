@@ -1,4 +1,4 @@
-# JobMate – Personal Career Profile Manager & Application Copilot
+# ApplyMate – Personal Career Profile Manager & Application Copilot
 
 [![Manifest V3](https://img.shields.io/badge/Chrome%20Extension-Manifest%20V3-4285F4?logo=google-chrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -8,7 +8,7 @@
 [![Design System](https://img.shields.io/badge/Design%20System-Glassmorphism%20%26%20Tokens-8B74F0)](https://github.com/amanshukla2004/ApplyMate)
 [![Local-First](https://img.shields.io/badge/Privacy-Local--First%20%26%20Zero--Telemetry-emerald)](https://localfirstweb.dev/)
 
-> **JobMate** (ApplyMate) is an intelligent, local-first Chrome extension engineered to streamline technical job applications. It eliminates repetitive manual data entry across modern ATS platforms (Greenhouse, Lever, Workday, LinkedIn Easy Apply, and Google Forms) while enforcing strict user agency, zero telemetry, and a premium glassmorphic user experience.
+> **ApplyMate** is an intelligent, local-first Chrome extension engineered to streamline technical job applications. It eliminates repetitive manual data entry across modern ATS platforms (Greenhouse, Lever, Workday, LinkedIn Easy Apply, and Google Forms) while enforcing strict user agency, zero telemetry, and a premium glassmorphic user experience.
 
 ---
 
@@ -312,7 +312,7 @@ npm test
 npm run build
 ```
 
-### Loading into Google Chrome
+### Loading into Google Chrome (Development)
 1. Open Chrome and navigate to `chrome://extensions/`.
 2. Toggle on **Developer mode** in the upper-right corner.
 3. Click **Load unpacked** in the top-left.
@@ -320,7 +320,16 @@ npm run build
    ```text
    ApplyMate/extension/dist
    ```
-5. Pin **JobMate** to your Chrome toolbar.
+5. Pin **ApplyMate** to your Chrome toolbar.
+
+### Packaging for Chrome Web Store (Production)
+To generate a store-ready, Manifest V3 compliant `.zip` archive containing all root assets, icons, fonts, and scripts:
+
+```bash
+cd extension
+npm run package
+```
+This automatically compiles the TypeScript bundles and outputs `applymate.zip` directly in `extension/`, ready to upload to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole).
 
 ---
 

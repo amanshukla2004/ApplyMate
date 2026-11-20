@@ -14,6 +14,8 @@ export const Popup: React.FC = () => {
   const [hasResume, setHasResume] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadData() {
       try {
         const [profile, education, experience, skills, resumes] = await Promise.all([
@@ -23,6 +25,8 @@ export const Popup: React.FC = () => {
           profileService.getSkills(),
           resumeService.getResumes(),
         ]);
+
+        if (!isMounted) return;
 
         const score = profileService.calculateCompleteness(
           profile,
@@ -34,51 +38,100 @@ export const Popup: React.FC = () => {
         setReadiness(score);
         setHasResume(resumes.length > 0);
 
-        if (typeof chrome !== 'undefined' && chrome.tabs) {
+        if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
           chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!isMounted) return;
+            if (chrome.runtime?.lastError || !tabs || tabs.length === 0) {
+              return;
+            }
+
             const current = tabs[0];
             if (current?.title) {
               setActiveTabTitle(current.title.split(/[-|–•]/)[0].trim());
             }
 
-            // Ping active tab for detected field count if content script is alive
-            if (current?.id) {
-              chrome.tabs.sendMessage(current.id, { type: 'PING' }, (pong) => {
-                if (pong) {
-                  chrome.tabs.sendMessage(current.id!, { type: 'SCAN_FORM' }, (res) => {
-                    if (res?.data?.fields) {
-                      setDetectedCount(res.data.fields.length);
-                    }
-                  });
-                }
-              });
+            // Only attempt content script messaging on valid http/https webpages
+            const url = current?.url || '';
+            const isWebPage = url.startsWith('http://') || url.startsWith('https://');
+
+            if (!isWebPage || !current?.id) {
+              return;
             }
+
+            // Ping active tab safely, ignoring connection errors on un-injected tabs
+            chrome.tabs.sendMessage(current.id, { type: 'PING' }, (pong) => {
+              if (chrome.runtime?.lastError || !isMounted) {
+                // Ignore runtime.lastError to prevent uncaught popup errors
+                return;
+              }
+
+              if (pong) {
+                chrome.tabs.sendMessage(current.id!, { type: 'SCAN_FORM' }, (res) => {
+                  if (chrome.runtime?.lastError || !isMounted) {
+                    return;
+                  }
+                  if (res?.data?.fields) {
+                    setDetectedCount(res.data.fields.length);
+                  }
+                });
+              }
+            });
           });
         }
       } catch (err) {
-        console.error('Failed to load popup data', err);
+        console.warn('Failed to load popup data', err);
       }
     }
 
     loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const openSidePanel = async () => {
-    if (typeof chrome !== 'undefined' && chrome.sidePanel) {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab?.id) {
-        await chrome.sidePanel.open({ tabId: tab.id });
-        window.close();
+    try {
+      if (typeof chrome !== 'undefined' && chrome.sidePanel) {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.id) {
+          try {
+            await chrome.sidePanel.open({ tabId: tab.id });
+          } catch (tabErr) {
+            if (tab.windowId) {
+              await chrome.sidePanel.open({ windowId: tab.windowId });
+            } else {
+              throw tabErr;
+            }
+          }
+          window.close();
+          return;
+        }
       }
-    } else {
       window.open('sidepanel.html', '_blank');
+    } catch (err) {
+      console.warn('Could not open side panel natively:', err);
+      try {
+        if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+          window.open(chrome.runtime.getURL('sidepanel.html'), '_blank');
+        } else {
+          window.open('sidepanel.html', '_blank');
+        }
+      } catch {
+        // Silently handle
+      }
     }
   };
 
   const openOptions = () => {
-    if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    } else {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
+        chrome.runtime.openOptionsPage();
+      } else {
+        window.open('options.html', '_blank');
+      }
+    } catch (err) {
+      console.warn('Failed to open options page:', err);
       window.open('options.html', '_blank');
     }
   };
