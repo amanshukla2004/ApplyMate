@@ -150,6 +150,8 @@ export const SidePanel: React.FC = () => {
         return profile.preferences.expectedCompensation || '';
       case 'GENDER':
         return profile.personal.gender || '';
+      case 'RACE_ETHNICITY':
+        return profile.personal.race || '';
       default:
         return '';
     }
@@ -364,6 +366,8 @@ export const SidePanel: React.FC = () => {
           { label: 'Email Address', value: profile.personal.email },
           { label: 'Phone Number', value: profile.personal.phone },
           { label: 'Date of Birth', value: profile.personal.dateOfBirth || '' },
+          { label: 'Gender', value: profile.personal.gender || '' },
+          { label: 'Race / Ethnicity', value: profile.personal.race || '' },
         ],
       },
       {

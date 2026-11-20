@@ -75,6 +75,14 @@ export class GoogleFormsAdapter implements FormAdapter {
             f.canonicalField = 'NOTICE_PERIOD';
             f.confidence = 1.0;
             f.status = 'MATCHED';
+          } else if (lower.includes('gender') || lower.includes('sex')) {
+            f.canonicalField = 'GENDER';
+            f.confidence = 1.0;
+            f.status = 'MATCHED';
+          } else if (lower.includes('race') || lower.includes('ethnicity')) {
+            f.canonicalField = 'RACE_ETHNICITY';
+            f.confidence = 1.0;
+            f.status = 'MATCHED';
           }
         }
       }
