@@ -9,12 +9,24 @@ export class LabelExtractor {
       return this.cleanLabel(ariaLabel);
     }
 
-    // 2. Check aria-labelledby
+    // 2. Check aria-labelledby (handles single ID or multiple space-separated IDs like in Google Forms)
     const ariaLabelledBy = element.getAttribute('aria-labelledby');
     if (ariaLabelledBy) {
-      const labelEl = document.getElementById(ariaLabelledBy);
-      if (labelEl && labelEl.textContent) {
-        return this.cleanLabel(labelEl.textContent);
+      const ids = ariaLabelledBy.split(/\s+/).filter(Boolean);
+      const parts = ids
+        .map((id) => document.getElementById(id)?.textContent?.trim())
+        .filter(Boolean);
+      if (parts.length > 0) {
+        return this.cleanLabel(parts.join(' '));
+      }
+    }
+
+    // 2b. Check Google Forms and ATS question container (role="listitem" or .Qr7Oae)
+    const formItem = element.closest('[role="listitem"], .Qr7Oae, .freebirdFormviewerViewNumberedItemContainer');
+    if (formItem) {
+      const heading = formItem.querySelector('[role="heading"], .M7eMe, .HoGqGc');
+      if (heading && heading.textContent && heading.textContent.trim()) {
+        return this.cleanLabel(heading.textContent);
       }
     }
 

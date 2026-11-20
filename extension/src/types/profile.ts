@@ -8,6 +8,7 @@ export interface PersonalInfo {
   alternatePhone?: string;
   dateOfBirth?: string;
   gender?: string;
+  race?: string;
 }
 
 export interface AddressInfo {

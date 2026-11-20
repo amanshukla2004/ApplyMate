@@ -13,22 +13,36 @@ import {
   RefreshCw,
   BookmarkPlus,
   HelpCircle,
+  ClipboardList,
+  Search,
+  ArrowRight,
 } from 'lucide-react';
 import { DetectedField, WebsiteMetadata } from '../types/messaging';
+import { ApplicationField, CANONICAL_FIELDS } from '../types/canonicalFields';
 import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
 import { answerService } from '../services/answerService';
 import { applicationService } from '../services/applicationService';
 import { aiService } from '../services/ai/aiService';
-import { UserProfile, ResumeRecord, SavedAnswer } from '../types/profile';
+import {
+  UserProfile,
+  ResumeRecord,
+  SavedAnswer,
+  EducationRecord,
+  ExperienceRecord,
+  SkillItem,
+} from '../types/profile';
 
-type TabType = 'autofill' | 'resumes' | 'ai' | 'answers';
+type TabType = 'autofill' | 'quickcopy' | 'resumes' | 'ai' | 'answers';
 
 export const SidePanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('autofill');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [resumes, setResumes] = useState<ResumeRecord[]>([]);
   const [answers, setAnswers] = useState<SavedAnswer[]>([]);
+  const [educationList, setEducationList] = useState<EducationRecord[]>([]);
+  const [experienceList, setExperienceList] = useState<ExperienceRecord[]>([]);
+  const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
 
   // Scanning & Autofill state
   const [isScanning, setIsScanning] = useState(false);
@@ -40,6 +54,9 @@ export const SidePanel: React.FC = () => {
   const [websiteInfo, setWebsiteInfo] = useState<WebsiteMetadata | null>(null);
   const [fillResults, setFillResults] = useState<{ total: number; success: number; failed: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Quick Copy search query
+  const [copySearchQuery, setCopySearchQuery] = useState('');
 
   // AI Copilot state
   const [customQuestion, setCustomQuestion] = useState('');
@@ -56,14 +73,20 @@ export const SidePanel: React.FC = () => {
 
   async function loadAllData() {
     try {
-      const [p, r, a] = await Promise.all([
+      const [p, r, a, edu, exp, sk] = await Promise.all([
         profileService.getProfile(),
         resumeService.getResumes(),
         answerService.getAnswers(),
+        profileService.getEducation(),
+        profileService.getExperience(),
+        profileService.getSkills(),
       ]);
       setProfile(p);
       setResumes(r);
       setAnswers(a);
+      setEducationList(edu);
+      setExperienceList(exp);
+      setSkillsList(sk);
     } catch (err) {
       console.error('Failed to load profile data', err);
     }
@@ -101,8 +124,22 @@ export const SidePanel: React.FC = () => {
         return profile.links.githubUrl;
       case 'PORTFOLIO_URL':
         return profile.links.portfolioUrl || '';
+      case 'COLLEGE':
+        return educationList[0]?.institution || '';
+      case 'DEGREE':
+        return educationList[0]?.degree || '';
+      case 'BRANCH':
+        return educationList[0]?.branch || '';
+      case 'CGPA':
+        return educationList[0]?.cgpa || '';
+      case 'GRADUATION_YEAR':
+        return educationList[0]?.graduationYear || '';
+      case 'EXPERIENCE':
+        return experienceList[0]?.companyName ? `${experienceList.length} role(s)` : '';
+      case 'SKILLS':
+        return skillsList.map((s) => s.name).join(', ');
       case 'WORK_AUTHORIZATION':
-        return profile.preferences.workAuthorizationStatus || 'Yes';
+        return profile.preferences.workAuthorizationStatus || 'Authorized to work';
       case 'RELOCATION':
         return profile.preferences.willingToRelocate ? 'Yes' : 'No';
       case 'NOTICE_PERIOD':
@@ -175,7 +212,7 @@ export const SidePanel: React.FC = () => {
     const selected = new Set<string>();
 
     for (const f of scannedFields) {
-      if (f.fieldType === 'file') continue; // File inputs filled via user selection
+      if (f.fieldType === 'file') continue;
       const val = resolveProfileValue(f.canonicalField);
       if (val) {
         values[f.id] = val;
@@ -194,6 +231,33 @@ export const SidePanel: React.FC = () => {
       else next.add(id);
       return next;
     });
+  };
+
+  // Manual Mapping for unrecognized fields
+  const handleMapField = (fieldId: string, canonical: ApplicationField | '') => {
+    if (!canonical) return;
+    const value = resolveProfileValue(canonical);
+
+    setFields((prev) =>
+      prev.map((f) => {
+        if (f.id === fieldId) {
+          return {
+            ...f,
+            canonicalField: canonical,
+            status: 'MATCHED',
+            confidence: 1.0,
+          };
+        }
+        return f;
+      })
+    );
+
+    setFieldValues((prev) => ({
+      ...prev,
+      [fieldId]: value,
+    }));
+
+    setSelectedFieldIds((prev) => new Set([...prev, fieldId]));
   };
 
   const handleFillFields = async (onlySelected: boolean) => {
@@ -217,7 +281,6 @@ export const SidePanel: React.FC = () => {
     }
 
     if (typeof chrome === 'undefined' || !chrome.runtime) {
-      // Standalone mock
       setTimeout(() => {
         setIsFilling(false);
         setFillResults({
@@ -254,6 +317,7 @@ export const SidePanel: React.FC = () => {
   };
 
   const handleCopy = (text: string, key: string) => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
@@ -286,6 +350,62 @@ export const SidePanel: React.FC = () => {
       window.open('options.html', '_blank');
     }
   };
+
+  // Build full profile key-value catalogue for Quick Copy tab
+  const quickCopyCatalog = useMemo(() => {
+    if (!profile) return [];
+    return [
+      {
+        category: 'Personal Details',
+        items: [
+          { label: 'Full Name', value: profile.personal.fullName || `${profile.personal.firstName} ${profile.personal.lastName}`.trim() },
+          { label: 'First Name', value: profile.personal.firstName },
+          { label: 'Last Name', value: profile.personal.lastName },
+          { label: 'Email Address', value: profile.personal.email },
+          { label: 'Phone Number', value: profile.personal.phone },
+          { label: 'Date of Birth', value: profile.personal.dateOfBirth || '' },
+        ],
+      },
+      {
+        category: 'Address Details',
+        items: [
+          { label: 'Street Address', value: profile.address.addressLine1 },
+          { label: 'City', value: profile.address.city },
+          { label: 'State / Province', value: profile.address.state },
+          { label: 'Postal / Zip Code', value: profile.address.postalCode },
+          { label: 'Country', value: profile.address.country },
+        ],
+      },
+      {
+        category: 'Professional Links',
+        items: [
+          { label: 'LinkedIn Profile', value: profile.links.linkedInUrl },
+          { label: 'GitHub Profile', value: profile.links.githubUrl },
+          { label: 'Portfolio / Website', value: profile.links.portfolioUrl || '' },
+        ],
+      },
+      {
+        category: 'Education',
+        items: [
+          { label: 'College / University', value: educationList[0]?.institution || '' },
+          { label: 'Degree', value: educationList[0]?.degree || '' },
+          { label: 'Branch / Specialization', value: educationList[0]?.branch || '' },
+          { label: 'CGPA / Percentage', value: educationList[0]?.cgpa || '' },
+          { label: 'Graduation Year', value: educationList[0]?.graduationYear || '' },
+        ],
+      },
+      {
+        category: 'Employment Preferences',
+        items: [
+          { label: 'Notice Period', value: profile.preferences.noticePeriodDays || 'Immediate' },
+          { label: 'Expected Compensation', value: profile.preferences.expectedCompensation || '' },
+          { label: 'Work Authorization', value: profile.preferences.workAuthorizationStatus || 'Authorized to work' },
+          { label: 'Willing to Relocate', value: profile.preferences.willingToRelocate ? 'Yes' : 'No' },
+          { label: 'Key Skills', value: skillsList.map((s) => s.name).join(', ') },
+        ],
+      },
+    ];
+  }, [profile, educationList, skillsList]);
 
   // Stats
   const matchedCount = useMemo(() => fields.filter((f) => f.status === 'MATCHED').length, [fields]);
@@ -322,10 +442,10 @@ export const SidePanel: React.FC = () => {
       </header>
 
       {/* Navigation Tabs */}
-      <nav className="flex border-b border-slate-200 bg-white px-2 shrink-0">
+      <nav className="flex border-b border-slate-200 bg-white px-1.5 shrink-0">
         <button
           onClick={() => setActiveTab('autofill')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-xs flex items-center justify-center gap-1.5 transition ${
+          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
             activeTab === 'autofill'
               ? 'border-indigo-600 text-indigo-600 font-semibold'
               : 'border-transparent text-slate-600 hover:text-slate-800'
@@ -335,8 +455,19 @@ export const SidePanel: React.FC = () => {
           Autofill
         </button>
         <button
+          onClick={() => setActiveTab('quickcopy')}
+          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
+            activeTab === 'quickcopy'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          <ClipboardList className="w-3.5 h-3.5 text-indigo-600" />
+          Quick Copy
+        </button>
+        <button
           onClick={() => setActiveTab('resumes')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-xs flex items-center justify-center gap-1.5 transition ${
+          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
             activeTab === 'resumes'
               ? 'border-indigo-600 text-indigo-600 font-semibold'
               : 'border-transparent text-slate-600 hover:text-slate-800'
@@ -347,18 +478,18 @@ export const SidePanel: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('ai')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-xs flex items-center justify-center gap-1.5 transition ${
+          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
             activeTab === 'ai'
               ? 'border-indigo-600 text-indigo-600 font-semibold'
               : 'border-transparent text-slate-600 hover:text-slate-800'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-          AI Copilot
+          AI
         </button>
         <button
           onClick={() => setActiveTab('answers')}
-          className={`flex-1 py-2 text-center font-medium border-b-2 text-xs flex items-center justify-center gap-1.5 transition ${
+          className={`flex-1 py-2 text-center font-medium border-b-2 text-[11px] flex items-center justify-center gap-1 transition ${
             activeTab === 'answers'
               ? 'border-indigo-600 text-indigo-600 font-semibold'
               : 'border-transparent text-slate-600 hover:text-slate-800'
@@ -443,6 +574,21 @@ export const SidePanel: React.FC = () => {
               )}
             </div>
 
+            {/* Quick Copy Fallback Banner */}
+            <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-2 text-indigo-900">
+                <ClipboardList className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>Need to copy fields manually?</span>
+              </div>
+              <button
+                onClick={() => setActiveTab('quickcopy')}
+                className="text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-0.5 text-[11px]"
+              >
+                <span>Quick Copy</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+
             {/* Field Inspection Checklist */}
             {fields.length > 0 ? (
               <div className="space-y-2">
@@ -464,7 +610,7 @@ export const SidePanel: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {fields.map((field) => {
                     const isSelected = selectedFieldIds.has(field.id);
                     const isEditing = editingFieldId === field.id;
@@ -507,6 +653,26 @@ export const SidePanel: React.FC = () => {
                               )}
                             </div>
 
+                            {/* Dropdown to manually map unrecognized fields */}
+                            {!field.canonicalField && (
+                              <div className="my-1">
+                                <select
+                                  onChange={(e) => handleMapField(field.id, e.target.value as ApplicationField)}
+                                  className="w-full text-[10px] p-1 border border-indigo-200 rounded bg-indigo-50/50 text-indigo-900 font-medium"
+                                  defaultValue=""
+                                >
+                                  <option value="" disabled>
+                                    ⚡ Map this field to your profile...
+                                  </option>
+                                  {Object.values(CANONICAL_FIELDS).map((def) => (
+                                    <option key={def.id} value={def.id}>
+                                      {def.displayLabel}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
                             {/* Proposed Autofill Value */}
                             {field.fieldType === 'file' ? (
                               <p className="text-[11px] text-indigo-600 font-medium">
@@ -537,7 +703,7 @@ export const SidePanel: React.FC = () => {
                                     currentValue ? 'text-slate-800 font-medium' : 'text-slate-400 italic'
                                   }`}
                                 >
-                                  {currentValue || 'No saved profile value'}
+                                  {currentValue || 'No value assigned'}
                                 </span>
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
@@ -551,12 +717,14 @@ export const SidePanel: React.FC = () => {
                                     <button
                                       onClick={() => handleCopy(currentValue, field.id)}
                                       title="Copy value"
-                                      className="p-0.5 text-slate-400 hover:text-indigo-600 rounded"
+                                      className="p-1 text-slate-400 hover:text-indigo-600 rounded flex items-center gap-0.5 text-[9px] font-semibold"
                                     >
                                       {copiedKey === field.id ? (
-                                        <Check className="w-3 h-3 text-emerald-600" />
+                                        <span className="text-emerald-600 font-bold">✓ Copied</span>
                                       ) : (
-                                        <Copy className="w-3 h-3" />
+                                        <>
+                                          <Copy className="w-3 h-3" /> Copy
+                                        </>
                                       )}
                                     </button>
                                   )}
@@ -589,13 +757,101 @@ export const SidePanel: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: RESUMES */}
+        {/* TAB 2: QUICK COPY (MANUAL COPY / PASTE CATALOG) */}
+        {activeTab === 'quickcopy' && (
+          <div className="space-y-3">
+            <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs space-y-2.5">
+              <div>
+                <h3 className="font-semibold text-slate-800 text-xs">📋 1-Click Profile Copy</h3>
+                <p className="text-[11px] text-slate-500">
+                  Easily copy any of your profile details with 1 click to paste into forms that don't allow automatic scanning.
+                </p>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+                <input
+                  type="text"
+                  placeholder="Filter fields e.g. Phone, Email, Address..."
+                  value={copySearchQuery}
+                  onChange={(e) => setCopySearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-2.5 py-1.5 text-[11px] border border-slate-300 rounded-lg focus:outline-indigo-500"
+                />
+              </div>
+
+              {/* Catalog Groups */}
+              <div className="space-y-3 pt-1">
+                {quickCopyCatalog.map((group) => {
+                  const filteredItems = group.items.filter((item) =>
+                    !copySearchQuery
+                      ? true
+                      : item.label.toLowerCase().includes(copySearchQuery.toLowerCase()) ||
+                        item.value.toLowerCase().includes(copySearchQuery.toLowerCase())
+                  );
+
+                  if (filteredItems.length === 0) return null;
+
+                  return (
+                    <div key={group.category} className="space-y-1.5">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                        {group.category}
+                      </span>
+                      <div className="space-y-1">
+                        {filteredItems.map((item) => (
+                          <div
+                            key={item.label}
+                            className="p-2 bg-slate-50 hover:bg-indigo-50/40 border border-slate-200/90 rounded-lg flex items-center justify-between gap-2 transition"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[10px] text-slate-500 block leading-tight font-medium">
+                                {item.label}
+                              </span>
+                              <span
+                                className={`text-[11px] font-semibold truncate block ${
+                                  item.value ? 'text-slate-800' : 'text-slate-400 italic'
+                                }`}
+                              >
+                                {item.value || 'Not configured in profile'}
+                              </span>
+                            </div>
+
+                            {item.value && (
+                              <button
+                                onClick={() => handleCopy(item.value, item.label)}
+                                className="px-2 py-1 rounded bg-white hover:bg-indigo-600 hover:text-white border border-slate-200 text-slate-700 text-[10px] font-semibold flex items-center gap-1 shrink-0 shadow-2xs transition active:scale-95"
+                              >
+                                {copiedKey === item.label ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-emerald-600" />
+                                    <span>Copied!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: RESUMES */}
         {activeTab === 'resumes' && (
           <div className="space-y-3">
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs">
               <h3 className="font-semibold text-slate-800 text-xs mb-1">Saved Resumes</h3>
               <p className="text-[11px] text-slate-500 mb-3">
-                Browser security prevents automated local file attachment without user consent. Select a resume below to prepare it for upload.
+                Select a resume below to download and prepare it for upload into the job form.
               </p>
 
               {resumes.length > 0 ? (
@@ -655,7 +911,7 @@ export const SidePanel: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: AI COPILOT */}
+        {/* TAB 4: AI COPILOT */}
         {activeTab === 'ai' && (
           <div className="space-y-3">
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs space-y-2.5">
@@ -720,7 +976,7 @@ export const SidePanel: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 4: ANSWER BANK */}
+        {/* TAB 5: ANSWER BANK */}
         {activeTab === 'answers' && (
           <div className="space-y-3">
             <div className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-xs space-y-2">

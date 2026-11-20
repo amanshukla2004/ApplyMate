@@ -28,6 +28,7 @@ export type ApplicationField =
   | 'RESUME'
   | 'COVER_LETTER'
   | 'GENDER'
+  | 'RACE_ETHNICITY'
   | 'HEARD_ABOUT_US';
 
 export interface CanonicalFieldDefinition {
@@ -270,7 +271,15 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     displayLabel: 'Gender (Optional)',
     category: 'personal',
     dataType: 'select',
-    aliases: ['gender', 'sex'],
+    aliases: ['gender', 'sex', 'gender identity'],
+    sensitive: true,
+  },
+  RACE_ETHNICITY: {
+    id: 'RACE_ETHNICITY',
+    displayLabel: 'Race / Ethnicity (Optional)',
+    category: 'personal',
+    dataType: 'select',
+    aliases: ['race', 'ethnicity', 'race/ethnicity', 'ethnic origin', 'racial background', 'demographic race', 'ethnic background'],
     sensitive: true,
   },
   HEARD_ABOUT_US: {
