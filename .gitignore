@@ -1,0 +1,144 @@
+# ==============================================================================
+# ApplyMate / JobMate .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Dependencies & Package Managers
+# ------------------------------------------------------------------------------
+node_modules/
+**/node_modules/
+.pnp/
+.pnp.js
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# ------------------------------------------------------------------------------
+# Build & Distribution Artifacts
+# ------------------------------------------------------------------------------
+dist/
+**/dist/
+build/
+**/build/
+out/
+**/out/
+*.tsbuildinfo
+.vite/
+**/.vite/
+.parcel-cache/
+.turbo/
+
+# Chrome Extension Packaged Archives
+*.crx
+*.xpi
+*.zip
+
+# ------------------------------------------------------------------------------
+# Testing, Coverage & Reports
+# ------------------------------------------------------------------------------
+coverage/
+**/coverage/
+.vitest/
+**/.vitest/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.nyc_output/
+
+# ------------------------------------------------------------------------------
+# Logs & Process Outputs
+# ------------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ------------------------------------------------------------------------------
+# Environment Variables, Secrets & Certificates
+# ------------------------------------------------------------------------------
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+secrets.json
+api-keys.json
+config.local.json
+
+# ------------------------------------------------------------------------------
+# Database & Local Storage Files
+# ------------------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.dump
+
+# ------------------------------------------------------------------------------
+# Backend Artifacts (Java / Spring Boot / Maven - Future Phase)
+# ------------------------------------------------------------------------------
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/wrapper/maven-wrapper.jar
+.gradle/
+
+# ------------------------------------------------------------------------------
+# Editor, IDE & System Files
+# ------------------------------------------------------------------------------
+# Visual Studio Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+*.code-workspace
+
+# JetBrains / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Other Editors & System
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+.DS_Store
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+desktop.ini
+
+# ------------------------------------------------------------------------------
+# Temporary, Cache & Scratch Files
+# ------------------------------------------------------------------------------
+.eslintcache
+.stylelintcache
+*.tmp
+*.temp
+scratch/
+**/scratch/
+.system_generated/
+
+# ------------------------------------------------------------------------------
+# Specification & Private Prompts
+# ------------------------------------------------------------------------------
+prompt.md
+*.prompt.md
+
+*.prompt.md
