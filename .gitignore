@@ -138,10 +138,12 @@ scratch/
 .system_generated/
 
 # ------------------------------------------------------------------------------
-# Specification & Private Prompts
+# Specification & Private Prompts / Internal Architecture
 # ------------------------------------------------------------------------------
 prompt.md
 *.prompt.md
+CODEBASE_ARCHITECTURE_LLD.md
+finishedProduct.md
 
 # Store Publishing Guide
 CHROME_STORE_GUIDE.md

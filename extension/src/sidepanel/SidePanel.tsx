@@ -237,7 +237,7 @@ export const SidePanel: React.FC = () => {
       case 'LAST_NAME':
         return p.personal.lastName || '';
       case 'FULL_NAME':
-        return `${p.personal.firstName || ''} ${p.personal.lastName || ''}`.trim();
+        return p.personal.fullName || `${p.personal.firstName || ''} ${p.personal.lastName || ''}`.trim();
       case 'EMAIL':
         return p.personal.email || '';
       case 'PHONE':

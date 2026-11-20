@@ -111,6 +111,12 @@ function initFloatingWidget() {
   if (typeof document === 'undefined') return;
   if (document.getElementById('applymate-shadow-host')) return;
 
+  // Don't mount widget on pages without interactive forms/inputs
+  const hasInputs = document.querySelector(
+    'input:not([type="hidden"]):not([type="search"]), textarea, select, [role="textbox"]'
+  );
+  if (!hasInputs) return;
+
   const host = document.createElement('div');
   host.id = 'applymate-shadow-host';
   host.style.all = 'initial';
@@ -367,14 +373,46 @@ function initSubmitDetection() {
   );
 }
 
+function extractCompanyName(): string {
+  const host = window.location.hostname.toLowerCase();
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+
+  if (host.includes('greenhouse.io') || host.includes('lever.co')) {
+    if (pathParts.length > 0 && pathParts[0] !== 'jobs' && pathParts[0] !== 'apply') {
+      return pathParts[0].charAt(0).toUpperCase() + pathParts[0].slice(1);
+    }
+  }
+
+  if (host.includes('myworkdayjobs.com')) {
+    const sub = host.split('.')[0];
+    return sub.charAt(0).toUpperCase() + sub.slice(1);
+  }
+
+  // Generic: strip common prefixes
+  const cleanHost = host.replace(/^(www|careers|jobs|app)\./, '');
+  const mainDomain = cleanHost.split('.')[0];
+  if (mainDomain && mainDomain !== 'docs' && mainDomain !== 'forms') {
+    return mainDomain.charAt(0).toUpperCase() + mainDomain.slice(1);
+  }
+
+  // Fallback: title splitting
+  const titleParts = document.title.split(/[-|–•]/);
+  if (titleParts.length > 1) {
+    const candidate = titleParts[titleParts.length - 1].trim();
+    if (candidate.length < 30) return candidate;
+  }
+
+  return 'Company';
+}
+
 function recordApplicationOnSubmit() {
   try {
     const jobTitle = document.title.split(/[-|–•]/)[0].trim() || 'Software Engineer';
-    const companyName = window.location.hostname.replace('www.', '').split('.')[0];
+    const companyName = extractCompanyName();
     chrome.runtime.sendMessage({
       type: 'RECORD_APPLICATION',
       data: {
-        companyName: companyName.charAt(0).toUpperCase() + companyName.slice(1),
+        companyName,
         jobTitle,
         jobUrl: window.location.href,
       },

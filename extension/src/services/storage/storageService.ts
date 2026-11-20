@@ -10,6 +10,7 @@ import {
   SavedAnswer,
   ApplicationRecord,
   AppSettings,
+  CertificateRecord,
 } from '../../types/profile';
 
 export interface ExportData {
@@ -19,6 +20,7 @@ export interface ExportData {
   education: EducationRecord[];
   experience: ExperienceRecord[];
   skills: SkillItem[];
+  certificates?: CertificateRecord[];
   resumes: Omit<ResumeRecord, 'blobData'>[];
   projects: ProjectRecord[];
   answers: SavedAnswer[];
@@ -38,6 +40,23 @@ export class StorageService {
     const applications = await indexedDBClient.getAll<ApplicationRecord>(STORES.APPLICATIONS);
     const settings = await chromeStorageClient.getSettings();
 
+    // Fetch certificates
+    let certificates: CertificateRecord[] = [];
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      certificates = await new Promise<CertificateRecord[]>((resolve) => {
+        chrome.storage.local.get(['applymate_certificates'], (res) => {
+          resolve(res.applymate_certificates || []);
+        });
+      });
+    } else {
+      try {
+        const raw = localStorage.getItem('applymate_certificates');
+        if (raw) certificates = JSON.parse(raw);
+      } catch {
+        // ignore
+      }
+    }
+
     // Strip blobData from exported JSON
     const sanitizedResumes = resumes.map((r) => {
       const { blobData: _, ...rest } = r;
@@ -51,6 +70,7 @@ export class StorageService {
       education,
       experience,
       skills,
+      certificates,
       resumes: sanitizedResumes,
       projects,
       answers,
@@ -78,6 +98,15 @@ export class StorageService {
         await indexedDBClient.put(STORES.SKILLS, item);
       }
     }
+    if (data.certificates && Array.isArray(data.certificates)) {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        await new Promise<void>((resolve) => {
+          chrome.storage.local.set({ applymate_certificates: data.certificates }, () => resolve());
+        });
+      } else {
+        localStorage.setItem('applymate_certificates', JSON.stringify(data.certificates));
+      }
+    }
     if (data.projects && Array.isArray(data.projects)) {
       for (const item of data.projects) {
         await indexedDBClient.put(STORES.PROJECTS, item);
@@ -102,6 +131,11 @@ export class StorageService {
   async wipeAllData(): Promise<void> {
     await indexedDBClient.clearAllStores();
     await chromeStorageClient.clearSettings();
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.remove(['applymate_certificates']);
+    } else {
+      localStorage.removeItem('applymate_certificates');
+    }
   }
 }
 
