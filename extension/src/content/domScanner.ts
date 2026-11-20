@@ -11,6 +11,13 @@ export class DOMScanner {
     return this.elementRegistry.get(fieldId);
   }
 
+  registerElement(el: HTMLElement, customFieldId?: string): string {
+    this.counter++;
+    const fieldId = customFieldId || `jm-field-${this.counter}`;
+    this.elementRegistry.set(fieldId, el);
+    return fieldId;
+  }
+
   scan(): DetectedField[] {
     this.elementRegistry.clear();
     this.counter = 0;

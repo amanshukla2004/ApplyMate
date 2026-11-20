@@ -1,5 +1,8 @@
 import { TabManager } from './tabManager';
 import { ExtensionMessage } from '../types/messaging';
+import { profileService } from '../services/profileService';
+import { applicationService } from '../services/applicationService';
+import { ApplicationRecord } from '../types/profile';
 
 export class MessageRouter {
   static init(): void {
@@ -93,6 +96,58 @@ export class MessageRouter {
           chrome.runtime.openOptionsPage();
         }
         return { success: true };
+      }
+
+      case 'OPEN_SIDE_PANEL': {
+        const tab = await TabManager.getActiveTab();
+        if (tab && tab.id && chrome.sidePanel && chrome.sidePanel.open) {
+          try {
+            await chrome.sidePanel.open({ tabId: tab.id });
+            return { success: true };
+          } catch (err) {
+            return { success: false, error: (err as Error).message };
+          }
+        }
+        return { success: false, error: 'Side panel open not supported' };
+      }
+
+      case 'GET_USER_PROFILE': {
+        try {
+          const [profile, edu, exp, skills] = await Promise.all([
+            profileService.getProfile(),
+            profileService.getEducation(),
+            profileService.getExperience(),
+            profileService.getSkills(),
+          ]);
+          return {
+            success: true,
+            data: { profile, edu, exp, skills },
+          };
+        } catch (err) {
+          return { success: false, error: (err as Error).message };
+        }
+      }
+
+      case 'RECORD_APPLICATION': {
+        try {
+          const payload = (message as { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string } }).data;
+          const now = new Date();
+          const newApp: ApplicationRecord = {
+            id: `app_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            companyName: payload?.companyName || 'Company',
+            jobTitle: payload?.jobTitle || 'Role',
+            jobUrl: payload?.jobUrl || (await TabManager.getActiveTab())?.url || '',
+            applicationDate: now.toISOString().split('T')[0],
+            status: 'Applied',
+            notes: 'Auto-recorded by JobMate on form submission',
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+          };
+          await applicationService.saveApplication(newApp);
+          return { success: true, data: newApp };
+        } catch (err) {
+          return { success: false, error: (err as Error).message };
+        }
       }
 
       default:

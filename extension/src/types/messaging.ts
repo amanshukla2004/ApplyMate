@@ -50,7 +50,9 @@ export type ExtensionMessage =
   | { type: 'ACTIVE_TAB_INFO_RESULT'; tabId?: number; url?: string; title?: string }
   | { type: 'OPEN_SIDE_PANEL' }
   | { type: 'OPEN_OPTIONS' }
-  | { type: 'RELOAD_ACTIVE_TAB' };
+  | { type: 'RELOAD_ACTIVE_TAB' }
+  | { type: 'GET_USER_PROFILE' }
+  | { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string } };
 
 export type MessageResponse<T = unknown> = {
   success: boolean;

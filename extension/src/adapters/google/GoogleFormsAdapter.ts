@@ -9,7 +9,8 @@ export class GoogleFormsAdapter implements FormAdapter {
     return (
       url.includes('docs.google.com/forms') ||
       url.includes('/forms/d/e/') ||
-      !!doc.querySelector('.freebirdFormviewerViewFormCard, [role="listitem"] .M7eMe, form[action*="forms/d/e"]')
+      (url.includes('google.com') &&
+        !!doc.querySelector('.freebirdFormviewerViewFormCard, [role="listitem"] .M7eMe, form[action*="forms/d/e"]'))
     );
   }
 
@@ -132,6 +133,62 @@ export class GoogleFormsAdapter implements FormAdapter {
       }
     }
 
+    // Scan Google Forms custom radio & checkbox question cards
+    const questionCards = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '[role="listitem"], .Qr7Oae, .geS5n, .freebirdFormviewerViewNumberedItemContainer'
+      )
+    );
+
+    for (const card of questionCards) {
+      // Skip if this card already contains a text input/textarea that was scanned
+      const hasStandardInput = card.querySelector(
+        'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="image"]), textarea, select'
+      );
+      if (hasStandardInput) continue;
+
+      const radioOptions = Array.from(card.querySelectorAll<HTMLElement>('[role="radio"]'));
+      const checkboxOptions = Array.from(card.querySelectorAll<HTMLElement>('[role="checkbox"]'));
+
+      if (radioOptions.length === 0 && checkboxOptions.length === 0) continue;
+
+      const isRadio = radioOptions.length > 0;
+      const optionElements = isRadio ? radioOptions : checkboxOptions;
+
+      const titleEl = card.querySelector(
+        '[role="heading"], .M7eMe, .FwR7Pc, .HoGqGc, .freebirdFormviewerViewItemsItemItemTitle, [aria-level="3"]'
+      );
+      const rawTitle = titleEl?.textContent?.trim() || '';
+      const cleanTitle = rawTitle.replace(/\*/g, '').replace(/[\n\r\t]+/g, ' ').trim() || `Choice Question #${fields.length + 1}`;
+      const isRequired = rawTitle.includes('*') || card.querySelector('.v3Duub') !== null;
+
+      const optionsList = optionElements.map((opt) => {
+        const label =
+          opt.getAttribute('aria-label') ||
+          opt.getAttribute('data-value') ||
+          opt.closest('.docssharedWizToggleLabeledContainer')?.querySelector('.aDTYNe, .docssharedWizToggleLabeledContent')?.textContent?.trim() ||
+          opt.textContent?.trim() ||
+          'Option';
+        return {
+          label: label.trim(),
+          value: label.trim(),
+        };
+      });
+
+      const fieldId = domScanner.registerElement(card);
+
+      fields.push({
+        id: fieldId,
+        tagName: 'DIV',
+        fieldType: isRadio ? 'radio' : 'checkbox',
+        label: cleanTitle,
+        required: isRequired,
+        options: optionsList,
+        confidence: 0.8,
+        status: 'NEEDS_REVIEW',
+      });
+    }
+
     return fields;
   }
 
@@ -147,6 +204,32 @@ export class GoogleFormsAdapter implements FormAdapter {
     }
 
     try {
+      // Check if element is a question container containing radio or checkbox
+      const radioOrCheckbox = el.querySelectorAll<HTMLElement>('[role="radio"], [role="checkbox"]');
+      if (radioOrCheckbox.length > 0) {
+        const targetVal = value.toLowerCase().trim();
+        for (const opt of Array.from(radioOrCheckbox)) {
+          const optLabel = (
+            opt.getAttribute('aria-label') ||
+            opt.getAttribute('data-value') ||
+            opt.closest('.docssharedWizToggleLabeledContainer')?.querySelector('.aDTYNe')?.textContent ||
+            opt.textContent ||
+            ''
+          ).toLowerCase().trim();
+
+          if (optLabel === targetVal || optLabel.includes(targetVal) || targetVal.includes(optLabel)) {
+            opt.click();
+            opt.dispatchEvent(new Event('change', { bubbles: true }));
+            opt.dispatchEvent(new Event('input', { bubbles: true }));
+            return {
+              fieldId,
+              success: true,
+              message: `Selected choice: ${value}`,
+            };
+          }
+        }
+      }
+
       el.focus();
 
       // Native prototype setter

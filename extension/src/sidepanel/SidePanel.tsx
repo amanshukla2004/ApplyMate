@@ -23,6 +23,7 @@ import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
 import { answerService } from '../services/answerService';
 import { applicationService } from '../services/applicationService';
+import { projectService } from '../services/projectService';
 import { aiService } from '../services/ai/aiService';
 import {
   UserProfile,
@@ -31,6 +32,7 @@ import {
   EducationRecord,
   ExperienceRecord,
   SkillItem,
+  ProjectRecord,
 } from '../types/profile';
 
 type TabType = 'autofill' | 'quickcopy' | 'resumes' | 'ai' | 'answers';
@@ -43,6 +45,8 @@ export const SidePanel: React.FC = () => {
   const [educationList, setEducationList] = useState<EducationRecord[]>([]);
   const [experienceList, setExperienceList] = useState<ExperienceRecord[]>([]);
   const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
+  const [projectList, setProjectList] = useState<ProjectRecord[]>([]);
+  const [draftingFieldId, setDraftingFieldId] = useState<string | null>(null);
 
   // Scanning & Autofill state
   const [isScanning, setIsScanning] = useState(false);
@@ -73,13 +77,14 @@ export const SidePanel: React.FC = () => {
 
   async function loadAllData() {
     try {
-      const [p, r, a, edu, exp, sk] = await Promise.all([
+      const [p, r, a, edu, exp, sk, prj] = await Promise.all([
         profileService.getProfile(),
         resumeService.getResumes(),
         answerService.getAnswers(),
         profileService.getEducation(),
         profileService.getExperience(),
         profileService.getSkills(),
+        projectService.getProjects(),
       ]);
       setProfile(p);
       setResumes(r);
@@ -87,6 +92,7 @@ export const SidePanel: React.FC = () => {
       setEducationList(edu);
       setExperienceList(exp);
       setSkillsList(sk);
+      setProjectList(prj);
     } catch (err) {
       console.error('Failed to load profile data', err);
     }
@@ -280,6 +286,28 @@ export const SidePanel: React.FC = () => {
     }));
 
     setSelectedFieldIds((prev) => new Set([...prev, fieldId]));
+  };
+
+  const handleAiDraftForField = async (field: DetectedField) => {
+    if (!profile) return;
+    setDraftingFieldId(field.id);
+    try {
+      const res = await aiService.generateAnswer(
+        field.label || 'Tell us about your experience',
+        profile,
+        projectList,
+        experienceList,
+        educationList
+      );
+      if (res && res.answer) {
+        setFieldValues((prev) => ({ ...prev, [field.id]: res.answer }));
+        setSelectedFieldIds((prev) => new Set([...prev, field.id]));
+      }
+    } catch (err) {
+      setErrorMessage('AI draft failed: ' + (err as Error).message);
+    } finally {
+      setDraftingFieldId(null);
+    }
   };
 
   const handleFillFields = async (onlySelected: boolean) => {
@@ -740,6 +768,16 @@ export const SidePanel: React.FC = () => {
                                 </span>
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
+                                    onClick={() => handleAiDraftForField(field)}
+                                    disabled={draftingFieldId === field.id}
+                                    title="Draft tailored answer with AI"
+                                    className="px-1.5 py-0.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded text-[9.5px] font-semibold flex items-center gap-0.5 border border-violet-200 transition disabled:opacity-50"
+                                  >
+                                    <Sparkles className="w-2.5 h-2.5 text-violet-600" />
+                                    {draftingFieldId === field.id ? '...' : 'AI Draft'}
+                                  </button>
+
+                                  <button
                                     onClick={() => setEditingFieldId(field.id)}
                                     title="Edit value before filling"
                                     className="p-0.5 text-slate-400 hover:text-indigo-600 rounded"
@@ -762,6 +800,29 @@ export const SidePanel: React.FC = () => {
                                     </button>
                                   )}
                                 </div>
+                              </div>
+                            )}
+
+                            {/* Option pills for radio / choice questions */}
+                            {field.options && field.options.length > 0 && (
+                              <div className="mt-1.5 flex flex-wrap gap-1">
+                                {field.options.map((opt) => (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => {
+                                      setFieldValues((prev) => ({ ...prev, [field.id]: opt.value }));
+                                      setSelectedFieldIds((prev) => new Set(prev).add(field.id));
+                                    }}
+                                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition cursor-pointer ${
+                                      currentValue === opt.value
+                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                    }`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                ))}
                               </div>
                             )}
                           </div>
