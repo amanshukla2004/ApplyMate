@@ -226,34 +226,51 @@ export class GoogleFormsAdapter implements FormAdapter {
         }
       }
 
-      el.focus();
+      // If el is a container DIV, locate the nested input or textarea
+      let targetInput: HTMLInputElement | HTMLTextAreaElement | null = null;
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        targetInput = el as HTMLInputElement | HTMLTextAreaElement;
+      } else {
+        targetInput = el.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
+      }
 
-      // Native prototype setter
-      const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      if (!targetInput) {
+        return {
+          fieldId,
+          success: false,
+          message: 'No interactive input element found inside container',
+          errorCode: 'INPUT_NOT_FOUND',
+        };
+      }
+
+      targetInput.focus();
+
+      // Native prototype setter on proper element
+      const proto = targetInput.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
       const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
       if (descriptor && descriptor.set) {
-        descriptor.set.call(el, value);
+        descriptor.set.call(targetInput, value);
       } else {
-        (el as HTMLInputElement).value = value;
+        targetInput.value = value;
       }
 
       // Google Forms reactive listeners
       try {
-        el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: value }));
+        targetInput.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText', data: value }));
       } catch {
-        // Fallback if InputEvent not supported
+        // Fallback if InputEvent constructor not supported
       }
-      el.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-      el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: ' ' }));
-      el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: ' ' }));
-      el.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
+      targetInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+      targetInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+      targetInput.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: ' ' }));
+      targetInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: ' ' }));
+      targetInput.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
 
-      // Visual highlight
-      const origBorder = el.style.border;
-      el.style.border = '2px solid #6366f1';
+      // Visual highlight with brand lilac #8B74F0
+      const origBorder = targetInput.style.border;
+      targetInput.style.border = '2px solid #8B74F0';
       setTimeout(() => {
-        el.style.border = origBorder;
+        targetInput.style.border = origBorder;
       }, 1500);
 
       return {

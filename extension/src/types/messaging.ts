@@ -53,8 +53,10 @@ export type ExtensionMessage =
   | { type: 'RELOAD_ACTIVE_TAB' }
   | { type: 'HIGHLIGHT_FIELD'; fieldId: string; highlight: boolean; tabId?: number }
   | { type: 'GET_USER_PROFILE' }
+  | { type: 'EXECUTE_AUTOFILL_SHORTCUT' }
+  | { type: 'SCRAPE_JOB_DESCRIPTION' }
   | { type: 'WORKDAY_STEP_CHANGED'; data: { stepTitle: string; fields: DetectedField[]; website: WebsiteMetadata } }
-  | { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string } };
+  | { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string; platform?: string } };
 
 export type MessageResponse<T = unknown> = {
   success: boolean;

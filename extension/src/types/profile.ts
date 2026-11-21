@@ -157,6 +157,7 @@ export interface ApplicationRecord {
   jobTitle: string;
   jobDescription?: string;
   jobUrl: string;
+  platform?: string;
   applicationDate: string;
   resumeId?: string;
   status: ApplicationStatus;

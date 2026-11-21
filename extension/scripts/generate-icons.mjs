@@ -71,9 +71,13 @@ function crc32(buf) {
   return c ^ -1;
 }
 
-// Generate the ApplyMate icon
+// #TODO: [Brand & Identity]
+// Design official custom SVG and PNG icons for HapplyMate:
+// 16x16, 32x32, 48x48, 128x128 with modern joyful copilot branding.
+
+// Generate the HapplyMate icon
 // Gradient: #8B74F0 (Lilac) to #6366F1 (Indigo)
-// Glyph: Modern Geometric "A" with an upward ascending launch trajectory
+// Glyph: Modern Geometric Monogram with upward launch trajectory and smile curve
 function renderApplyMatePixel(x, y, w, h) {
   const nx = (x + 0.5) / w;
   const ny = (y + 0.5) / h;

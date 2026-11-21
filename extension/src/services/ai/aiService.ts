@@ -31,6 +31,10 @@ export interface JobAnalysisResult {
   requiredSkills: string[];
   responsibilities: string[];
   matchScore: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  tips: string[];
+  summary: string;
 }
 
 export class AIService {
@@ -76,28 +80,64 @@ export class AIService {
   async analyzeJobDescription(jobText: string, userSkills: string[]): Promise<JobAnalysisResult> {
     const textLower = jobText.toLowerCase();
 
-    // Detect common skills
+    // Comprehensive tech skills taxonomy
     const commonTech = [
-      'react', 'typescript', 'javascript', 'python', 'java', 'spring boot', 'node.js',
-      'docker', 'kubernetes', 'aws', 'gcp', 'sql', 'postgresql', 'mongodb', 'git',
-      'graphql', 'rest api', 'ci/cd', 'tailwind', 'next.js', 'redis'
+      'react', 'typescript', 'javascript', 'python', 'java', 'go', 'golang', 'rust',
+      'c++', 'c#', 'node.js', 'express', 'next.js', 'vue', 'angular', 'spring boot',
+      'django', 'fastapi', 'flask', 'docker', 'kubernetes', 'aws', 'gcp', 'azure',
+      'sql', 'postgresql', 'mysql', 'mongodb', 'redis', 'elasticsearch', 'dynamodb',
+      'graphql', 'rest api', 'ci/cd', 'tailwind', 'microservices', 'git', 'vitest', 'jest'
     ];
 
-    const detectedSkills = commonTech.filter((skill) => textLower.includes(skill));
-    const matchedCount = detectedSkills.filter((s) =>
-      userSkills.some((us) => us.toLowerCase() === s)
-    ).length;
+    const userSkillsNorm = userSkills.map((s) => s.toLowerCase().trim());
+    const detectedSkills = commonTech.filter((skill) => {
+      // Word boundary match to prevent 'go' matching in 'good' or 'algorithm'
+      const regex = new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      return regex.test(textLower);
+    });
 
-    const matchScore = detectedSkills.length > 0 ? Math.round((matchedCount / detectedSkills.length) * 100) : 75;
+    const matchedSkills = detectedSkills.filter((skill) =>
+      userSkillsNorm.some((us) => us === skill || us.includes(skill) || skill.includes(us))
+    );
+
+    const missingSkills = detectedSkills.filter(
+      (skill) => !matchedSkills.includes(skill)
+    );
+
+    const totalDetected = detectedSkills.length;
+    const matchScore = totalDetected > 0
+      ? Math.round((matchedSkills.length / totalDetected) * 100)
+      : userSkills.length > 0 ? 80 : 50;
+
+    let summary = 'Strong Fit';
+    if (matchScore < 50) summary = 'Skill Gap Detected';
+    else if (matchScore < 75) summary = 'Moderate Fit';
+
+    const tips: string[] = [];
+    if (missingSkills.length > 0) {
+      tips.push(`ATS identifies ${missingSkills.slice(0, 3).map((s) => `"${s}"`).join(', ')} as key requirements. Highlight relevant coursework or projects covering these.`);
+    }
+    if (matchedSkills.length > 0) {
+      tips.push(`Great alignment on ${matchedSkills.slice(0, 3).map((s) => `"${s}"`).join(', ')}! Ensure measurable metrics are included for these skills.`);
+    }
+    if (matchScore >= 80) {
+      tips.push('Excellent match score. Tailor your resume summary directly to this job description.');
+    } else {
+      tips.push('Review the missing skills and add relevant keywords to your profile before applying.');
+    }
 
     return {
       requiredSkills: detectedSkills,
-      responsibilities: [
-        'Design and develop high-performance software modules',
-        'Collaborate with cross-functional product and engineering teams',
-        'Write clean, well-tested, and maintainable code',
-      ],
+      matchedSkills,
+      missingSkills,
       matchScore,
+      summary,
+      tips,
+      responsibilities: [
+        'Design, develop, test, and deploy resilient web services and user interfaces',
+        'Participate in architecture reviews and cross-functional sprint planning',
+        'Write clean, well-tested, and maintainable software following industry standards',
+      ],
     };
   }
 
@@ -232,7 +272,7 @@ Provide a direct, polished answer (2-4 sentences).`;
           };
         }
       } catch (err) {
-        console.warn('[ApplyMate AI] Remote cover letter generation failed, falling back to local synthesis:', err);
+        console.warn('[HapplyMate AI] Remote cover letter generation failed, falling back to local synthesis:', err);
       }
     }
 
@@ -244,7 +284,7 @@ Provide a direct, polished answer (2-4 sentences).`;
     const topProjects = projects.slice(0, 2);
     const topExp = experience[0];
 
-    return `You are ApplyMate, an elite career copilot. Draft a tailored, professional 3-paragraph cover letter for ${profile.personal.fullName || 'the candidate'} applying for the position of "${jobTitle}" at "${companyName}".
+    return `You are HapplyMate, an elite career copilot. Draft a tailored, professional 3-paragraph cover letter for ${profile.personal.fullName || 'the candidate'} applying for the position of "${jobTitle}" at "${companyName}".
 
 Tone: ${tone} (reflect this tone strictly throughout the letter).
 Rules:

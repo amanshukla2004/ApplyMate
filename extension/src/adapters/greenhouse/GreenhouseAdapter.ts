@@ -42,6 +42,26 @@ export class GreenhouseAdapter implements FormAdapter {
         f.canonicalField = 'GITHUB_URL';
         f.confidence = 1.0;
         f.status = 'MATCHED';
+      } else if (f.name?.includes('urls[Portfolio]') || f.name?.includes('urls[Website]')) {
+        f.canonicalField = 'PORTFOLIO_URL';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (f.name?.includes('job_application[gender]')) {
+        f.canonicalField = 'GENDER';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (f.name?.includes('job_application[race]') || f.name?.includes('job_application[ethnicity]')) {
+        f.canonicalField = 'RACE_ETHNICITY';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (f.name?.includes('job_application[veteran_status]')) {
+        f.canonicalField = 'VETERAN_STATUS';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (f.name?.includes('job_application[disability_status]')) {
+        f.canonicalField = 'DISABILITY_STATUS';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
       }
     }
     return fields;

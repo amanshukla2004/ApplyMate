@@ -142,16 +142,20 @@ export class MessageRouter {
 
       case 'RECORD_APPLICATION': {
         try {
-          const payload = (message as { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string } }).data;
+          const payload = (message as { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string; platform?: string } }).data;
           const now = new Date();
+          const targetUrl = payload?.jobUrl || (await TabManager.getActiveTab())?.url || '';
+          const detectedPlatform = payload?.platform || applicationService.detectPlatformFromUrl(targetUrl);
+
           const newApp: ApplicationRecord = {
             id: `app_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             companyName: payload?.companyName || 'Company',
             jobTitle: payload?.jobTitle || 'Role',
-            jobUrl: payload?.jobUrl || (await TabManager.getActiveTab())?.url || '',
+            jobUrl: targetUrl,
+            platform: detectedPlatform,
             applicationDate: now.toISOString().split('T')[0],
             status: 'Applied',
-            notes: 'Auto-recorded by ApplyMate on form submission',
+            notes: 'Auto-recorded by HapplyMate on form submission',
             createdAt: now.toISOString(),
             updatedAt: now.toISOString(),
           };

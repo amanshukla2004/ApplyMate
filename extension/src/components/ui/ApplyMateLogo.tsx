@@ -1,11 +1,22 @@
 import React from 'react';
 
-export interface ApplyMateLogoProps {
+/**
+ * #TODO: [Brand & Identity]
+ * Design custom vector SVG and multi-resolution PNG icons for HapplyMate:
+ * - 16x16 px (Browser tab favicon, extension tray)
+ * - 32x32 px (Chrome extension management & high-DPI displays)
+ * - 48x48 px (Chrome extension menu & permissions dialog)
+ * - 128x128 px (Chrome Web Store official icon & installation banner)
+ * Motif requirements: A joyful, modern geometric emblem uniting 'H' & 'A' with
+ * an upward launch arrow and a subtle optimistic smile curve in brand violet (#8B74F0 -> #6366F1).
+ */
+
+export interface HapplyMateLogoProps {
   size?: number;
   className?: string;
 }
 
-export const ApplyMateLogo: React.FC<ApplyMateLogoProps> = ({ size = 32, className = '' }) => {
+export const HapplyMateLogo: React.FC<HapplyMateLogoProps> = ({ size = 32, className = '' }) => {
   return (
     <span
       className={`logo ${className}`.trim()}
@@ -13,37 +24,59 @@ export const ApplyMateLogo: React.FC<ApplyMateLogoProps> = ({ size = 32, classNa
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: `${Math.round(size * 0.28)}px`,
-        background: 'linear-gradient(135deg, #8B74F0 0%, #6366F1 100%)',
+        background: 'linear-gradient(135deg, #8B74F0 0%, #6366F1 50%, #4F46E5 100%)',
         display: 'grid',
         placeItems: 'center',
         flex: 'none',
-        boxShadow: '0 4px 12px rgba(139, 116, 240, 0.35)',
+        boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+        position: 'relative',
+        overflow: 'hidden',
       }}
       aria-hidden="true"
     >
+      {/* Subtle glassmorphism highlight sheen */}
+      <span
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '45%',
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 100%)',
+          borderRadius: `${Math.round(size * 0.28)}px ${Math.round(size * 0.28)}px 0 0`,
+          pointerEvents: 'none',
+        }}
+      />
       <svg
-        width={Math.round(size * 0.625)}
-        height={Math.round(size * 0.625)}
+        width={Math.round(size * 0.65)}
+        height={Math.round(size * 0.65)}
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Geometric "A" with upward launch trajectory */}
+        {/* Modern HapplyMate glyph: Dynamic Upward Arrow + Cheerful Smile Arc */}
         <path
-          d="M12 3L3 21H7.5L9.5 16.5H14.5L16.5 21H21L12 3Z"
+          d="M12 2.5L3.5 15.5H8.5V20.5H15.5V15.5H20.5L12 2.5Z"
           fill="#ffffff"
         />
+        {/* Inner joyful chevron highlight */}
         <path
-          d="M12 8.5L13.8 13.5H10.2L12 8.5Z"
-          fill="#8B74F0"
+          d="M12 7.2L8 13.5H16L12 7.2Z"
+          fill="#6366F1"
         />
-        {/* Dynamic crossbar accent */}
+        {/* Subtle optimistic smile arc accent at the base */}
         <path
-          d="M9.5 14.5L14.5 14.5L12 9.5Z"
-          fill="#ffffff"
+          d="M7 21.5C9.5 23 14.5 23 17 21.5"
+          stroke="#ffffff"
+          strokeWidth="1.8"
+          strokeLinecap="round"
           opacity="0.9"
         />
       </svg>
     </span>
   );
 };
+
+// Backward-compatible alias for existing imports
+export const ApplyMateLogo = HapplyMateLogo;
+export default HapplyMateLogo;

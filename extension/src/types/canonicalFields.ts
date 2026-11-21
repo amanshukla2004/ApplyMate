@@ -29,6 +29,8 @@ export type ApplicationField =
   | 'COVER_LETTER'
   | 'GENDER'
   | 'RACE_ETHNICITY'
+  | 'VETERAN_STATUS'
+  | 'DISABILITY_STATUS'
   | 'HEARD_ABOUT_US';
 
 export interface CanonicalFieldDefinition {
@@ -280,6 +282,22 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     category: 'personal',
     dataType: 'select',
     aliases: ['race', 'ethnicity', 'race/ethnicity', 'ethnic origin', 'racial background', 'demographic race', 'ethnic background'],
+    sensitive: true,
+  },
+  VETERAN_STATUS: {
+    id: 'VETERAN_STATUS',
+    displayLabel: 'Veteran Status (Optional)',
+    category: 'preferences',
+    dataType: 'select',
+    aliases: ['veteran', 'veteran status', 'protected veteran', 'military status'],
+    sensitive: true,
+  },
+  DISABILITY_STATUS: {
+    id: 'DISABILITY_STATUS',
+    displayLabel: 'Disability Status (Optional)',
+    category: 'preferences',
+    dataType: 'select',
+    aliases: ['disability', 'disability status', 'physical disability', 'handicap'],
     sensitive: true,
   },
   HEARD_ABOUT_US: {

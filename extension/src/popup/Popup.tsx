@@ -3,7 +3,7 @@ import { Backdrop } from '../components/ui/Backdrop';
 import { Button } from '../components/ui/Button';
 import { Pill } from '../components/ui/Pill';
 import { Ring } from '../components/ui/Ring';
-import { ApplyMateLogo } from '../components/ui/ApplyMateLogo';
+import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
 
@@ -148,8 +148,8 @@ export const Popup: React.FC = () => {
 
       <div className="popup glass" style={{ width: '100%', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div className="brand">
-          <ApplyMateLogo size={28} />
-          <b style={{ fontSize: '18px' }}>ApplyMate</b>
+          <HapplyMateLogo size={28} />
+          <b style={{ fontSize: '18px' }}>HapplyMate</b>
         </div>
 
         <div className="row" style={{ gap: '16px' }}>

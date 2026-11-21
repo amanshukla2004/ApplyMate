@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Backdrop } from '../components/ui/Backdrop';
 import { Button } from '../components/ui/Button';
 import { Pill } from '../components/ui/Pill';
-import { ApplyMateLogo } from '../components/ui/ApplyMateLogo';
+import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { DetectedField, WebsiteMetadata } from '../types/messaging';
 import { CANONICAL_FIELDS, ApplicationField } from '../types/canonicalFields';
 import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
 import { answerService } from '../services/answerService';
 import { projectService } from '../services/projectService';
-import { aiService } from '../services/ai/aiService';
+import { aiService, JobAnalysisResult } from '../services/ai/aiService';
 import {
   UserProfile,
   ResumeRecord,
@@ -52,12 +52,87 @@ export const SidePanel: React.FC = () => {
   const [workdayStepTitle, setWorkdayStepTitle] = useState<string | null>(null);
 
   // Cover Letter generation state
-  const [aiMode, setAiMode] = useState<'qa' | 'coverLetter'>('qa');
+  const [aiMode, setAiMode] = useState<'qa' | 'coverLetter' | 'match'>('qa');
   const [clCompany, setClCompany] = useState('');
   const [clJobTitle, setClJobTitle] = useState('');
   const [clTone, setClTone] = useState<'Confident' | 'Technical' | 'Enthusiastic'>('Confident');
   const [clGenerated, setClGenerated] = useState('');
   const [isGeneratingCl, setIsGeneratingCl] = useState(false);
+
+  // ATS Job Match state
+  const [jobText, setJobText] = useState('');
+  const [isAnalyzingJob, setIsAnalyzingJob] = useState(false);
+  const [jobAnalysis, setJobAnalysis] = useState<JobAnalysisResult | null>(null);
+  const [addedSkillNotice, setAddedSkillNotice] = useState<string | null>(null);
+
+  const handleAnalyzeActivePage = async () => {
+    setIsAnalyzingJob(true);
+    setAddedSkillNotice(null);
+    try {
+      let pageText = jobText;
+
+      if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.id) {
+          try {
+            const resp = await chrome.tabs.sendMessage(tab.id, { type: 'SCRAPE_JOB_DESCRIPTION' });
+            if (resp?.success && resp.data) {
+              if (resp.data.text) {
+                pageText = resp.data.text;
+                setJobText(pageText);
+              }
+              if (resp.data.company && !clCompany) {
+                setClCompany(resp.data.company);
+              }
+              if (resp.data.title && !clJobTitle) {
+                setClJobTitle(resp.data.title);
+              }
+            }
+          } catch (e) {
+            console.warn('Scraping error:', e);
+          }
+        }
+      }
+
+      if (!pageText.trim()) {
+        setJobAnalysis(null);
+        return;
+      }
+
+      const userSkillNames = skillsList.map((s) => s.name);
+      const res = await aiService.analyzeJobDescription(pageText, userSkillNames);
+      setJobAnalysis(res);
+    } catch (err) {
+      console.error('Job analysis failed:', err);
+    } finally {
+      setIsAnalyzingJob(false);
+    }
+  };
+
+  const handleAddSkillToProfile = async (skillName: string) => {
+    try {
+      const newSkill: SkillItem = {
+        id: `sk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: skillName.charAt(0).toUpperCase() + skillName.slice(1),
+        category: 'frameworks',
+        proficiency: 'Intermediate',
+      };
+      await profileService.saveSkill(newSkill);
+      const updated = await profileService.getSkills();
+      setSkillsList(updated);
+      setAddedSkillNotice(`Added "${newSkill.name}" to your profile!`);
+      setTimeout(() => setAddedSkillNotice(null), 3000);
+
+      // Re-run analysis with updated skills list
+      if (jobText) {
+        const userSkillNames = updated.map((s) => s.name);
+        const res = await aiService.analyzeJobDescription(jobText, userSkillNames);
+        setJobAnalysis(res);
+      }
+    } catch (err) {
+      console.warn('Failed to add skill:', err);
+    }
+  };
 
   // Copy tab state
   const [copySearchQuery, setCopySearchQuery] = useState('');
@@ -432,8 +507,8 @@ export const SidePanel: React.FC = () => {
       {/* Header */}
       <div className="ph">
         <div className="brand">
-          <ApplyMateLogo size={28} />
-          <span style={{ fontWeight: 700, fontSize: '17px' }}>ApplyMate</span>
+          <HapplyMateLogo size={28} />
+          <span style={{ fontWeight: 700, fontSize: '17px' }}>HapplyMate</span>
         </div>
         <Pill variant="i">
           {websiteInfo?.adapterName || 'Google Forms'}
@@ -829,22 +904,30 @@ export const SidePanel: React.FC = () => {
       {/* Body: AI Tab */}
       {activeTab === 'ai' && (
         <div className="pbody">
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
             <Button
               size="sm"
               variant={aiMode === 'qa' ? 'primary' : 'soft'}
               onClick={() => setAiMode('qa')}
-              style={{ flex: 1 }}
+              style={{ flex: 1, padding: '6px 4px', fontSize: '11px' }}
             >
-              Q&A Assistant
+              Q&A
             </Button>
             <Button
               size="sm"
               variant={aiMode === 'coverLetter' ? 'primary' : 'soft'}
               onClick={() => setAiMode('coverLetter')}
-              style={{ flex: 1 }}
+              style={{ flex: 1, padding: '6px 4px', fontSize: '11px' }}
             >
               Cover Letter
+            </Button>
+            <Button
+              size="sm"
+              variant={aiMode === 'match' ? 'primary' : 'soft'}
+              onClick={() => setAiMode('match')}
+              style={{ flex: 1, padding: '6px 4px', fontSize: '11px' }}
+            >
+              ATS Match
             </Button>
           </div>
 
@@ -901,7 +984,7 @@ export const SidePanel: React.FC = () => {
                 </div>
               )}
             </>
-          ) : (
+          ) : aiMode === 'coverLetter' ? (
             <>
               <div className="glass card">
                 <h3 style={{ fontSize: '16px', marginBottom: '6px' }}>1-Page Cover Letter</h3>
@@ -1017,6 +1100,133 @@ export const SidePanel: React.FC = () => {
                       {copiedKey === 'cl-gen' ? 'Copied to Clipboard!' : 'Copy Cover Letter'}
                     </Button>
                   </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="glass card">
+                <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>ATS Match & Skill Gap</h3>
+                <p className="hint" style={{ marginBottom: '10px', fontSize: '12px' }}>
+                  Analyze job description against your profile skills to maximize interview callback rates.
+                </p>
+
+                <div className="row" style={{ gap: '8px', marginBottom: '10px' }}>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={isAnalyzingJob}
+                    onClick={handleAnalyzeActivePage}
+                    style={{ flex: 1 }}
+                  >
+                    {isAnalyzingJob ? 'Analyzing Page...' : '⚡ Scan Active Job Post'}
+                  </Button>
+                </div>
+
+                <label className="f" htmlFor="jd-text">Job Description Text</label>
+                <textarea
+                  className="in"
+                  id="jd-text"
+                  rows={4}
+                  placeholder="Paste job description here or click 'Scan Active Job Post'..."
+                  value={jobText}
+                  onChange={(e) => setJobText(e.target.value)}
+                />
+
+                {jobText && !jobAnalysis && !isAnalyzingJob && (
+                  <Button
+                    size="sm"
+                    style={{ marginTop: '8px' }}
+                    onClick={handleAnalyzeActivePage}
+                  >
+                    Analyze Pasted Text
+                  </Button>
+                )}
+              </div>
+
+              {addedSkillNotice && (
+                <div style={{
+                  padding: '8px 12px',
+                  background: 'rgba(52, 199, 89, 0.15)',
+                  border: '1px solid #34c759',
+                  borderRadius: '8px',
+                  color: '#2e7d32',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  margin: '8px 0',
+                  textAlign: 'center'
+                }}>
+                  ✓ {addedSkillNotice}
+                </div>
+              )}
+
+              {jobAnalysis && (
+                <div className="fc">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div>
+                      <b style={{ fontSize: '16px', display: 'block' }}>{jobAnalysis.matchScore}% Match</b>
+                      <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{jobAnalysis.summary}</span>
+                    </div>
+                    <Pill variant={jobAnalysis.matchScore >= 75 ? 'm' : jobAnalysis.matchScore >= 50 ? 'r' : 'u'}>
+                      {jobAnalysis.matchScore >= 75 ? 'Strong Fit' : jobAnalysis.matchScore >= 50 ? 'Moderate' : 'Skill Gap'}
+                    </Pill>
+                  </div>
+
+                  {jobAnalysis.matchedSkills.length > 0 && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <label className="f" style={{ fontSize: '11px', color: '#2e7d32' }}>
+                        Matched Skills ({jobAnalysis.matchedSkills.length})
+                      </label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                        {jobAnalysis.matchedSkills.map((sk) => (
+                          <Pill key={sk} variant="m" style={{ fontSize: '11px' }}>
+                            ✓ {sk}
+                          </Pill>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {jobAnalysis.missingSkills.length > 0 && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <label className="f" style={{ fontSize: '11px', color: 'var(--warn)' }}>
+                        Missing Keywords ({jobAnalysis.missingSkills.length})
+                      </label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                        {jobAnalysis.missingSkills.map((sk) => (
+                          <button
+                            key={sk}
+                            type="button"
+                            onClick={() => handleAddSkillToProfile(sk)}
+                            title="Click to add skill to your profile"
+                            style={{
+                              border: '1px dashed var(--warn)',
+                              borderRadius: '99px',
+                              padding: '2px 8px',
+                              fontSize: '11px',
+                              background: 'transparent',
+                              color: 'var(--warn)',
+                              cursor: 'pointer',
+                              fontWeight: 500,
+                            }}
+                          >
+                            + {sk}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {jobAnalysis.tips.length > 0 && (
+                    <div style={{ marginTop: '8px', borderTop: '1px solid var(--line)', paddingTop: '8px' }}>
+                      <label className="f" style={{ fontSize: '11px' }}>ATS Strategy Tips</label>
+                      <ul style={{ margin: '4px 0 0 16px', padding: 0, fontSize: '12px', color: 'var(--muted)', lineHeight: '1.5' }}>
+                        {jobAnalysis.tips.map((tip, idx) => (
+                          <li key={idx} style={{ marginBottom: '4px' }}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </>

@@ -53,6 +53,36 @@ export class ApplicationService {
       activeCount: apps.filter((a) => ['Applied', 'Assessment', 'Interview'].includes(a.status)).length,
     };
   }
+
+  detectPlatformFromUrl(url: string): string {
+    const u = (url || '').toLowerCase();
+    if (u.includes('greenhouse.io')) return 'Greenhouse';
+    if (u.includes('lever.co')) return 'Lever';
+    if (u.includes('myworkdayjobs.com') || u.includes('workday.com')) return 'Workday';
+    if (u.includes('ashbyhq.com')) return 'Ashby';
+    if (u.includes('linkedin.com')) return 'LinkedIn';
+    if (u.includes('docs.google.com/forms') || u.includes('forms.gle')) return 'Google Forms';
+    if (u.includes('indeed.com')) return 'Indeed';
+    if (u.includes('smartrecruiters.com')) return 'SmartRecruiters';
+    if (u.includes('bamboohr.com')) return 'BambooHR';
+    if (u.includes('jobvite.com')) return 'Jobvite';
+    if (u.includes('rippling.com')) return 'Rippling';
+    return 'Company Portal';
+  }
+
+  exportToCSV(applications: ApplicationRecord[]): string {
+    const headers = ['Company', 'Job Title', 'Platform', 'Status', 'Application Date', 'Job URL', 'Notes'];
+    const rows = applications.map((app) => [
+      `"${(app.companyName || '').replace(/"/g, '""')}"`,
+      `"${(app.jobTitle || '').replace(/"/g, '""')}"`,
+      `"${(app.platform || this.detectPlatformFromUrl(app.jobUrl) || 'Direct').replace(/"/g, '""')}"`,
+      `"${(app.status || '').replace(/"/g, '""')}"`,
+      `"${(app.applicationDate || '').replace(/"/g, '""')}"`,
+      `"${(app.jobUrl || '').replace(/"/g, '""')}"`,
+      `"${(app.notes || '').replace(/"/g, '""')}"`,
+    ]);
+    return [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+  }
 }
 
 export const applicationService = new ApplicationService();

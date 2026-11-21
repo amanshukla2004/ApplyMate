@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Backdrop } from '../components/ui/Backdrop';
 import { Button } from '../components/ui/Button';
 import { Toast } from '../components/ui/Toast';
-import { ApplyMateLogo } from '../components/ui/ApplyMateLogo';
+import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { useTheme } from '../hooks/useTheme';
 
 import { OverviewView } from './views/OverviewView';
@@ -260,8 +260,8 @@ export const Options: React.FC = () => {
       {/* Top Header */}
       <header className="top">
         <div className="brand">
-          <ApplyMateLogo size={32} />
-          <span>ApplyMate</span>
+          <HapplyMateLogo size={32} />
+          <span>HapplyMate</span>
         </div>
         <div className="row">
           <Button variant="soft" size="sm" onClick={toggleCalm} aria-pressed={isCalm}>
@@ -649,6 +649,16 @@ export const Options: React.FC = () => {
                   setApplicationList(await applicationService.getApplications());
                   showToast(`Status updated to ${newStatus}`);
                 }}
+                onSaveApplication={async (record) => {
+                  await applicationService.saveApplication(record);
+                  setApplicationList(await applicationService.getApplications());
+                  showToast('Application added to tracker');
+                }}
+                onDeleteApplication={async (id) => {
+                  await applicationService.deleteApplication(id);
+                  setApplicationList(await applicationService.getApplications());
+                  showToast('Application removed');
+                }}
               />
             )}
 
@@ -668,7 +678,7 @@ export const Options: React.FC = () => {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = `applymate-backup-${new Date().toISOString().split('T')[0]}.json`;
+                  a.download = `happlymate-backup-${new Date().toISOString().split('T')[0]}.json`;
                   a.click();
                   URL.revokeObjectURL(url);
                   showToast('Backup exported');

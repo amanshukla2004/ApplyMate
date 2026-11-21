@@ -2,7 +2,7 @@ import { adapterRegistry } from '../adapters/adapterRegistry';
 import { ExtensionMessage } from '../types/messaging';
 import { domScanner } from './domScanner';
 
-console.log('[ApplyMate] Content script loaded on:', window.location.href);
+console.log('[HapplyMate] Content script loaded on:', window.location.href);
 
 // Listen for messages from background worker or side panel
 chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
@@ -24,6 +24,21 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
   if (message.type === 'HIGHLIGHT_FIELD') {
     handleHighlightField(message.fieldId, message.highlight);
     sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'EXECUTE_AUTOFILL_SHORTCUT') {
+    executeAutofillFromProfile().then((res) => {
+      sendResponse({ success: true, ...res });
+    }).catch((err) => {
+      sendResponse({ success: false, error: err?.message });
+    });
+    return true;
+  }
+
+  if (message.type === 'SCRAPE_JOB_DESCRIPTION') {
+    const jdData = scrapeJobDescriptionFromDOM();
+    sendResponse({ success: true, data: jdData });
     return true;
   }
 
@@ -110,7 +125,7 @@ let globalToastFn: ((msg: string, isError?: boolean) => void) | null = null;
 
 function initFloatingWidget() {
   if (typeof document === 'undefined') return;
-  if (document.getElementById('applymate-shadow-host')) return;
+  if (document.getElementById('happlymate-shadow-host') || document.getElementById('applymate-shadow-host')) return;
 
   // Don't mount widget on pages without interactive forms/inputs
   const hasInputs = document.querySelector(
@@ -119,7 +134,7 @@ function initFloatingWidget() {
   if (!hasInputs) return;
 
   const host = document.createElement('div');
-  host.id = 'applymate-shadow-host';
+  host.id = 'happlymate-shadow-host';
   host.style.all = 'initial';
   host.style.position = 'fixed';
   host.style.right = '20px';
@@ -210,7 +225,7 @@ function initFloatingWidget() {
       <path d="M12 8.5L13.8 13.5H10.2L12 8.5Z" fill="#8B74F0"/>
       <path d="M9.5 14.5L14.5 14.5L12 9.5Z" fill="#ffffff" opacity="0.9"/>
     </svg>
-    <span>ApplyMate Autofill</span>
+    <span>HapplyMate Autofill</span>
   `;
 
   const triggerToast = (msg: string, isError = false, onRetry?: () => void) => {
@@ -232,52 +247,7 @@ function initFloatingWidget() {
   globalToastFn = triggerToast;
 
   fab.onclick = async () => {
-    try {
-      const profileRes = await chrome.runtime.sendMessage({ type: 'GET_USER_PROFILE' });
-      if (!profileRes || !profileRes.success || !profileRes.data?.profile) {
-        triggerToast('Open Options to set up profile first', true);
-        return;
-      }
-
-      const { profile, edu, exp, skills } = profileRes.data;
-      const adapter = adapterRegistry.getActiveAdapter();
-      const fields = await adapter.scanForm();
-
-      const values: Record<string, string> = {};
-      for (const f of fields) {
-        if (f.fieldType === 'file') continue;
-        const val = resolveCanonicalValue(f.canonicalField, profile, edu, exp, skills);
-        if (val) {
-          values[f.id] = val;
-        }
-      }
-
-      const count = Object.keys(values).length;
-      if (count === 0) {
-        triggerToast('No fillable fields matched', true, () => fab.click());
-        return;
-      }
-
-      const results = await adapter.fillFields(values);
-      const successful = results.filter((r) => r.success).length;
-
-      // Apply lilac outline for 2s
-      for (const [id] of Object.entries(values)) {
-        const el = domScanner.getElement(id);
-        if (el) {
-          el.style.outline = '2px solid #8B74F0';
-          el.style.outlineOffset = '2px';
-          setTimeout(() => {
-            el.style.outline = '';
-            el.style.outlineOffset = '';
-          }, 2000);
-        }
-      }
-
-      triggerToast(`Filled ${successful} fields`);
-    } catch (err) {
-      triggerToast('Could not fill form', true, () => fab.click());
-    }
+    await executeAutofillFromProfile();
   };
 
   container.appendChild(toast);
@@ -285,6 +255,100 @@ function initFloatingWidget() {
   shadow.appendChild(style);
   shadow.appendChild(container);
   document.body.appendChild(host);
+}
+
+async function executeAutofillFromProfile(): Promise<{ filledCount: number }> {
+  try {
+    const profileRes = await chrome.runtime.sendMessage({ type: 'GET_USER_PROFILE' });
+    if (!profileRes || !profileRes.success || !profileRes.data?.profile) {
+      if (globalToastFn) globalToastFn('Open Options to set up profile first', true);
+      return { filledCount: 0 };
+    }
+
+    const { profile, edu, exp, skills } = profileRes.data;
+    const adapter = adapterRegistry.getActiveAdapter();
+    const fields = await adapter.scanForm();
+
+    const values: Record<string, string> = {};
+    for (const f of fields) {
+      if (f.fieldType === 'file') continue;
+      const val = resolveCanonicalValue(f.canonicalField, profile, edu, exp, skills);
+      if (val) {
+        values[f.id] = val;
+      }
+    }
+
+    const count = Object.keys(values).length;
+    if (count === 0) {
+      if (globalToastFn) globalToastFn('No fillable fields matched', true);
+      return { filledCount: 0 };
+    }
+
+    const results = await adapter.fillFields(values);
+    const successful = results.filter((r) => r.success).length;
+
+    // Apply brand lilac outline for 2s
+    for (const [id] of Object.entries(values)) {
+      const el = domScanner.getElement(id);
+      if (el) {
+        el.style.outline = '2px solid #8B74F0';
+        el.style.outlineOffset = '2px';
+        setTimeout(() => {
+          el.style.outline = '';
+          el.style.outlineOffset = '';
+        }, 2000);
+      }
+    }
+
+    if (globalToastFn) {
+      globalToastFn(`⚡ Autofilled ${successful} fields!`);
+    }
+
+    return { filledCount: successful };
+  } catch (err) {
+    if (globalToastFn) globalToastFn('Could not fill form', true);
+    return { filledCount: 0 };
+  }
+}
+
+function scrapeJobDescriptionFromDOM(): { text: string; title: string; company: string } {
+  const company = extractCompanyName();
+  const title = document.title.split(/[-|–•]/)[0].trim() || 'Software Engineer';
+
+  // Common job description selectors across Greenhouse, Lever, Workday, LinkedIn, Ashby, etc.
+  const selectors = [
+    '[data-automation-id="jobPostingDescription"]',
+    '#content.job-description',
+    '#job-description',
+    '.job-description',
+    '.description__text',
+    '.show-more-less-html__markup',
+    '.posting-requirements',
+    '.section-page',
+    '[data-testid="job-description"]',
+    '.ashby-job-posting-description',
+    'article',
+    'main',
+  ];
+
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el && el.textContent && el.textContent.trim().length > 100) {
+      return {
+        text: el.textContent.trim().slice(0, 8000),
+        title,
+        company,
+      };
+    }
+  }
+
+  // Fallback: document body text truncated
+  const bodyText = (document.body?.innerText || '').slice(0, 5000);
+  return {
+    text: bodyText,
+    title,
+    company,
+  };
 }
 
 function resolveCanonicalValue(
@@ -336,14 +400,26 @@ function resolveCanonicalValue(
       return edu?.[0]?.endDate || edu?.[0]?.graduationYear || '';
     case 'SKILLS':
       return skills?.map((s) => s.name).join(', ') || '';
+    case 'EXPERIENCE':
+      return _exp?.[0] ? `${_exp[0].designation} at ${_exp[0].companyName}` : '';
     case 'WORK_AUTHORIZATION':
-      return profile.preferences?.workAuthorization || 'Authorized to work';
+      return profile.preferences?.workAuthorizationStatus || profile.preferences?.workAuthorization || 'Authorized to work';
     case 'NOTICE_PERIOD':
       return profile.preferences?.noticePeriodDays || 'Immediate';
+    case 'CURRENT_CTC':
+      return profile.preferences?.currentCompensation || '';
+    case 'EXPECTED_CTC':
+      return profile.preferences?.expectedCompensation || '';
+    case 'RELOCATION':
+      return profile.preferences?.willingToRelocate ? 'Yes' : 'No';
     case 'GENDER':
       return profile.personal?.gender || '';
     case 'RACE_ETHNICITY':
       return profile.personal?.race || '';
+    case 'VETERAN_STATUS':
+      return profile.preferences?.veteranStatus || 'I am not a protected veteran';
+    case 'DISABILITY_STATUS':
+      return profile.preferences?.disabilityStatus || 'No, I do not have a disability';
     default:
       return '';
   }
@@ -412,12 +488,18 @@ function recordApplicationOnSubmit() {
   try {
     const jobTitle = document.title.split(/[-|–•]/)[0].trim() || 'Software Engineer';
     const companyName = extractCompanyName();
+    const adapter = adapterRegistry.getActiveAdapter();
+    const platform = adapter.name
+      .replace(/ (Job Board|Application Form|Application Portal|Career Portal|Easy Apply|Web Form)/gi, '')
+      .trim();
+
     chrome.runtime.sendMessage({
       type: 'RECORD_APPLICATION',
       data: {
         companyName,
         jobTitle,
         jobUrl: window.location.href,
+        platform: platform || 'Company Portal',
       },
     });
   } catch {
@@ -463,7 +545,7 @@ function checkWizardStepChange() {
           }
         }
       } catch (err) {
-        console.warn('[ApplyMate] Workday wizard step scan error:', err);
+        console.warn('[HapplyMate] Workday wizard step scan error:', err);
       }
     }
   }, 400);

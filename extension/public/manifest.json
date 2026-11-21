@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "ApplyMate – Personal Job Application Assistant",
+  "name": "HapplyMate – AI Job Application Assistant & Career Co-Pilot",
   "version": "1.0.0",
   "description": "Intelligent, privacy-first personal job application copilot for Chrome.",
   "icons": {
@@ -25,7 +25,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ApplyMate Assistant",
+    "default_title": "HapplyMate Assistant",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -39,6 +39,15 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
+  },
+  "commands": {
+    "autofill_active_form": {
+      "suggested_key": {
+        "default": "Alt+A",
+        "mac": "Alt+A"
+      },
+      "description": "Trigger HapplyMate 1-Click Form Autofill"
+    }
   },
   "content_scripts": [
     {

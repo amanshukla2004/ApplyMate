@@ -5,12 +5,14 @@ import { LeverAdapter } from './lever/LeverAdapter';
 import { WorkdayAdapter } from './workday/WorkdayAdapter';
 import { LinkedInAdapter } from './linkedin/LinkedInAdapter';
 import { GoogleFormsAdapter } from './google/GoogleFormsAdapter';
+import { AshbyAdapter } from './ashby/AshbyAdapter';
 
 export class AdapterRegistry {
   private adapters: FormAdapter[] = [
     new GoogleFormsAdapter(),
     new GreenhouseAdapter(),
     new LeverAdapter(),
+    new AshbyAdapter(),
     new WorkdayAdapter(),
     new LinkedInAdapter(),
   ];

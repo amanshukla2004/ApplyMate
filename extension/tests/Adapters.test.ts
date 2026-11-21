@@ -26,6 +26,32 @@ describe('AdapterRegistry', () => {
     expect(adapter.name).toBe('LinkedIn Easy Apply');
   });
 
+  it('detects Ashby adapter on jobs.ashbyhq.com', () => {
+    const adapter = adapterRegistry.getActiveAdapter('https://jobs.ashbyhq.com/openai/123-abc', document);
+    expect(adapter.name).toBe('Ashby Application Portal');
+  });
+
+  it('scans Ashby form inputs and maps canonical fields', async () => {
+    document.body.innerHTML = `
+      <form class="ashby-application-form">
+        <input name="name" type="text" placeholder="Full Name" />
+        <input name="email" type="email" placeholder="Email" />
+        <input name="phoneNumber" type="tel" placeholder="Phone" />
+        <input name="linkedInUrl" type="url" placeholder="LinkedIn Profile" />
+        <input name="githubUrl" type="url" placeholder="GitHub URL" />
+      </form>
+    `;
+    const adapter = adapterRegistry.getActiveAdapter('https://jobs.ashbyhq.com/notion/456', document);
+    const fields = await adapter.scanForm();
+
+    expect(fields.length).toBe(5);
+    expect(fields[0].canonicalField).toBe('FULL_NAME');
+    expect(fields[1].canonicalField).toBe('EMAIL');
+    expect(fields[2].canonicalField).toBe('PHONE');
+    expect(fields[3].canonicalField).toBe('LINKEDIN_URL');
+    expect(fields[4].canonicalField).toBe('GITHUB_URL');
+  });
+
   it('detects Google Forms adapter on docs.google.com/forms', () => {
     const adapter = adapterRegistry.getActiveAdapter('https://docs.google.com/forms/d/e/1FAIpQLSc0_xyz/viewform', document);
     expect(adapter.name).toBe('Google Forms');

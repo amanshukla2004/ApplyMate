@@ -168,3 +168,68 @@ describe('Feature 3: Grounded AI Cover Letter Generator', () => {
     expect(res.tone).toBe('Enthusiastic');
   });
 });
+
+describe('Feature A: Smart Job Description ATS Match & Skill Gap Analyzer', () => {
+  it('correctly calculates match score and identifies missing vs matched skills', async () => {
+    const jobDescription = `
+      We are looking for a Senior Full Stack Engineer.
+      Requirements:
+      - Deep expertise in React, TypeScript, and Node.js
+      - Experience with PostgreSQL, Redis, and Docker
+      - Familiarity with Kubernetes, AWS, and GraphQL is a plus.
+    `;
+
+    const userSkills = ['React', 'TypeScript', 'Node.js', 'PostgreSQL'];
+    const analysis = await aiService.analyzeJobDescription(jobDescription, userSkills);
+
+    expect(analysis.matchScore).toBeGreaterThan(0);
+    expect(analysis.matchedSkills).toContain('react');
+    expect(analysis.matchedSkills).toContain('typescript');
+    expect(analysis.matchedSkills).toContain('node.js');
+    expect(analysis.matchedSkills).toContain('postgresql');
+
+    expect(analysis.missingSkills).toContain('redis');
+    expect(analysis.missingSkills).toContain('docker');
+    expect(analysis.missingSkills).toContain('kubernetes');
+    expect(analysis.missingSkills).toContain('aws');
+    expect(analysis.missingSkills).toContain('graphql');
+
+    expect(analysis.tips.length).toBeGreaterThan(0);
+    expect(analysis.summary).toBeDefined();
+  });
+});
+
+describe('Feature C: Pipeline CSV Export', () => {
+  it('formats tracked applications into RFC 4180 compliant CSV', async () => {
+    const { applicationService } = await import('../src/services/applicationService');
+    const apps = [
+      {
+        id: 'app-1',
+        companyName: 'Google',
+        jobTitle: 'Software Engineer III',
+        jobUrl: 'https://careers.google.com/jobs/1',
+        applicationDate: '2026-03-01T10:00:00.000Z',
+        status: 'Interview' as const,
+        notes: 'Round 1 technical phone screen went well',
+        createdAt: '2026-03-01T10:00:00.000Z',
+        updatedAt: '2026-03-01T10:00:00.000Z',
+      },
+      {
+        id: 'app-2',
+        companyName: 'Stripe, Inc.',
+        jobTitle: 'Backend Engineer',
+        jobUrl: 'https://stripe.com/jobs/2',
+        applicationDate: '2026-03-02T12:00:00.000Z',
+        status: 'Offer' as const,
+        notes: 'Offer letter received with equity grant',
+        createdAt: '2026-03-02T12:00:00.000Z',
+        updatedAt: '2026-03-02T12:00:00.000Z',
+      },
+    ];
+
+    const csv = applicationService.exportToCSV(apps);
+    expect(csv).toContain('Company,Job Title,Platform,Status,Application Date,Job URL,Notes');
+    expect(csv).toContain('"Google","Software Engineer III","Company Portal","Interview"');
+    expect(csv).toContain('"Stripe, Inc.","Backend Engineer","Company Portal","Offer"');
+  });
+});
