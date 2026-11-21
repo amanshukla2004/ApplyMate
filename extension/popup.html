@@ -8,8 +8,24 @@
     <link rel="icon" type="image/png" sizes="16x16" href="./icons/icon16.png" />
     <link rel="shortcut icon" href="./favicon.ico" />
     <link rel="stylesheet" href="./src/styles/globals.css" />
+    <style>
+      html, body {
+        width: 340px;
+        margin: 0;
+        padding: 0;
+        background-color: #0E0C16;
+        color: #F8FAFC;
+        overflow: hidden;
+        font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+      #root {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
   </head>
-  <body class="w-80 bg-slate-50 text-slate-800 antialiased p-0 m-0">
+  <body class="antialiased">
     <div id="root"></div>
     <script type="module" src="./src/popup/main.tsx"></script>
   </body>
