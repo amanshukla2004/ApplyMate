@@ -175,7 +175,8 @@ export const Popup: React.FC = () => {
   return (
     <div
       style={{
-        width: '340px',
+        width: '350px',
+        minHeight: '480px',
         boxSizing: 'border-box',
         padding: '16px',
         background: '#0D0B17',

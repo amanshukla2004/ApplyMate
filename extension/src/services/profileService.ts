@@ -126,27 +126,27 @@ export class ProfileService {
   ): number {
     let score = 0;
     // Personal (30%)
-    if (profile.personal.firstName) score += 5;
-    if (profile.personal.lastName) score += 5;
-    if (profile.personal.email) score += 10;
-    if (profile.personal.phone) score += 10;
+    if (profile?.personal?.firstName) score += 5;
+    if (profile?.personal?.lastName) score += 5;
+    if (profile?.personal?.email) score += 10;
+    if (profile?.personal?.phone) score += 10;
 
     // Address (10%)
-    if (profile.address.city && profile.address.country) score += 10;
+    if (profile?.address?.city && profile?.address?.country) score += 10;
 
     // Links (15%)
-    if (profile.links.linkedInUrl) score += 10;
-    if (profile.links.githubUrl) score += 5;
+    if (profile?.links?.linkedInUrl) score += 10;
+    if (profile?.links?.githubUrl) score += 5;
 
     // Education (15%)
-    if (education.length > 0) score += 15;
+    if (education?.length > 0) score += 15;
 
     // Experience (10%)
-    if (experience.length > 0) score += 10;
+    if (experience?.length > 0) score += 10;
 
     // Skills (10%)
-    if (skills.length >= 3) score += 10;
-    else if (skills.length > 0) score += 5;
+    if (skills?.length >= 3) score += 10;
+    else if (skills?.length > 0) score += 5;
 
     // Resumes (10%)
     if (resumesCount > 0) score += 10;
