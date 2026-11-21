@@ -366,6 +366,8 @@ function resolveCanonicalValue(
       return profile.personal?.lastName || '';
     case 'FULL_NAME':
       return profile.personal?.fullName || `${profile.personal?.firstName || ''} ${profile.personal?.lastName || ''}`.trim();
+    case 'PREFERRED_NAME':
+      return profile.personal?.firstName || '';
     case 'EMAIL':
       return profile.personal?.email || '';
     case 'PHONE':
@@ -379,9 +381,13 @@ function resolveCanonicalValue(
     case 'STATE':
       return profile.address?.state || '';
     case 'COUNTRY':
-      return profile.address?.country || '';
+      return profile.address?.country || 'India';
     case 'ZIP_CODE':
       return profile.address?.postalCode || '';
+    case 'FULL_LOCATION': {
+      const parts = [profile.address?.city, profile.address?.state, profile.address?.country || 'India'].filter(Boolean);
+      return parts.join(', ');
+    }
     case 'LINKEDIN_URL':
       return profile.links?.linkedInUrl || profile.links?.linkedin || '';
     case 'GITHUB_URL':
@@ -397,21 +403,51 @@ function resolveCanonicalValue(
     case 'CGPA':
       return edu?.[0]?.gpa || edu?.[0]?.cgpa || '';
     case 'GRADUATION_YEAR':
-      return edu?.[0]?.endDate || edu?.[0]?.graduationYear || '';
+      return edu?.[0]?.endDate || edu?.[0]?.graduationYear?.toString() || '';
+    case 'START_MONTH':
+      return edu?.[0]?.startMonth || '08';
+    case 'START_YEAR':
+      return edu?.[0]?.startYear?.toString() || '2023';
+    case 'END_MONTH':
+      return edu?.[0]?.endMonth || '06';
+    case 'END_YEAR':
+      return edu?.[0]?.graduationYear?.toString() || '2027';
     case 'SKILLS':
-      return skills?.map((s) => s.name).join(', ') || '';
+      return skills?.map((s: any) => s.name).join(', ') || '';
     case 'EXPERIENCE':
       return _exp?.[0] ? `${_exp[0].designation} at ${_exp[0].companyName}` : '';
     case 'WORK_AUTHORIZATION':
-      return profile.preferences?.workAuthorizationStatus || profile.preferences?.workAuthorization || 'Authorized to work';
+      return profile.preferences?.workAuthorizationStatus || 'Authorized to work';
+    case 'VISA_SPONSORSHIP':
+      return profile.preferences?.requiresVisaSponsorship ? 'Yes' : 'No';
+    case 'RELOCATION':
+      return profile.preferences?.willingToRelocate ? 'Yes' : 'Yes';
+    case 'BACKLOGS':
+      return 'No';
+    case 'INTERNSHIP_DURATION':
+      return 'Yes';
+    case 'IN_OFFICE':
+      return 'Yes';
+    case 'US_CITIZEN':
+      return 'No';
+    case 'CITIZENSHIP':
+      return profile.address?.country || 'India';
+    case 'FOREIGN_RESIDENCY':
+      return 'None';
+    case 'FOREIGN_RESIDENCY_NON_CITIZEN':
+      return 'None';
+    case 'FUTURE_OPPORTUNITIES':
+      return 'Yes';
+    case 'CONSENT_DATA_PROTECTION':
+    case 'CONSENT_TERMS':
+    case 'CONSENT_DEMOGRAPHIC':
+      return 'Yes';
     case 'NOTICE_PERIOD':
       return profile.preferences?.noticePeriodDays || 'Immediate';
     case 'CURRENT_CTC':
       return profile.preferences?.currentCompensation || '';
     case 'EXPECTED_CTC':
       return profile.preferences?.expectedCompensation || '';
-    case 'RELOCATION':
-      return profile.preferences?.willingToRelocate ? 'Yes' : 'No';
     case 'GENDER':
       return profile.personal?.gender || '';
     case 'RACE_ETHNICITY':

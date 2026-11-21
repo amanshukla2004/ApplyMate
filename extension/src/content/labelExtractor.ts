@@ -64,16 +64,16 @@ export class LabelExtractor {
     // 6. Check preceding sibling or nearby container label / text
     const previousSibling = element.previousElementSibling;
     if (previousSibling && (previousSibling.tagName === 'LABEL' || previousSibling.tagName === 'SPAN' || previousSibling.tagName === 'DIV')) {
-      if (previousSibling.textContent && previousSibling.textContent.trim().length < 80) {
+      if (previousSibling.textContent && previousSibling.textContent.trim().length < 300) {
         return this.cleanLabel(previousSibling.textContent);
       }
     }
 
-    // 7. Check parent container text header (e.g. form-group label)
-    const parent = element.parentElement;
-    if (parent) {
-      const labelChild = parent.querySelector('label, .label, .field-label, [data-automation-id*="label"]');
-      if (labelChild && labelChild.textContent && labelChild.textContent.trim().length < 80) {
+    // 7. Check parent or closest field container text header (Greenhouse, Workday, Lever)
+    const container = element.closest('.field, [class*="field"], .form-group, .form-item, fieldset') || element.parentElement;
+    if (container) {
+      const labelChild = container.querySelector('label, .label, .field-label, legend, [data-automation-id*="label"]');
+      if (labelChild && labelChild.textContent && labelChild.textContent.trim().length < 300) {
         return this.cleanLabel(labelChild.textContent);
       }
     }

@@ -139,6 +139,8 @@ export interface JobPreferences {
   willingToRelocate: boolean;
   workAuthorizationStatus: string;
   requiresVisaSponsorship: boolean;
+  veteranStatus?: string;
+  disabilityStatus?: string;
 }
 
 export type ApplicationStatus =

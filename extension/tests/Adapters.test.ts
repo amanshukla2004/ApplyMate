@@ -11,6 +11,63 @@ describe('AdapterRegistry', () => {
     expect(adapter.name).toBe('Greenhouse Job Board');
   });
 
+  it('scans complex Greenhouse form with education, screener questions, and consents', async () => {
+    document.body.innerHTML = `
+      <form id="application_form">
+        <input id="first_name" name="first_name" type="text" />
+        <input id="last_name" name="last_name" type="text" />
+        <input id="email" name="email" type="email" />
+        <input id="phone" name="phone" type="tel" />
+        <input name="job_application[answers_attributes][0][school_name_id]" type="text" />
+        <select name="job_application[answers_attributes][0][degree_id]">
+          <option value="">Select...</option>
+          <option value="btech">Bachelor of Technology</option>
+        </select>
+        <div class="field">
+          <label>In which city, state/province and country are you currently based?*</label>
+          <input name="job_application[answers][question_1001]" type="text" />
+        </div>
+        <div class="field">
+          <label>Do you have any active backlogs / academic arrears?*</label>
+          <select name="job_application[answers][question_1002]">
+            <option value="">Select...</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Are you available for a 6-month internship?*</label>
+          <select name="job_application[answers][question_1003]">
+            <option value="">Select...</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>
+            <input name="job_application[answers][question_1004]" type="checkbox" />
+            Yes, I have read and acknowledge the Job Applicant Data Protection Notice.
+          </label>
+        </div>
+      </form>
+    `;
+
+    const adapter = adapterRegistry.getActiveAdapter('https://boards.greenhouse.io/nasdaq/jobs/999', document);
+    const fields = await adapter.scanForm();
+
+    expect(fields.length).toBe(10);
+    expect(fields[0].canonicalField).toBe('FIRST_NAME');
+    expect(fields[1].canonicalField).toBe('LAST_NAME');
+    expect(fields[2].canonicalField).toBe('EMAIL');
+    expect(fields[3].canonicalField).toBe('PHONE');
+    expect(fields[4].canonicalField).toBe('COLLEGE');
+    expect(fields[5].canonicalField).toBe('DEGREE');
+    expect(fields[6].canonicalField).toBe('FULL_LOCATION');
+    expect(fields[7].canonicalField).toBe('BACKLOGS');
+    expect(fields[8].canonicalField).toBe('INTERNSHIP_DURATION');
+    expect(fields[9].canonicalField).toBe('CONSENT_DATA_PROTECTION');
+  });
+
   it('detects Lever adapter on jobs.lever.co', () => {
     const adapter = adapterRegistry.getActiveAdapter('https://jobs.lever.co/company/abc', document);
     expect(adapter.name).toBe('Lever Application Form');

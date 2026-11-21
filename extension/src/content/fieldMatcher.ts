@@ -63,9 +63,10 @@ export class FieldMatcher {
 
         // Exact match on Label
         if (normLabel === normAlias) {
-          score = Math.max(score, 0.90);
-        } else if (normLabel.includes(normAlias)) {
-          score = Math.max(score, 0.80);
+          score = Math.max(score, 0.95);
+        } else if (normLabel.includes(normAlias) && normAlias.length > 3) {
+          const specificity = Math.min(0.12, normAlias.length / 100);
+          score = Math.max(score, 0.80 + specificity);
         }
 
         // Aria label

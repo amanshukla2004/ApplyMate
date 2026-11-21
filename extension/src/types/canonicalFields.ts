@@ -1,6 +1,7 @@
 export type ApplicationField =
   | 'FIRST_NAME'
   | 'LAST_NAME'
+  | 'PREFERRED_NAME'
   | 'FULL_NAME'
   | 'EMAIL'
   | 'PHONE'
@@ -10,6 +11,7 @@ export type ApplicationField =
   | 'STATE'
   | 'COUNTRY'
   | 'ZIP_CODE'
+  | 'FULL_LOCATION'
   | 'LINKEDIN_URL'
   | 'GITHUB_URL'
   | 'PORTFOLIO_URL'
@@ -18,13 +20,29 @@ export type ApplicationField =
   | 'BRANCH'
   | 'CGPA'
   | 'GRADUATION_YEAR'
+  | 'START_MONTH'
+  | 'START_YEAR'
+  | 'END_MONTH'
+  | 'END_YEAR'
   | 'SKILLS'
   | 'EXPERIENCE'
   | 'NOTICE_PERIOD'
   | 'CURRENT_CTC'
   | 'EXPECTED_CTC'
   | 'WORK_AUTHORIZATION'
+  | 'VISA_SPONSORSHIP'
   | 'RELOCATION'
+  | 'BACKLOGS'
+  | 'INTERNSHIP_DURATION'
+  | 'IN_OFFICE'
+  | 'US_CITIZEN'
+  | 'CITIZENSHIP'
+  | 'FOREIGN_RESIDENCY'
+  | 'FOREIGN_RESIDENCY_NON_CITIZEN'
+  | 'FUTURE_OPPORTUNITIES'
+  | 'CONSENT_DATA_PROTECTION'
+  | 'CONSENT_TERMS'
+  | 'CONSENT_DEMOGRAPHIC'
   | 'RESUME'
   | 'COVER_LETTER'
   | 'GENDER'
@@ -58,6 +76,14 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     category: 'personal',
     dataType: 'text',
     aliases: ['last name', 'lastname', 'lname', 'last_name', 'surname', 'family name'],
+    sensitive: false,
+  },
+  PREFERRED_NAME: {
+    id: 'PREFERRED_NAME',
+    displayLabel: 'Preferred First Name',
+    category: 'personal',
+    dataType: 'text',
+    aliases: ['preferred first name', 'preferred name', 'nickname', 'chosen name'],
     sensitive: false,
   },
   FULL_NAME: {
@@ -132,6 +158,22 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     aliases: ['zip', 'zip code', 'zipcode', 'postal code', 'postcode', 'pin code', 'pincode'],
     sensitive: false,
   },
+  FULL_LOCATION: {
+    id: 'FULL_LOCATION',
+    displayLabel: 'Full Location (City, State, Country)',
+    category: 'address',
+    dataType: 'text',
+    aliases: [
+      'in which city state province and country are you currently based',
+      'currently based',
+      'location city',
+      'current location',
+      'based in',
+      'city state and country',
+      'present location',
+    ],
+    sensitive: false,
+  },
   LINKEDIN_URL: {
     id: 'LINKEDIN_URL',
     displayLabel: 'LinkedIn Profile URL',
@@ -161,7 +203,18 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     displayLabel: 'College / University',
     category: 'education',
     dataType: 'text',
-    aliases: ['university', 'college', 'institution', 'school', 'institute name', 'alma mater'],
+    aliases: [
+      'university',
+      'college',
+      'institution',
+      'school',
+      'institute name',
+      'alma mater',
+      'which college or school are you currently attending',
+      'school attending',
+      'college attending',
+      'current college',
+    ],
     sensitive: false,
   },
   DEGREE: {
@@ -185,7 +238,16 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     displayLabel: 'CGPA / Percentage',
     category: 'education',
     dataType: 'text',
-    aliases: ['cgpa', 'gpa', 'grade', 'percentage', 'marks', 'score'],
+    aliases: [
+      'cgpa',
+      'gpa',
+      'grade',
+      'percentage',
+      'marks',
+      'score',
+      'cumulative grade point average',
+      'cumulative gpa',
+    ],
     sensitive: false,
   },
   GRADUATION_YEAR: {
@@ -194,6 +256,38 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     category: 'education',
     dataType: 'text',
     aliases: ['graduation year', 'grad year', 'year of completion', 'passing year', 'year of graduation', 'end year'],
+    sensitive: false,
+  },
+  START_MONTH: {
+    id: 'START_MONTH',
+    displayLabel: 'Education Start Month',
+    category: 'education',
+    dataType: 'select',
+    aliases: ['start date month', 'start month', 'education start month', 'from month'],
+    sensitive: false,
+  },
+  START_YEAR: {
+    id: 'START_YEAR',
+    displayLabel: 'Education Start Year',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['start date year', 'start year', 'education start year', 'from year'],
+    sensitive: false,
+  },
+  END_MONTH: {
+    id: 'END_MONTH',
+    displayLabel: 'Education End Month',
+    category: 'education',
+    dataType: 'select',
+    aliases: ['end date month', 'end month', 'education end month', 'to month'],
+    sensitive: false,
+  },
+  END_YEAR: {
+    id: 'END_YEAR',
+    displayLabel: 'Education End Year',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['end date year', 'end year', 'education end year', 'to year'],
     sensitive: false,
   },
   SKILLS: {
@@ -217,7 +311,7 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     displayLabel: 'Notice Period (Days/Months)',
     category: 'preferences',
     dataType: 'text',
-    aliases: ['notice period', 'notice', 'availability to join', 'how soon can you start', 'earliest start date'],
+    aliases: ['notice period', 'notice period days', 'employment notice', 'availability to join', 'how soon can you start', 'earliest start date'],
     sensitive: false,
   },
   CURRENT_CTC: {
@@ -249,7 +343,177 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     displayLabel: 'Willingness to Relocate',
     category: 'preferences',
     dataType: 'select',
-    aliases: ['willing to relocate', 'relocation', 'relocate', 'open to relocation'],
+    aliases: [
+      'willing to relocate',
+      'relocation',
+      'relocate',
+      'open to relocation',
+      'relocate at your own expense if needed',
+      'willing to relocate at your own expense',
+    ],
+    sensitive: false,
+  },
+  VISA_SPONSORSHIP: {
+    id: 'VISA_SPONSORSHIP',
+    displayLabel: 'Visa Sponsorship Requirement',
+    category: 'preferences',
+    dataType: 'select',
+    aliases: [
+      'will you now or in the future require sponsorship for employment visa status',
+      'require sponsorship for employment visa status',
+      'visa sponsorship',
+      'sponsorship required',
+      'require visa sponsorship',
+    ],
+    sensitive: false,
+  },
+  BACKLOGS: {
+    id: 'BACKLOGS',
+    displayLabel: 'Active Backlogs / Academic Arrears',
+    category: 'education',
+    dataType: 'select',
+    aliases: [
+      'do you have any active backlogs academic arrears',
+      'active backlogs',
+      'academic arrears',
+      'backlogs',
+      'any active backlogs',
+    ],
+    sensitive: false,
+  },
+  INTERNSHIP_DURATION: {
+    id: 'INTERNSHIP_DURATION',
+    displayLabel: 'Internship Availability / Duration',
+    category: 'preferences',
+    dataType: 'select',
+    aliases: [
+      'are you available for a 6 month internship',
+      'available for a 6 month internship',
+      'internship duration',
+      'available for internship',
+      '6 month internship',
+    ],
+    sensitive: false,
+  },
+  IN_OFFICE: {
+    id: 'IN_OFFICE',
+    displayLabel: 'In-Office Attendance Requirement',
+    category: 'preferences',
+    dataType: 'select',
+    aliases: [
+      'are you willing to report to the office at least 3 days a week',
+      'report to the office at least 3 days a week',
+      'report to the office',
+      'in office attendance',
+      'hybrid policy',
+    ],
+    sensitive: false,
+  },
+  US_CITIZEN: {
+    id: 'US_CITIZEN',
+    displayLabel: 'U.S. Citizen / Permanent Resident Status',
+    category: 'preferences',
+    dataType: 'select',
+    aliases: [
+      'are you a u s citizen',
+      'u s citizen u s national',
+      'lawful permanent resident alien',
+      'green card holder',
+      'us citizen',
+      'trade control screening',
+    ],
+    sensitive: false,
+  },
+  CITIZENSHIP: {
+    id: 'CITIZENSHIP',
+    displayLabel: 'Country of Citizenship',
+    category: 'personal',
+    dataType: 'select',
+    aliases: [
+      'please list each country where you hold citizenship',
+      'country where you hold citizenship',
+      'citizenship country',
+      'primary citizenship',
+      'nationality',
+    ],
+    sensitive: false,
+  },
+  FOREIGN_RESIDENCY: {
+    id: 'FOREIGN_RESIDENCY',
+    displayLabel: 'Foreign Permanent Residency (5 Years)',
+    category: 'personal',
+    dataType: 'select',
+    aliases: [
+      'please list each country during the past five years where you held permanent resident status but were not a citizen',
+      'permanent resident status but were not a citizen',
+      'foreign permanent residency',
+    ],
+    sensitive: false,
+  },
+  FOREIGN_RESIDENCY_NON_CITIZEN: {
+    id: 'FOREIGN_RESIDENCY_NON_CITIZEN',
+    displayLabel: 'Foreign Non-Citizen Residency (5 Years)',
+    category: 'personal',
+    dataType: 'select',
+    aliases: [
+      'please list each country during the past five years where you resided but were not a citizen or permanent resident',
+      'resided but were not a citizen or permanent resident',
+      'foreign residency visa',
+    ],
+    sensitive: false,
+  },
+  FUTURE_OPPORTUNITIES: {
+    id: 'FUTURE_OPPORTUNITIES',
+    displayLabel: 'Future Job Opportunities Consent',
+    category: 'preferences',
+    dataType: 'select',
+    aliases: [
+      'would you like nasdaq to keep your application details and contact you about other job opportunities in the future',
+      'keep your application details and contact you about other job opportunities',
+      'contact you about other job opportunities',
+      'future job opportunities',
+      'talent community',
+    ],
+    sensitive: false,
+  },
+  CONSENT_DATA_PROTECTION: {
+    id: 'CONSENT_DATA_PROTECTION',
+    displayLabel: 'Data Protection Notice Consent',
+    category: 'other',
+    dataType: 'select',
+    aliases: [
+      'job applicant data protection notice',
+      'data protection notice',
+      'i have read and acknowledge the job applicant data protection notice',
+      'applicant privacy policy',
+      'privacy notice consent',
+    ],
+    sensitive: false,
+  },
+  CONSENT_TERMS: {
+    id: 'CONSENT_TERMS',
+    displayLabel: 'Terms & Conditions Certification',
+    category: 'other',
+    dataType: 'select',
+    aliases: [
+      'terms and conditions',
+      'certification authorization',
+      'yes i have read and consent to the terms and conditions',
+      'certification and authorization',
+      'declaration and consent',
+    ],
+    sensitive: false,
+  },
+  CONSENT_DEMOGRAPHIC: {
+    id: 'CONSENT_DEMOGRAPHIC',
+    displayLabel: 'Voluntary Demographic Consent',
+    category: 'other',
+    dataType: 'select',
+    aliases: [
+      'voluntary demographic data notice and consent',
+      'demographic data notice',
+      'consent to processing of sensitive personal information',
+    ],
     sensitive: false,
   },
   RESUME: {

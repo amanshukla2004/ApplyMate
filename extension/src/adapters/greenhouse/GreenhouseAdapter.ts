@@ -18,47 +18,78 @@ export class GreenhouseAdapter implements FormAdapter {
     const fields = domScanner.scan();
     // Greenhouse specific refinements:
     for (const f of fields) {
-      if (f.elementId === 'first_name' || f.name === 'first_name') {
+      const name = (f.name || '').toLowerCase();
+      const id = (f.elementId || '').toLowerCase();
+
+      if (id === 'first_name' || name === 'first_name' || name.includes('[first_name]')) {
         f.canonicalField = 'FIRST_NAME';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.elementId === 'last_name' || f.name === 'last_name') {
+      } else if (id === 'last_name' || name === 'last_name' || name.includes('[last_name]')) {
         f.canonicalField = 'LAST_NAME';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.elementId === 'email' || f.name === 'email') {
+      } else if (id === 'email' || name === 'email' || name.includes('[email]')) {
         f.canonicalField = 'EMAIL';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.elementId === 'phone' || f.name === 'phone') {
+      } else if (id === 'phone' || name === 'phone' || name.includes('[phone]')) {
         f.canonicalField = 'PHONE';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.name?.includes('urls[LinkedIn]')) {
+      } else if (name.includes('urls[linkedin]') || id.includes('linkedin')) {
         f.canonicalField = 'LINKEDIN_URL';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.name?.includes('urls[GitHub]')) {
+      } else if (name.includes('urls[github]') || id.includes('github')) {
         f.canonicalField = 'GITHUB_URL';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.name?.includes('urls[Portfolio]') || f.name?.includes('urls[Website]')) {
+      } else if (name.includes('urls[portfolio]') || name.includes('urls[website]') || id.includes('portfolio') || id.includes('website')) {
         f.canonicalField = 'PORTFOLIO_URL';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.name?.includes('job_application[gender]')) {
+      } else if (name.includes('school_name') || id.includes('school_name')) {
+        f.canonicalField = 'COLLEGE';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (name.includes('degree') || id.includes('degree')) {
+        f.canonicalField = 'DEGREE';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (name.includes('discipline') || id.includes('discipline')) {
+        f.canonicalField = 'BRANCH';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (name.includes('start_date_month') || id.includes('start_date_month')) {
+        f.canonicalField = 'START_MONTH';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (name.includes('start_date_year') || id.includes('start_date_year')) {
+        f.canonicalField = 'START_YEAR';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (name.includes('end_date_month') || id.includes('end_date_month')) {
+        f.canonicalField = 'END_MONTH';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (name.includes('end_date_year') || id.includes('end_date_year')) {
+        f.canonicalField = 'END_YEAR';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (name.includes('job_application[gender]')) {
         f.canonicalField = 'GENDER';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.name?.includes('job_application[race]') || f.name?.includes('job_application[ethnicity]')) {
+      } else if (name.includes('job_application[race]') || name.includes('job_application[ethnicity]')) {
         f.canonicalField = 'RACE_ETHNICITY';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.name?.includes('job_application[veteran_status]')) {
+      } else if (name.includes('job_application[veteran_status]')) {
         f.canonicalField = 'VETERAN_STATUS';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (f.name?.includes('job_application[disability_status]')) {
+      } else if (name.includes('job_application[disability_status]')) {
         f.canonicalField = 'DISABILITY_STATUS';
         f.confidence = 1.0;
         f.status = 'MATCHED';

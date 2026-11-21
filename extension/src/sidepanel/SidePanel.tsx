@@ -356,12 +356,16 @@ export const SidePanel: React.FC = () => {
         return p.personal.lastName || '';
       case 'FULL_NAME':
         return p.personal.fullName || `${p.personal.firstName || ''} ${p.personal.lastName || ''}`.trim();
+      case 'PREFERRED_NAME':
+        return p.personal.firstName || '';
       case 'EMAIL':
         return p.personal.email || '';
       case 'PHONE':
         return p.personal.phone || '';
       case 'ADDRESS':
         return p.address.addressLine1 || '';
+      case 'ADDRESS_LINE_2':
+        return p.address.addressLine2 || '';
       case 'CITY':
         return p.address.city || '';
       case 'STATE':
@@ -369,7 +373,11 @@ export const SidePanel: React.FC = () => {
       case 'ZIP_CODE':
         return p.address.postalCode || '';
       case 'COUNTRY':
-        return p.address.country || '';
+        return p.address.country || 'India';
+      case 'FULL_LOCATION': {
+        const parts = [p.address.city, p.address.state, p.address.country || 'India'].filter(Boolean);
+        return parts.join(', ');
+      }
       case 'LINKEDIN_URL':
         return p.links.linkedInUrl || '';
       case 'GITHUB_URL':
@@ -388,6 +396,14 @@ export const SidePanel: React.FC = () => {
         return edu[0]?.cgpa || '';
       case 'GRADUATION_YEAR':
         return edu[0]?.graduationYear?.toString() || '';
+      case 'START_MONTH':
+        return '08';
+      case 'START_YEAR':
+        return edu[0]?.graduationYear ? (parseInt(edu[0].graduationYear, 10) - 4).toString() : '2023';
+      case 'END_MONTH':
+        return '06';
+      case 'END_YEAR':
+        return edu[0]?.graduationYear?.toString() || '2027';
       case 'EXPERIENCE':
         return experienceList[0] ? `${experienceList[0].designation} at ${experienceList[0].companyName}` : '';
       case 'NOTICE_PERIOD':
@@ -398,12 +414,38 @@ export const SidePanel: React.FC = () => {
         return p.preferences.currentCompensation || '';
       case 'WORK_AUTHORIZATION':
         return p.preferences.workAuthorizationStatus || 'Authorized';
+      case 'VISA_SPONSORSHIP':
+        return p.preferences.requiresVisaSponsorship ? 'Yes' : 'No';
       case 'RELOCATION':
-        return p.preferences.willingToRelocate ? 'Yes' : 'No';
+        return p.preferences.willingToRelocate ? 'Yes' : 'Yes';
+      case 'BACKLOGS':
+        return 'No';
+      case 'INTERNSHIP_DURATION':
+        return 'Yes';
+      case 'IN_OFFICE':
+        return 'Yes';
+      case 'US_CITIZEN':
+        return 'No';
+      case 'CITIZENSHIP':
+        return p.address.country || 'India';
+      case 'FOREIGN_RESIDENCY':
+        return 'None';
+      case 'FOREIGN_RESIDENCY_NON_CITIZEN':
+        return 'None';
+      case 'FUTURE_OPPORTUNITIES':
+        return 'Yes';
+      case 'CONSENT_DATA_PROTECTION':
+      case 'CONSENT_TERMS':
+      case 'CONSENT_DEMOGRAPHIC':
+        return 'Yes';
       case 'GENDER':
         return p.personal.gender || '';
       case 'RACE_ETHNICITY':
         return p.personal.race || '';
+      case 'VETERAN_STATUS':
+        return p.preferences.veteranStatus || 'I am not a protected veteran';
+      case 'DISABILITY_STATUS':
+        return p.preferences.disabilityStatus || 'No, I do not have a disability';
       default:
         return '';
     }
