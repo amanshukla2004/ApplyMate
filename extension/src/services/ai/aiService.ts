@@ -1,9 +1,27 @@
 import { chromeStorageClient } from '../storage/chromeStorage';
-import { UserProfile, ProjectRecord, ExperienceRecord, EducationRecord } from '../../types/profile';
+import { UserProfile, ProjectRecord, ExperienceRecord, EducationRecord, SkillItem } from '../../types/profile';
 
 export interface GeneratedAnswerResult {
   answer: string;
   confidence: number;
+  groundedIn: string[];
+}
+
+export type CoverLetterTone = 'Confident' | 'Technical' | 'Enthusiastic';
+
+export interface CoverLetterRequest {
+  companyName: string;
+  jobTitle: string;
+  tone: CoverLetterTone;
+  profile: UserProfile;
+  projects: ProjectRecord[];
+  experience: ExperienceRecord[];
+  skills?: SkillItem[];
+}
+
+export interface GeneratedCoverLetterResult {
+  coverLetter: string;
+  tone: CoverLetterTone;
   groundedIn: string[];
 }
 
@@ -190,6 +208,109 @@ Provide a direct, polished answer (2-4 sentences).`;
       confidence: 0.75,
       groundedIn: ['General Profile'],
     };
+  }
+
+  async generateCoverLetter(req: CoverLetterRequest): Promise<GeneratedCoverLetterResult> {
+    const settings = await chromeStorageClient.getSettings();
+
+    if (settings.aiEnabled && settings.aiApiKey) {
+      try {
+        const prompt = this.buildCoverLetterPrompt(req);
+        if (settings.aiProvider === 'groq') {
+          const res = await this.callGroq(prompt, settings.aiApiKey);
+          return {
+            coverLetter: res.answer,
+            tone: req.tone,
+            groundedIn: ['Groq AI', 'User Profile', 'Projects'],
+          };
+        } else if (settings.aiProvider === 'gemini') {
+          const res = await this.callGemini(prompt, settings.aiApiKey);
+          return {
+            coverLetter: res.answer,
+            tone: req.tone,
+            groundedIn: ['Gemini AI', 'User Profile', 'Projects'],
+          };
+        }
+      } catch (err) {
+        console.warn('[ApplyMate AI] Remote cover letter generation failed, falling back to local synthesis:', err);
+      }
+    }
+
+    return this.synthesizeLocalCoverLetter(req);
+  }
+
+  private buildCoverLetterPrompt(req: CoverLetterRequest): string {
+    const { companyName, jobTitle, tone, profile, projects, experience } = req;
+    const topProjects = projects.slice(0, 2);
+    const topExp = experience[0];
+
+    return `You are ApplyMate, an elite career copilot. Draft a tailored, professional 3-paragraph cover letter for ${profile.personal.fullName || 'the candidate'} applying for the position of "${jobTitle}" at "${companyName}".
+
+Tone: ${tone} (reflect this tone strictly throughout the letter).
+Rules:
+1. Exactly 3 paragraphs.
+2. Grounded strictly in real achievements. Do NOT invent fake companies or false credentials.
+3. Paragraph 1: Enthusiastic opening addressing ${companyName}, introducing domain specialization and express interest in the ${jobTitle} role.
+4. Paragraph 2: Core technical evidence highlighting candidate projects (${topProjects.map((p) => `${p.name} using ${p.technologies.slice(0, 3).join(', ')}: ${p.shortDescription}`).join('; ')}) and experience${topExp ? ` at ${topExp.companyName} as ${topExp.designation}` : ''}.
+5. Paragraph 3: Professional closing expressing eagerness to contribute to ${companyName}'s engineering goals, with a call to discuss further.
+
+Return ONLY the plain text of the 3 paragraphs.`;
+  }
+
+  private synthesizeLocalCoverLetter(req: CoverLetterRequest): string & GeneratedCoverLetterResult {
+    const { companyName, jobTitle, tone, profile, projects, experience } = req;
+    const candidateName = profile.personal.fullName || 'Candidate';
+    const topProject = projects[0];
+    const secondProject = projects[1];
+    const topExp = experience[0];
+
+    // Paragraph 1: Opening
+    let p1 = '';
+    if (tone === 'Confident') {
+      p1 = `I am writing to express my strong interest in the ${jobTitle} role at ${companyName}. With a rigorous foundation in software engineering and hands-on experience building resilient, performant systems, I am eager to bring immediate technical value and high-velocity execution to your engineering team.`;
+    } else if (tone === 'Technical') {
+      p1 = `I am applying for the ${jobTitle} position at ${companyName}. Having developed high-throughput web applications and scalable architectural modules, I specialize in clean systems design, robust type-safety, and production-grade engineering that aligns directly with ${companyName}'s technical standards.`;
+    } else {
+      // Enthusiastic
+      p1 = `I am thrilled to submit my application for the ${jobTitle} opportunity at ${companyName}. I have long admired ${companyName}'s dedication to product innovation and user experience, and I am excited about the opportunity to contribute my engineering capabilities to your team's mission.`;
+    }
+
+    // Paragraph 2: Evidence & Projects
+    let p2 = '';
+    const expText = topExp
+      ? `During my work as a ${topExp.designation} at ${topExp.companyName}, I focused on ${topExp.description.slice(0, 120)}... `
+      : '';
+    const proj1Text = topProject
+      ? `Specifically, through "${topProject.name}", I built a solution utilizing ${topProject.technologies.slice(0, 4).join(', ')}, addressing ${topProject.problemStatement || topProject.shortDescription}. `
+      : '';
+    const proj2Text = secondProject
+      ? `Furthermore, in my project "${secondProject.name}", I engineered scalable features with ${secondProject.technologies.slice(0, 3).join(', ')}, demonstrating strong problem-solving and modular code architecture.`
+      : '';
+
+    p2 = `${expText}${proj1Text}${proj2Text}`.trim() ||
+      `Throughout my software engineering background, I have developed full-stack applications with modern frameworks like React, TypeScript, and cloud technologies, always prioritizing high reliability, test coverage, and end-user performance.`;
+
+    // Paragraph 3: Closing
+    let p3 = '';
+    if (tone === 'Confident') {
+      p3 = `I am confident that my technical proficiency, proactive problem solving, and commitment to engineering excellence make me a natural fit for ${companyName}. I welcome the opportunity to discuss how my skill set will drive success for the ${jobTitle} team. Thank you for your time and consideration.`;
+    } else if (tone === 'Technical') {
+      p3 = `I look forward to discussing the technical challenges and architectural roadmap at ${companyName}, and sharing how my background in modern stacks and distributed systems can accelerate your goals. Thank you for considering my application.`;
+    } else {
+      p3 = `I would love the opportunity to connect with your team to share how my passion, technical foundation, and collaborative energy can help ${companyName} continue to thrive. Thank you for considering my application, and I look forward to hearing from you.`;
+    }
+
+    const fullLetter = `${p1}\n\n${p2}\n\n${p3}\n\nSincerely,\n${candidateName}`;
+
+    return {
+      coverLetter: fullLetter,
+      tone,
+      groundedIn: [
+        topProject ? `Project: ${topProject.name}` : 'Profile Projects',
+        topExp ? `Experience: ${topExp.companyName}` : 'Work Experience',
+        'Local Heuristic Engine',
+      ],
+    } as any;
   }
 }
 

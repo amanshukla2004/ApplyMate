@@ -48,6 +48,17 @@ export const SidePanel: React.FC = () => {
   const [aiGeneratedText, setAiGeneratedText] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
+  // Workday step state
+  const [workdayStepTitle, setWorkdayStepTitle] = useState<string | null>(null);
+
+  // Cover Letter generation state
+  const [aiMode, setAiMode] = useState<'qa' | 'coverLetter'>('qa');
+  const [clCompany, setClCompany] = useState('');
+  const [clJobTitle, setClJobTitle] = useState('');
+  const [clTone, setClTone] = useState<'Confident' | 'Technical' | 'Enthusiastic'>('Confident');
+  const [clGenerated, setClGenerated] = useState('');
+  const [isGeneratingCl, setIsGeneratingCl] = useState(false);
+
   // Copy tab state
   const [copySearchQuery, setCopySearchQuery] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -78,6 +89,23 @@ export const SidePanel: React.FC = () => {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  useEffect(() => {
+    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+      const listener = (msg: any) => {
+        if (msg.type === 'WORKDAY_STEP_CHANGED' && msg.data) {
+          processFields(msg.data.fields, msg.data.website);
+          if (msg.data.stepTitle) {
+            setWorkdayStepTitle(msg.data.stepTitle);
+          }
+        }
+      };
+      chrome.runtime.onMessage.addListener(listener);
+      return () => {
+        chrome.runtime.onMessage.removeListener(listener);
+      };
+    }
+  }, [profile, educationList]);
 
   const loadAllData = async () => {
     try {
@@ -163,7 +191,22 @@ export const SidePanel: React.FC = () => {
     customEdu?: EducationRecord[]
   ) => {
     setFields(scanned);
-    if (site) setWebsiteInfo(site);
+    if (site) {
+      setWebsiteInfo(site);
+      if (site.adapterName && site.adapterName.includes('(')) {
+        const stepMatch = site.adapterName.match(/\(([^)]+)\)/);
+        if (stepMatch) setWorkdayStepTitle(stepMatch[1]);
+      }
+      if (!clCompany && site.hostname) {
+        const cleanHost = site.hostname.replace(/^(www|careers|jobs|app)\./, '').split('.')[0];
+        if (cleanHost && cleanHost !== 'docs' && cleanHost !== 'forms') {
+          setClCompany(cleanHost.charAt(0).toUpperCase() + cleanHost.slice(1));
+        }
+      }
+      if (!clJobTitle && site.title) {
+        setClJobTitle(site.title.split(/[-|–•]/)[0].trim());
+      }
+    }
 
     const activeProfile = customProfile || profile;
     const activeEdu = customEdu || educationList;
@@ -475,6 +518,24 @@ export const SidePanel: React.FC = () => {
                   <Pill variant="u">{unknownCount} unknown</Pill>
                 </div>
               )}
+              {workdayStepTitle && (
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--i-bg)',
+                    color: 'var(--i-t)',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>⚡ Workday Step: <strong>{workdayStepTitle}</strong></span>
+                  <span style={{ fontSize: '11px', opacity: 0.8 }}>Auto-tracked</span>
+                </div>
+              )}
             </div>
 
             {errorMessage && (
@@ -768,55 +829,197 @@ export const SidePanel: React.FC = () => {
       {/* Body: AI Tab */}
       {activeTab === 'ai' && (
         <div className="pbody">
-          <div className="glass card">
-            <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>AI Answer Generator</h3>
-            <label className="f" htmlFor="ai-prompt">Question prompt</label>
-            <textarea
-              className="in"
-              id="ai-prompt"
-              rows={3}
-              placeholder="e.g. Why should we hire you for this role?"
-              value={aiCustomQuestion}
-              onChange={(e) => setAiCustomQuestion(e.target.value)}
-            />
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             <Button
               size="sm"
-              style={{ marginTop: '10px' }}
-              disabled={isGeneratingAi || !aiCustomQuestion.trim() || !profile}
-              onClick={async () => {
-                if (!profile) return;
-                setIsGeneratingAi(true);
-                try {
-                  const res = await aiService.generateAnswer(
-                    aiCustomQuestion,
-                    profile,
-                    projectList,
-                    experienceList,
-                    educationList
-                  );
-                  setAiGeneratedText(res.answer);
-                } catch {
-                  setAiGeneratedText('Could not generate answer. Check API key in Settings.');
-                } finally {
-                  setIsGeneratingAi(false);
-                }
-              }}
+              variant={aiMode === 'qa' ? 'primary' : 'soft'}
+              onClick={() => setAiMode('qa')}
+              style={{ flex: 1 }}
             >
-              {isGeneratingAi ? 'Drafting...' : 'Generate Answer'}
+              Q&A Assistant
+            </Button>
+            <Button
+              size="sm"
+              variant={aiMode === 'coverLetter' ? 'primary' : 'soft'}
+              onClick={() => setAiMode('coverLetter')}
+              style={{ flex: 1 }}
+            >
+              Cover Letter
             </Button>
           </div>
 
-          {aiGeneratedText && (
-            <div className="fc">
-              <div className="ai">{aiGeneratedText}</div>
-              <Button
-                variant="soft"
-                size="sm"
-                onClick={() => copyToClipboard('ai-gen', aiGeneratedText)}
-              >
-                {copiedKey === 'ai-gen' ? 'Copied' : 'Copy Answer'}
-              </Button>
-            </div>
+          {aiMode === 'qa' ? (
+            <>
+              <div className="glass card">
+                <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>AI Answer Generator</h3>
+                <label className="f" htmlFor="ai-prompt">Question prompt</label>
+                <textarea
+                  className="in"
+                  id="ai-prompt"
+                  rows={3}
+                  placeholder="e.g. Why should we hire you for this role?"
+                  value={aiCustomQuestion}
+                  onChange={(e) => setAiCustomQuestion(e.target.value)}
+                />
+                <Button
+                  size="sm"
+                  style={{ marginTop: '10px' }}
+                  disabled={isGeneratingAi || !aiCustomQuestion.trim() || !profile}
+                  onClick={async () => {
+                    if (!profile) return;
+                    setIsGeneratingAi(true);
+                    try {
+                      const res = await aiService.generateAnswer(
+                        aiCustomQuestion,
+                        profile,
+                        projectList,
+                        experienceList,
+                        educationList
+                      );
+                      setAiGeneratedText(res.answer);
+                    } catch {
+                      setAiGeneratedText('Could not generate answer. Check API key in Settings.');
+                    } finally {
+                      setIsGeneratingAi(false);
+                    }
+                  }}
+                >
+                  {isGeneratingAi ? 'Drafting...' : 'Generate Answer'}
+                </Button>
+              </div>
+
+              {aiGeneratedText && (
+                <div className="fc">
+                  <div className="ai">{aiGeneratedText}</div>
+                  <Button
+                    variant="soft"
+                    size="sm"
+                    onClick={() => copyToClipboard('ai-gen', aiGeneratedText)}
+                  >
+                    {copiedKey === 'ai-gen' ? 'Copied' : 'Copy Answer'}
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="glass card">
+                <h3 style={{ fontSize: '16px', marginBottom: '6px' }}>1-Page Cover Letter</h3>
+                <p className="hint" style={{ marginBottom: '12px', fontSize: '12px' }}>
+                  Grounded in your real projects and experience. Formatted in 3 concise paragraphs.
+                </p>
+
+                <div className="stack" style={{ gap: '10px' }}>
+                  <div>
+                    <label className="f" htmlFor="cl-company">Target Company</label>
+                    <input
+                      className="in"
+                      id="cl-company"
+                      placeholder="e.g. Stripe, Google, Meta"
+                      value={clCompany}
+                      onChange={(e) => setClCompany(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="f" htmlFor="cl-role">Target Role</label>
+                    <input
+                      className="in"
+                      id="cl-role"
+                      placeholder="e.g. Senior Software Engineer"
+                      value={clJobTitle}
+                      onChange={(e) => setClJobTitle(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="f">Tone</label>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      {(['Confident', 'Technical', 'Enthusiastic'] as const).map((tone) => (
+                        <button
+                          key={tone}
+                          type="button"
+                          onClick={() => setClTone(tone)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 8px',
+                            borderRadius: '6px',
+                            border: clTone === tone ? '1.5px solid var(--accent)' : '1px solid var(--line)',
+                            background: clTone === tone ? 'var(--a-bg)' : 'transparent',
+                            color: clTone === tone ? 'var(--a-t)' : 'var(--ink)',
+                            fontWeight: 600,
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {tone}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    style={{ marginTop: '4px' }}
+                    disabled={isGeneratingCl || !profile}
+                    onClick={async () => {
+                      if (!profile) return;
+                      setIsGeneratingCl(true);
+                      try {
+                        const res = await aiService.generateCoverLetter({
+                          companyName: clCompany.trim() || 'the Company',
+                          jobTitle: clJobTitle.trim() || 'Software Engineer',
+                          tone: clTone,
+                          profile,
+                          projects: projectList,
+                          experience: experienceList,
+                          skills: skillsList,
+                        });
+                        setClGenerated(res.coverLetter);
+                      } catch {
+                        setClGenerated('Failed to generate cover letter. Check settings or retry.');
+                      } finally {
+                        setIsGeneratingCl(false);
+                      }
+                    }}
+                  >
+                    {isGeneratingCl ? 'Synthesizing...' : 'Generate 1-Page Cover Letter'}
+                  </Button>
+                </div>
+              </div>
+
+              {clGenerated && (
+                <div className="fc">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <Pill variant="a">{clTone} Tone</Pill>
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                      {clGenerated.split(/\s+/).filter(Boolean).length} words
+                    </span>
+                  </div>
+                  <div
+                    className="ai"
+                    style={{
+                      whiteSpace: 'pre-wrap',
+                      fontSize: '12px',
+                      lineHeight: '1.6',
+                      maxHeight: '280px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {clGenerated}
+                  </div>
+                  <div className="row" style={{ marginTop: '8px' }}>
+                    <Button
+                      variant="soft"
+                      size="sm"
+                      onClick={() => copyToClipboard('cl-gen', clGenerated)}
+                    >
+                      {copiedKey === 'cl-gen' ? 'Copied to Clipboard!' : 'Copy Cover Letter'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

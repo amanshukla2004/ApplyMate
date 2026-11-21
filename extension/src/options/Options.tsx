@@ -597,6 +597,31 @@ export const Options: React.FC = () => {
                   setResumeList(await resumeService.getResumes());
                   showToast('Active resume updated');
                 }}
+                onApplyParsedData={async (data) => {
+                  try {
+                    if (data.personal || data.address || data.links) {
+                      await profileService.updateProfile({
+                        personal: data.personal as any,
+                        address: data.address as any,
+                        links: data.links as any,
+                      });
+                    }
+                    for (const edu of data.education) {
+                      await profileService.saveEducation(edu);
+                    }
+                    for (const exp of data.experience) {
+                      await profileService.saveExperience(exp);
+                    }
+                    for (const sk of data.skills) {
+                      await profileService.saveSkill(sk);
+                    }
+                    await loadData();
+                    showToast('✨ Profile auto-populated from resume (100% Client-Side)!');
+                  } catch (err) {
+                    console.error('Failed to apply parsed resume data:', err);
+                    showToast('Failed to apply resume details');
+                  }
+                }}
               />
             )}
 

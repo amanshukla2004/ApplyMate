@@ -53,6 +53,7 @@ export type ExtensionMessage =
   | { type: 'RELOAD_ACTIVE_TAB' }
   | { type: 'HIGHLIGHT_FIELD'; fieldId: string; highlight: boolean; tabId?: number }
   | { type: 'GET_USER_PROFILE' }
+  | { type: 'WORKDAY_STEP_CHANGED'; data: { stepTitle: string; fields: DetectedField[]; website: WebsiteMetadata } }
   | { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string } };
 
 export type MessageResponse<T = unknown> = {

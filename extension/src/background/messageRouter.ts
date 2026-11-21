@@ -128,6 +128,10 @@ export class MessageRouter {
         }
       }
 
+      case 'WORKDAY_STEP_CHANGED': {
+        return { success: true };
+      }
+
       case 'HIGHLIGHT_FIELD': {
         const tab = await TabManager.getActiveTab();
         if (tab && tab.id) {

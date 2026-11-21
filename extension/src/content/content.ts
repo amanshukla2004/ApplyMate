@@ -106,6 +106,7 @@ async function handleFillFields(values: Record<string, string>) {
 
 // In-Page Floating Quick-Action Widget inside Shadow DOM
 let shadowToastTimeout: any = null;
+let globalToastFn: ((msg: string, isError?: boolean) => void) | null = null;
 
 function initFloatingWidget() {
   if (typeof document === 'undefined') return;
@@ -227,6 +228,8 @@ function initFloatingWidget() {
       toast.classList.remove('show');
     }, 3000);
   };
+
+  globalToastFn = triggerToast;
 
   fab.onclick = async () => {
     try {
@@ -422,14 +425,90 @@ function recordApplicationOnSubmit() {
   }
 }
 
+// ----------------------------------------------------------------------------
+// Workday & Multi-Step Wizard Automator
+// ----------------------------------------------------------------------------
+let lastWizardUrl = typeof window !== 'undefined' ? window.location.href : '';
+let lastWizardStepTitle = '';
+let wizardDebounceTimer: any = null;
+
+function checkWizardStepChange() {
+  clearTimeout(wizardDebounceTimer);
+  wizardDebounceTimer = setTimeout(async () => {
+    if (typeof window === 'undefined') return;
+    const currentUrl = window.location.href;
+    const isWorkday = currentUrl.includes('myworkdayjobs.com') || currentUrl.includes('workday.com');
+    if (!isWorkday) return;
+
+    const adapter = adapterRegistry.getActiveAdapter();
+    const currentStepTitle = (adapter as any).getCurrentStepTitle ? (adapter as any).getCurrentStepTitle() : '';
+
+    if (currentUrl !== lastWizardUrl || (currentStepTitle && currentStepTitle !== lastWizardStepTitle)) {
+      lastWizardUrl = currentUrl;
+      lastWizardStepTitle = currentStepTitle;
+
+      try {
+        const scanResult = await handleScanForm();
+        if (scanResult.success && scanResult.data) {
+          chrome.runtime.sendMessage({
+            type: 'WORKDAY_STEP_CHANGED',
+            data: {
+              ...scanResult.data,
+              stepTitle: currentStepTitle,
+            },
+          }).catch(() => {});
+
+          if (globalToastFn && currentStepTitle && currentStepTitle !== 'Application Form') {
+            globalToastFn(`Workday Step: ${currentStepTitle} (${scanResult.data.fields.length} fields detected)`);
+          }
+        }
+      } catch (err) {
+        console.warn('[ApplyMate] Workday wizard step scan error:', err);
+      }
+    }
+  }, 400);
+}
+
+function initWorkdayWizardWatcher() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  const origPushState = history.pushState;
+  if (origPushState) {
+    history.pushState = function (...args) {
+      origPushState.apply(this, args);
+      checkWizardStepChange();
+    };
+  }
+
+  const origReplaceState = history.replaceState;
+  if (origReplaceState) {
+    history.replaceState = function (...args) {
+      origReplaceState.apply(this, args);
+      checkWizardStepChange();
+    };
+  }
+
+  window.addEventListener('popstate', checkWizardStepChange);
+  window.addEventListener('hashchange', checkWizardStepChange);
+
+  if (typeof MutationObserver !== 'undefined' && document.body) {
+    const observer = new MutationObserver(() => {
+      checkWizardStepChange();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+}
+
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       initFloatingWidget();
       initSubmitDetection();
+      initWorkdayWizardWatcher();
     });
   } else {
     initFloatingWidget();
     initSubmitDetection();
+    initWorkdayWizardWatcher();
   }
 }

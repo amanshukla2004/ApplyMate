@@ -169,11 +169,39 @@ export class WorkdayAdapter implements FormAdapter {
     return results;
   }
 
+  getCurrentStepTitle(doc: Document = document): string {
+    const stepEl = doc.querySelector(
+      '[data-automation-id="pageHeader"], [data-automation-id="stepTitle"], [data-automation-id="progressBar"] [aria-current="step"], [data-automation-id*="step"] h2, [data-automation-id="jobApplicationStep"]'
+    );
+    if (stepEl && stepEl.textContent?.trim()) {
+      return stepEl.textContent.trim().replace(/\s+/g, ' ');
+    }
+
+    const headings = Array.from(doc.querySelectorAll('h2, h3, [role="heading"]'));
+    for (const h of headings) {
+      const text = (h.textContent || '').trim().replace(/\s+/g, ' ');
+      if (
+        text.includes('Information') ||
+        text.includes('Experience') ||
+        text.includes('Questionnaire') ||
+        text.includes('Questions') ||
+        text.includes('Disclosures') ||
+        text.includes('Review') ||
+        text.includes('Resume')
+      ) {
+        return text;
+      }
+    }
+
+    return 'Application Form';
+  }
+
   getMetadata(): WebsiteMetadata {
+    const step = this.getCurrentStepTitle();
     return {
       url: window.location.href,
       hostname: window.location.hostname,
-      adapterName: this.name,
+      adapterName: step && step !== 'Application Form' ? `Workday (${step})` : this.name,
       title: document.title,
     };
   }
