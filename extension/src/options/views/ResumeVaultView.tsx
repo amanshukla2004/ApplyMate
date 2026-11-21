@@ -258,6 +258,26 @@ export const ResumeVaultView: React.FC<ResumeVaultViewProps> = ({
               </div>
             )}
 
+            {/* Projects Preview */}
+            {parsedData.projects && parsedData.projects.length > 0 && (
+              <div className="glass card" style={{ padding: '12px 14px' }}>
+                <b style={{ fontSize: '14px' }}>Projects Detected ({parsedData.projects.length})</b>
+                {parsedData.projects.map((proj, idx) => (
+                  <div key={idx} style={{ marginTop: '6px', fontSize: '13px' }}>
+                    <strong>{proj.name}</strong>{' '}
+                    {proj.technologies && proj.technologies.length > 0 && (
+                      <span className="hint">({proj.technologies.join(', ')})</span>
+                    )}
+                    {proj.shortDescription && (
+                      <div className="hint" style={{ fontSize: '12px', marginTop: '2px' }}>
+                        {proj.shortDescription}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Skills Preview */}
             {parsedData.skills.length > 0 && (
               <div className="glass card" style={{ padding: '12px 14px' }}>

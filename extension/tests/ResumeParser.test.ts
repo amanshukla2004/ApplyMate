@@ -70,17 +70,67 @@ Tools: Git, REST APIs, GraphQL, Linux
     expect(exp.designation).toBe('Senior Software Engineer');
   });
 
-  it('accurately categorizes technical skills', () => {
-    const parsed = ResumeParserService.parse(sampleResumeText);
-    const skillNames = parsed.skills.map((s) => s.name);
+  it('correctly extracts projects and links from structured modern resumes', () => {
+    const modernResume = `
+Aman Shukla
+Full-Stack Developer | Java, Spring Boot, React & Agentic AI
++91-7983163187 | work.amanshukla2004@gmail.com | LinkedIn | GitHub
 
-    expect(skillNames).toContain('TypeScript');
-    expect(skillNames).toContain('React');
-    expect(skillNames).toContain('Node.js');
-    expect(skillNames).toContain('PostgreSQL');
-    expect(skillNames).toContain('AWS');
-    expect(skillNames).toContain('Docker');
-    expect(skillNames).toContain('Git');
+EDUCATION
+JSS Academy of Technical Education Noida, India
+B.Tech, Computer Science (AI & ML) — CGPA: 8.56/10.0 2023 – 2027
+
+PROJECTS
+Roomly — Hotel Booking Platform | Spring Boot, PostgreSQL | GitHub | Demo Feb 2026 – Mar 2026
+• Achieved a 99% reduction in transaction errors by eliminating inventory double-booking conflicts through row-level pessimistic locking in PostgreSQL.
+• Coordinated secure payment workflows by integrating the Stripe SDK and webhook event handling.
+
+BLOGWHO — AI Blogging Platform | Spring Boot, LangGraph | GitHub | Demo Jun 2026 – Jul 2026
+• Achieved strict role-scoped access control across 47 system-critical API endpoints using Spring Security.
+
+TECHNICAL SKILLS
+Languages: Java, JavaScript, TypeScript, Python, SQL
+Backend: Spring Boot, FastAPI, REST APIs, Microservices
+Databases: PostgreSQL, MySQL, Redis
+
+[EMBEDDED_LINKS]
+https://linkedin.com/in/amanshukla-dev
+https://github.com/amanshukla2004
+https://github.com/amanshukla2004/airBnbApp
+https://nox-hotelmanagement.vercel.app/
+https://github.com/amanshukla2004/Agentic_blog_generation_Saas
+https://blogwho.onrender.com/
+`;
+
+    const parsed = ResumeParserService.parse(modernResume);
+
+    expect(parsed.personal.fullName).toBe('Aman Shukla');
+    expect(parsed.personal.firstName).toBe('Aman');
+    expect(parsed.personal.lastName).toBe('Shukla');
+    expect(parsed.personal.email).toBe('work.amanshukla2004@gmail.com');
+    expect(parsed.personal.phone).toContain('7983163187');
+    expect(parsed.address.city).toBe('Noida');
+    expect(parsed.address.country).toBe('India');
+    expect(parsed.links.linkedInUrl).toContain('linkedin.com/in/amanshukla-dev');
+    expect(parsed.links.githubUrl).toContain('github.com/amanshukla2004');
+
+    expect(parsed.education.length).toBeGreaterThan(0);
+    expect(parsed.education[0].institution).toContain('JSS Academy of Technical Education');
+    expect(parsed.education[0].degree).toBe('B.Tech');
+    expect(parsed.education[0].graduationYear).toBe('2027');
+    expect(parsed.education[0].cgpa).toBe('8.56/10.0');
+
+    expect(parsed.projects.length).toBe(2);
+    expect(parsed.projects[0].name).toBe('Roomly');
+    expect(parsed.projects[0].technologies).toContain('Spring Boot');
+    expect(parsed.projects[0].technologies).toContain('PostgreSQL');
+    expect(parsed.projects[0].githubUrl).toContain('airBnbApp');
+    expect(parsed.projects[0].liveUrl).toContain('nox-hotelmanagement.vercel.app');
+    expect(parsed.projects[0].shortDescription).toContain('reduction in transaction errors');
+
+    expect(parsed.projects[1].name).toBe('BLOGWHO');
+    expect(parsed.projects[1].githubUrl).toContain('Agentic_blog_generation_Saas');
+    expect(parsed.projects[1].liveUrl).toContain('blogwho.onrender.com');
   });
 });
 

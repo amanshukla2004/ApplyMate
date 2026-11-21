@@ -15,11 +15,11 @@ import { resumeService } from '../services/resumeService';
 import { applicationService } from '../services/applicationService';
 
 export const Popup: React.FC = () => {
-  const [readiness, setReadiness] = useState<number>(100);
+  const [readiness, setReadiness] = useState<number>(0);
   const [activeTabTitle, setActiveTabTitle] = useState<string>('Job Application');
   const [activeTabUrl, setActiveTabUrl] = useState<string>('');
   const [detectedCount, setDetectedCount] = useState<number>(0);
-  const [hasResume, setHasResume] = useState<boolean>(true);
+  const [hasResume, setHasResume] = useState<boolean>(false);
   const [isWebPage, setIsWebPage] = useState<boolean>(false);
   const [platform, setPlatform] = useState<string>('');
   const [autofillSuccess, setAutofillSuccess] = useState<boolean>(false);

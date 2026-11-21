@@ -28,6 +28,8 @@ import { answerService } from '../services/answerService';
 import { applicationService } from '../services/applicationService';
 import { storageService } from '../services/storage/storageService';
 import { chromeStorageClient } from '../services/storage/chromeStorage';
+import { PDFParserService } from '../services/pdf/pdfParserService';
+import { ResumeParserService } from '../services/pdf/resumeParserService';
 
 import {
   UserProfile,
@@ -157,12 +159,52 @@ export const Options: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const handleDirectResumeUpload = async (file: File) => {
+    try {
+      showToast('📄 Parsing resume locally (Zero-Cloud)...');
+      await resumeService.saveResume(file, file.name);
+
+      const extractedText = await PDFParserService.extractText(file);
+      const data = ResumeParserService.parse(extractedText);
+
+      if (data.personal || data.address || data.links) {
+        await profileService.updateProfile({
+          personal: data.personal as any,
+          address: data.address as any,
+          links: data.links as any,
+        });
+      }
+      for (const edu of data.education) {
+        await profileService.saveEducation(edu);
+      }
+      for (const exp of data.experience) {
+        await profileService.saveExperience(exp);
+      }
+      if (data.projects && data.projects.length > 0) {
+        for (const proj of data.projects) {
+          await projectService.saveProject(proj);
+        }
+      }
+      for (const sk of data.skills) {
+        await profileService.saveSkill(sk);
+      }
+
+      await loadData();
+      showToast('✨ Resume imported & profile auto-populated!');
+    } catch (err) {
+      console.error('Failed to parse resume:', err);
+      showToast('Failed to parse resume. Please check the file.');
+    }
+  };
+
   // Header info
   const hours = new Date().getHours();
   const greetingTime = hours < 12 ? 'morning' : hours < 18 ? 'afternoon' : 'evening';
-  const firstName = profile?.personal?.firstName || 'Aman';
-  const lastName = profile?.personal?.lastName || 'Shukla';
-  const initials = `${firstName[0] || 'A'}${lastName[0] || 'S'}`;
+  const hasName = Boolean(profile?.personal?.firstName?.trim());
+  const firstName = profile?.personal?.firstName?.trim() || '';
+  const lastName = profile?.personal?.lastName?.trim() || '';
+  const greetingHeading = hasName ? `Good ${greetingTime}, ${firstName}` : 'Welcome to HapplyMate';
+  const initials = hasName ? `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() : '👋';
   const formattedDate = new Date().toLocaleDateString('en', {
     weekday: 'long',
     day: 'numeric',
@@ -413,14 +455,14 @@ export const Options: React.FC = () => {
               <div>
                 <p>{formattedDate}</p>
                 <h1 style={{ fontSize: '32px' }}>
-                  Good {greetingTime}, {firstName}
+                  {greetingHeading}
                 </h1>
               </div>
               <div className="row">
                 <span
                   className="icon"
                   style={{ font: '700 15px var(--f-h)' }}
-                  aria-label={`Signed in as ${firstName} ${lastName}`}
+                  aria-label={hasName ? `Signed in as ${firstName} ${lastName}` : 'Welcome to HapplyMate'}
                 >
                   {initials}
                 </span>
@@ -445,6 +487,7 @@ export const Options: React.FC = () => {
                 hasResume={resumeList.length > 0}
                 hasSkills={skillsList.length >= 5}
                 onNavigate={(sec) => setActiveSection(sec as SectionId)}
+                onUploadResume={handleDirectResumeUpload}
               />
             )}
 
@@ -611,6 +654,11 @@ export const Options: React.FC = () => {
                     }
                     for (const exp of data.experience) {
                       await profileService.saveExperience(exp);
+                    }
+                    if (data.projects && data.projects.length > 0) {
+                      for (const proj of data.projects) {
+                        await projectService.saveProject(proj);
+                      }
                     }
                     for (const sk of data.skills) {
                       await profileService.saveSkill(sk);

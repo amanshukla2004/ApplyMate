@@ -1,15 +1,16 @@
 /**
- * Client-Side PDF Text Extractor
+ * Client-Side PDF Text & Hyperlink Extractor
  * 
- * Extracts human-readable text directly from PDF binary data (ArrayBuffer or Uint8Array)
- * inside the browser thread using native Web APIs without sending data to any external server.
+ * Extracts clean plain text and embedded URI annotations directly from PDF binary data
+ * (ArrayBuffer or Uint8Array) inside the browser thread using native Web APIs without
+ * sending any data to external servers.
  * 
  * Privacy Guarantee: 100% Client-Side. Zero network transmission.
  */
 
 export class PDFParserService {
   /**
-   * Extracts clean plain text from a PDF File or ArrayBuffer.
+   * Extracts clean plain text and embedded hyperlinks from a PDF File or ArrayBuffer.
    */
   static async extractText(fileOrBuffer: File | ArrayBuffer | Uint8Array): Promise<string> {
     let bytes: Uint8Array;
@@ -29,34 +30,33 @@ export class PDFParserService {
 
     // Verify PDF header
     if (!binaryString.includes('%PDF-')) {
-      // If it's a plain text or markdown resume, return directly
       const textDecoder = new TextDecoder('utf-8', { fatal: false });
       return textDecoder.decode(bytes);
     }
 
+    // 1. Extract embedded /URI hyperlinks from PDF annotations (e.g. LinkedIn, GitHub, Portfolio URLs)
+    const extractedUrls = new Set<string>(this.extractPdfHyperlinks(binaryString));
+
     const textChunks: string[] = [];
 
-    // 1. Extract and decompress all FlateDecode streams
+    // 2. Extract and decompress all FlateDecode streams sequentially
     const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
     let match: RegExpExecArray | null;
+    let streamsFound = false;
 
-    // Index of streams to locate dictionary metadata (/Filter /FlateDecode)
     while ((match = streamRegex.exec(binaryString)) !== null) {
       const streamStart = match.index + match[0].indexOf('stream') + 6;
-      // Skip carriage return/newline after 'stream'
       let actualStart = streamStart;
       if (bytes[actualStart] === 0x0d) actualStart++;
       if (bytes[actualStart] === 0x0a) actualStart++;
 
       const streamEnd = match.index + match[0].lastIndexOf('endstream');
-      // Trim preceding newline before 'endstream'
       let actualEnd = streamEnd;
       if (actualEnd > actualStart && (bytes[actualEnd - 1] === 0x0a || bytes[actualEnd - 1] === 0x0d)) actualEnd--;
       if (actualEnd > actualStart && (bytes[actualEnd - 1] === 0x0a || bytes[actualEnd - 1] === 0x0d)) actualEnd--;
 
       const streamSlice = bytes.subarray(actualStart, actualEnd);
 
-      // Check dictionary preceding this stream for /FlateDecode
       const precedingDict = binaryString.substring(Math.max(0, match.index - 500), match.index);
       const isFlate = precedingDict.includes('/FlateDecode') || precedingDict.includes('/Fl');
 
@@ -64,28 +64,105 @@ export class PDFParserService {
         try {
           const decompressed = await this.decompressFlate(streamSlice);
           if (decompressed) {
+            // Scan decompressed streams (like /ObjStm) for embedded links and annotations
+            const streamUrls = this.extractPdfHyperlinks(decompressed);
+            for (const u of streamUrls) {
+              extractedUrls.add(u);
+            }
+
             const parsed = this.parseTextFromStream(decompressed);
-            if (parsed.trim()) textChunks.push(parsed);
+            if (parsed.trim()) {
+              textChunks.push(parsed);
+              streamsFound = true;
+            }
           }
         } catch {
-          // If decompression fails, try parsing raw slice
-          const rawParsed = this.parseTextFromStream(this.uint8ArrayToString(streamSlice));
-          if (rawParsed.trim()) textChunks.push(rawParsed);
+          const rawDecompressed = this.uint8ArrayToString(streamSlice);
+          const streamUrls = this.extractPdfHyperlinks(rawDecompressed);
+          for (const u of streamUrls) {
+            extractedUrls.add(u);
+          }
+
+          const rawParsed = this.parseTextFromStream(rawDecompressed);
+          if (rawParsed.trim()) {
+            textChunks.push(rawParsed);
+            streamsFound = true;
+          }
         }
       } else {
-        const rawParsed = this.parseTextFromStream(this.uint8ArrayToString(streamSlice));
-        if (rawParsed.trim()) textChunks.push(rawParsed);
+        const rawContent = this.uint8ArrayToString(streamSlice);
+        const streamUrls = this.extractPdfHyperlinks(rawContent);
+        for (const u of streamUrls) {
+          extractedUrls.add(u);
+        }
+
+        const rawParsed = this.parseTextFromStream(rawContent);
+        if (rawParsed.trim()) {
+          textChunks.push(rawParsed);
+          streamsFound = true;
+        }
       }
     }
 
-    // 2. Also inspect raw uncompressed text blocks in the entire document
-    const docLevelParsed = this.parseTextFromStream(binaryString);
-    if (docLevelParsed.trim()) {
-      textChunks.push(docLevelParsed);
+    // 3. Fallback to doc-level search only if streams produced no valid text
+    if (!streamsFound) {
+      const docLevelParsed = this.parseTextFromStream(binaryString);
+      if (docLevelParsed.trim()) {
+        textChunks.push(docLevelParsed);
+      }
+    }
+
+    // Append extracted hyperlinks so resume parser knows about hidden PDF links
+    if (extractedUrls.size > 0) {
+      textChunks.push('\n[EMBEDDED_LINKS]\n' + Array.from(extractedUrls).join('\n'));
     }
 
     const combined = textChunks.join('\n');
     return this.cleanExtractedText(combined);
+  }
+
+  /**
+   * Scans PDF dictionary annotations and stream content for /URI hyperlinks and professional URLs.
+   */
+  private static extractPdfHyperlinks(binary: string): string[] {
+    const urls = new Set<string>();
+    const uriRegex = /\/URI\s*(?:\(([^)]+)\)|<([0-9a-fA-F]+)>)/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = uriRegex.exec(binary)) !== null) {
+      let rawUrl = '';
+      if (match[1]) {
+        rawUrl = this.decodePdfString(`(${match[1]})`);
+      } else if (match[2]) {
+        rawUrl = this.decodePdfString(`<${match[2]}>`);
+      }
+      if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('mailto:')) {
+        const clean = rawUrl.replace(/^mailto:/, '').replace(/[)>"';]+$/, '').trim();
+        if (clean && !clean.includes('ams.org') && !clean.includes('scripts.sil.org')) {
+          urls.add(clean);
+        }
+      }
+    }
+
+    // Also scan for direct URLs (e.g., in /ObjStm or decompressed streams)
+    const directRegex = /https?:\/\/[^\s<>()"']+/g;
+    while ((match = directRegex.exec(binary)) !== null) {
+      const clean = match[0].replace(/[)>"';]+$/, '').trim();
+      if (
+        clean.includes('linkedin.com') ||
+        clean.includes('github.com') ||
+        clean.includes('leetcode.com') ||
+        clean.includes('vercel.app') ||
+        clean.includes('streamlit.app') ||
+        clean.includes('render.com') ||
+        clean.includes('onrender.com') ||
+        /\.(?:dev|me|io)\b/.test(clean)
+      ) {
+        urls.add(clean);
+      }
+    }
+
+    return Array.from(urls);
   }
 
   /**
@@ -96,9 +173,6 @@ export class PDFParserService {
       return null;
     }
 
-    // PDF FlateDecode is RFC 1950 (zlib wrapper).
-    // Native DecompressionStream('deflate') expects zlib header.
-    // DecompressionStream('deflate-raw') expects raw deflate.
     try {
       const stream = new ReadableStream({
         start(controller) {
@@ -107,8 +181,8 @@ export class PDFParserService {
         },
       });
 
-      const decompressedStream = stream.pipeThrough(new DecompressionStream('deflate'));
-      const reader = decompressedStream.getReader();
+      const decompressed = stream.pipeThrough(new DecompressionStream('deflate'));
+      const reader = decompressed.getReader();
       const chunks: Uint8Array[] = [];
       let totalLength = 0;
 
@@ -133,7 +207,7 @@ export class PDFParserService {
     } catch {
       // Try deflate-raw by stripping 2-byte zlib header if present
       try {
-        const rawBytes = bytes.length > 2 && (bytes[0] === 0x78) ? bytes.subarray(2, bytes.length - 4) : bytes;
+        const rawBytes = bytes.length > 2 && bytes[0] === 0x78 ? bytes.subarray(2, bytes.length - 4) : bytes;
         const rawStream = new ReadableStream({
           start(controller) {
             controller.enqueue(rawBytes);
@@ -170,7 +244,7 @@ export class PDFParserService {
   }
 
   /**
-   * Parses PDF text operators (BT ... ET, Tj, TJ, etc.) from a decoded stream.
+   * Parses PDF text operators (BT ... ET, Tj, TJ, T*, Td) from a decoded stream sequentially.
    */
   private static parseTextFromStream(content: string): string {
     const lines: string[] = [];
@@ -181,49 +255,86 @@ export class PDFParserService {
 
     while ((btMatch = btRegex.exec(content)) !== null) {
       const block = btMatch[1];
-      const extractedBlockText = this.parseOperators(block);
+      const extractedBlockText = this.parseOperatorsSequential(block);
       if (extractedBlockText.trim()) {
         lines.push(extractedBlockText.trim());
       }
     }
 
-    // If no BT...ET blocks were found, attempt loose operator search
     if (lines.length === 0) {
-      const looseText = this.parseOperators(content);
+      const looseText = this.parseOperatorsSequential(content);
       if (looseText.trim()) lines.push(looseText.trim());
     }
 
     return lines.join('\n');
   }
 
-  private static parseOperators(block: string): string {
-    const tokens: string[] = [];
+  /**
+   * Parses text operators in strict stream order, preserving line breaks and kerning spaces.
+   */
+  private static parseOperatorsSequential(block: string): string {
+    const result: string[] = [];
+    let currentLine = '';
 
-    // 1. Matches Array of text tokens: [ (text) -10 (more text) ] TJ
-    const tjArrayRegex = /\[([\s\S]*?)\]\s*TJ/g;
+    // Regex matching:
+    // 1. TJ arrays: \[([\s\S]*?)\]\s*TJ
+    // 2. Tj / ' / " operators: (\((?:\\\(|\\\)|[^()])*\)|<[0-9a-fA-F]+>)\s*(Tj|'|")
+    // 3. Newline: T\*
+    // 4. Move text position: ([-0-9.]+)\s+([-0-9.]+)\s+(T[dD])
+    const operatorRegex = /\[([\s\S]*?)\]\s*TJ|(\((?:\\\(|\\\)|[^()])*\)|<[0-9a-fA-F]+>)\s*(Tj|'|")|T\*|([-0-9.]+)\s+([-0-9.]+)\s+(T[dD])/g;
     let match: RegExpExecArray | null;
 
-    while ((match = tjArrayRegex.exec(block)) !== null) {
-      const arrayContent = match[1];
-      // Match (strings) or <hex strings>
-      const stringMatches = arrayContent.match(/\((?:\\\(|\\\)|[^()])*\)|<[0-9a-fA-F]+>/g);
-      if (stringMatches) {
-        const line = stringMatches
-          .map((s) => this.decodePdfString(s))
-          .join('')
-          .trim();
-        if (line) tokens.push(line);
+    while ((match = operatorRegex.exec(block)) !== null) {
+      if (match[1] !== undefined) {
+        // TJ Array: [ (str) -250 (str2) ]
+        const arrayContent = match[1];
+        const tokenRegex = /\((?:\\\(|\\\)|[^()])*\)|<[0-9a-fA-F]+>|[-0-9.]+/g;
+        let tokenMatch: RegExpExecArray | null;
+        let lastWasSpace = false;
+
+        while ((tokenMatch = tokenRegex.exec(arrayContent)) !== null) {
+          const item = tokenMatch[0];
+          if (item.startsWith('(') || item.startsWith('<')) {
+            const text = this.decodePdfString(item);
+            currentLine += text;
+            lastWasSpace = text.endsWith(' ');
+          } else {
+            const num = parseFloat(item);
+            // In PDF font coordinates, a negative displacement < -70 corresponds to a word space
+            if (!isNaN(num) && num < -70 && !lastWasSpace && currentLine.length > 0 && !currentLine.endsWith(' ')) {
+              currentLine += ' ';
+              lastWasSpace = true;
+            }
+          }
+        }
+      } else if (match[2] !== undefined) {
+        // Single Tj, ', "
+        const op = match[3];
+        if (op === "'" || op === '"') {
+          if (currentLine.trim()) result.push(currentLine.trim());
+          currentLine = '';
+        }
+        currentLine += this.decodePdfString(match[2]);
+      } else if (match[0] === 'T*') {
+        if (currentLine.trim()) result.push(currentLine.trim());
+        currentLine = '';
+      } else if (match[6] !== undefined) {
+        // Td or TD (vertical offset)
+        const ty = parseFloat(match[5]);
+        if (Math.abs(ty) > 1) {
+          if (currentLine.trim()) result.push(currentLine.trim());
+          currentLine = '';
+        } else if (Math.abs(parseFloat(match[4])) > 10 && !currentLine.endsWith(' ')) {
+          currentLine += ' ';
+        }
       }
     }
 
-    // 2. Matches single string operators: (text) Tj or ' or "
-    const tjSingleRegex = /(\((?:\\\(|\\\)|[^()])*\)|<[0-9a-fA-F]+>)\s*(?:Tj|'|")/g;
-    while ((match = tjSingleRegex.exec(block)) !== null) {
-      const decoded = this.decodePdfString(match[1]);
-      if (decoded.trim()) tokens.push(decoded.trim());
+    if (currentLine.trim()) {
+      result.push(currentLine.trim());
     }
 
-    return tokens.join(' ');
+    return result.join('\n');
   }
 
   private static decodePdfString(raw: string): string {
@@ -264,6 +375,10 @@ export class PDFParserService {
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n')
       .replace(/[ \t]+/g, ' ')
+      .replace(/\s+[j|]\s+/g, ' | ')
+      .replace(/\{\s*(\d{4}|[A-Za-z]+)/g, '- $1')
+      .replace(/work\s*ows\b/gi, 'workflows')
+      .replace(/con\s*icts\b/gi, 'conflicts')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
   }
