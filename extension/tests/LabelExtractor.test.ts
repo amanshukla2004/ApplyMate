@@ -70,4 +70,104 @@ describe('LabelExtractor', () => {
     const label = LabelExtractor.extractLabel(input);
     expect(label).toBe('Phone number');
   });
+
+  it('does not extract placeholder "Select..." and falls back to question container label', () => {
+    document.body.innerHTML = `
+      <div class="field">
+        <label>Are your university will be able to provide an "No Objection Certificate" *</label>
+        <div class="select-wrapper">
+          <input id="noc-select" type="text" placeholder="Select..." />
+        </div>
+      </div>
+    `;
+    const input = document.getElementById('noc-select')!;
+    const label = LabelExtractor.extractLabel(input);
+    expect(label).toBe('Are your university will be able to provide an "No Objection Certificate"');
+  });
+
+  it('does not extract button text "Attach" for resume file upload', () => {
+    document.body.innerHTML = `
+      <div class="field">
+        <label>Resume/CV *</label>
+        <button type="button">Attach</button>
+        <input id="resume-file" type="file" />
+      </div>
+    `;
+    const input = document.getElementById('resume-file')!;
+    const label = LabelExtractor.extractLabel(input);
+    expect(label).toBe('Resume/CV');
+  });
+
+  it('extracts label from multi-level nested container in Zoho Recruit and rejects rec_form IDs', () => {
+    document.body.innerHTML = `
+      <div class="rec-form-row form-group">
+        <div class="rec-field-label col-sm-4">
+          <label class="control-label">Mobile *</label>
+        </div>
+        <div class="rec-field-value col-sm-8">
+          <div class="input-container">
+            <input id="rec_form_40797000000003149" name="rec_form_40797000000003149" type="text" />
+          </div>
+        </div>
+      </div>
+    `;
+    const input = document.getElementById('rec_form_40797000000003149')!;
+    const label = LabelExtractor.extractLabel(input);
+    expect(label).toBe('Mobile');
+  });
+
+  it('rejects internal hashes and technical IDs in isInvalidPlaceholder', () => {
+    expect(LabelExtractor.isInvalidPlaceholder('rec form 40797000000003149')).toBe(true);
+    expect(LabelExtractor.isInvalidPlaceholder('rec_form_40797000000003149')).toBe(true);
+    expect(LabelExtractor.isInvalidPlaceholder('field #8')).toBe(true);
+    expect(LabelExtractor.isInvalidPlaceholder('Field #12')).toBe(true);
+    expect(LabelExtractor.isInvalidPlaceholder('40797000000003149')).toBe(true);
+    expect(LabelExtractor.isInvalidPlaceholder('Select...')).toBe(true);
+    expect(LabelExtractor.isInvalidPlaceholder('Attach')).toBe(true);
+    expect(LabelExtractor.isInvalidPlaceholder('-None-')).toBe(true);
+    expect(LabelExtractor.isInvalidPlaceholder('Mobile')).toBe(false);
+    expect(LabelExtractor.isInvalidPlaceholder('Portfolio')).toBe(false);
+  });
+
+  it('extracts label with (?) help tooltip cleanly in Zoho Recruit', () => {
+    document.body.innerHTML = `
+      <div class="rec-field-row">
+        <div class="rec-label">
+          Portfolio (BD, Web Operator and Founder's office candidates can add their linkedin or professional profiles) * (?)
+        </div>
+        <div class="rec-input">
+          <input id="rec_form_40797000000003151" name="rec_form_40797000000003151" type="text" />
+        </div>
+      </div>
+    `;
+    const input = document.getElementById('rec_form_40797000000003151')!;
+    const label = LabelExtractor.extractLabel(input);
+    expect(label).toBe(
+      "Portfolio (BD, Web Operator and Founder's office candidates can add their linkedin or professional profiles)"
+    );
+  });
+
+  it('strips Zoho CRM type suffix _s from data-zcqa and normalizes brand names like LinkedIn and Facebook', () => {
+    document.body.innerHTML = `
+      <div class="crc-form-row">
+        <crux-text-component data-zcqa="rec_LinkedIn_s">
+          <div class="lyteField">
+            <input id="rec_linkedin_input" type="text" />
+          </div>
+        </crux-text-component>
+      </div>
+      <div class="crc-form-row">
+        <crux-text-component data-zcqa="rec_Facebook_s">
+          <div class="lyteField">
+            <input id="rec_facebook_input" type="text" />
+          </div>
+        </crux-text-component>
+      </div>
+    `;
+    const in1 = document.getElementById('rec_linkedin_input')!;
+    const in2 = document.getElementById('rec_facebook_input')!;
+
+    expect(LabelExtractor.extractLabel(in1)).toBe('LinkedIn');
+    expect(LabelExtractor.extractLabel(in2)).toBe('Facebook');
+  });
 });

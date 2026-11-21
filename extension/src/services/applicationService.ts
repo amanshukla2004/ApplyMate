@@ -60,6 +60,7 @@ export class ApplicationService {
     if (u.includes('lever.co')) return 'Lever';
     if (u.includes('myworkdayjobs.com') || u.includes('workday.com')) return 'Workday';
     if (u.includes('ashbyhq.com')) return 'Ashby';
+    if (u.includes('zohorecruit.') || u.includes('zohopublic.') || u.includes('recruit.zoho.')) return 'Zoho Recruit';
     if (u.includes('linkedin.com')) return 'LinkedIn';
     if (u.includes('docs.google.com/forms') || u.includes('forms.gle')) return 'Google Forms';
     if (u.includes('indeed.com')) return 'Indeed';

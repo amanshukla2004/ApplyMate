@@ -14,6 +14,8 @@ node_modules/
 .yarn/unplugged/
 .yarn/build-state.yml
 .yarn/install-state.gz
+.pnpm-store/
+.npm/
 
 # ------------------------------------------------------------------------------
 # Build & Distribution Artifacts
@@ -121,10 +123,13 @@ target/
 *~
 *.bak
 .DS_Store
+._*
 Thumbs.db
 Thumbs.db:encryptable
 ehthumbs.db
 desktop.ini
+$RECYCLE.BIN/
+.history/
 
 # ------------------------------------------------------------------------------
 # Temporary, Cache & Scratch Files
@@ -136,6 +141,9 @@ desktop.ini
 scratch/
 **/scratch/
 .system_generated/
+**/.system_generated/
+.gemini/
+**/.gemini/
 
 # ------------------------------------------------------------------------------
 # Documentation & Markdown Files (All ignored, excluding README.md)

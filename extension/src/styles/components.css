@@ -263,6 +263,40 @@
   box-sizing: border-box;
 }
 
+select.in,
+select {
+  cursor: pointer;
+  color-scheme: dark;
+}
+
+select option,
+.in option {
+  background-color: #241F36;
+  color: #F4F1FA;
+  padding: 8px 12px;
+}
+
+:root[data-theme='dark'] select option,
+:root[data-theme='dark'] .in option,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] select.in {
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] select option,
+:root[data-theme='dark'] .in option {
+  background-color: #241F36;
+  color: #F4F1FA;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) select option,
+  :root:not([data-theme='light']) .in option {
+    background-color: #241F36;
+    color: #F4F1FA;
+  }
+}
+
 .in:focus {
   border-color: var(--accent);
   outline: none;

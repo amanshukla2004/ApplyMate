@@ -38,8 +38,44 @@ describe('FieldMatcher', () => {
     expect(res.confidence).toBeGreaterThanOrEqual(0.85);
   });
 
+  it('correctly matches University NOC question to UNIVERSITY_NOC and NOT COLLEGE', () => {
+    const res = FieldMatcher.match('', '', 'Are your university will be able to provide an "No Objection Certificate" *');
+    expect(res.canonicalField).toBe('UNIVERSITY_NOC');
+    expect(res.canonicalField).not.toBe('COLLEGE');
+    expect(res.confidence).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it('matches College when specifically asking for institution name', () => {
+    const res = FieldMatcher.match('school', 'college', 'College / University');
+    expect(res.canonicalField).toBe('COLLEGE');
+    expect(res.confidence).toBeGreaterThanOrEqual(0.8);
+  });
+
   it('returns low confidence for unknown custom question', () => {
     const res = FieldMatcher.match('custom_prompt_xyz', 'q99', 'What is your favorite book?');
     expect(res.confidence).toBeLessThan(0.6);
+  });
+
+  it('never matches long narrative essay questions containing "website" to PORTFOLIO_URL', () => {
+    const res = FieldMatcher.match(
+      '',
+      '',
+      'Tell us about a product or an app or a website that you built or participated in building as a side project or as a part of an internship? What was the problem that you were solving? What was the result/ impact. Please ensure you share the numerical impact? *'
+    );
+    expect(res.canonicalField).not.toBe('PORTFOLIO_URL');
+  });
+
+  it('correctly matches social fields LinkedIn and Facebook despite casing or spacing variants', () => {
+    const r1 = FieldMatcher.match('', '', 'LinkedIn');
+    expect(r1.canonicalField).toBe('LINKEDIN_URL');
+    expect(r1.confidence).toBeGreaterThanOrEqual(0.85);
+
+    const r2 = FieldMatcher.match('', '', 'Linked In S');
+    expect(r2.canonicalField).toBe('LINKEDIN_URL');
+    expect(r2.confidence).toBeGreaterThanOrEqual(0.85);
+
+    const r3 = FieldMatcher.match('', '', 'Facebook S');
+    expect(r3.canonicalField).toBe('FACEBOOK_URL');
+    expect(r3.confidence).toBeGreaterThanOrEqual(0.85);
   });
 });

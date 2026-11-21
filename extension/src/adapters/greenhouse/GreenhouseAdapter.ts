@@ -20,6 +20,7 @@ export class GreenhouseAdapter implements FormAdapter {
     for (const f of fields) {
       const name = (f.name || '').toLowerCase();
       const id = (f.elementId || '').toLowerCase();
+      const label = (f.label || '').toLowerCase();
 
       if (id === 'first_name' || name === 'first_name' || name.includes('[first_name]')) {
         f.canonicalField = 'FIRST_NAME';
@@ -37,15 +38,34 @@ export class GreenhouseAdapter implements FormAdapter {
         f.canonicalField = 'PHONE';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (name.includes('urls[linkedin]') || id.includes('linkedin')) {
+      } else if (
+        name.includes('candidate_location') ||
+        id.includes('candidate_location') ||
+        name.includes('location') ||
+        id.includes('location') ||
+        label.includes('location (city)') ||
+        label === 'location' ||
+        label === 'city'
+      ) {
+        f.canonicalField = 'CITY';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (name.includes('urls[linkedin]') || id.includes('linkedin') || label.includes('linkedin')) {
         f.canonicalField = 'LINKEDIN_URL';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (name.includes('urls[github]') || id.includes('github')) {
+      } else if (name.includes('urls[github]') || id.includes('github') || label.includes('github')) {
         f.canonicalField = 'GITHUB_URL';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (name.includes('urls[portfolio]') || name.includes('urls[website]') || id.includes('portfolio') || id.includes('website')) {
+      } else if (
+        name.includes('urls[portfolio]') ||
+        name.includes('urls[website]') ||
+        id.includes('portfolio') ||
+        id.includes('website') ||
+        label === 'website' ||
+        label === 'portfolio'
+      ) {
         f.canonicalField = 'PORTFOLIO_URL';
         f.confidence = 1.0;
         f.status = 'MATCHED';
@@ -61,22 +81,53 @@ export class GreenhouseAdapter implements FormAdapter {
         f.canonicalField = 'BRANCH';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (name.includes('start_date_month') || id.includes('start_date_month')) {
+      } else if (name.includes('start_date_month') || id.includes('start_date_month') || label.includes('start date month') || label === 'start month') {
         f.canonicalField = 'START_MONTH';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (name.includes('start_date_year') || id.includes('start_date_year')) {
+      } else if (name.includes('start_date_year') || id.includes('start_date_year') || label.includes('start date year') || label === 'start year') {
         f.canonicalField = 'START_YEAR';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (name.includes('end_date_month') || id.includes('end_date_month')) {
+      } else if (name.includes('end_date_month') || id.includes('end_date_month') || label.includes('end date month') || label === 'end month') {
         f.canonicalField = 'END_MONTH';
         f.confidence = 1.0;
         f.status = 'MATCHED';
-      } else if (name.includes('end_date_year') || id.includes('end_date_year')) {
+      } else if (name.includes('end_date_year') || id.includes('end_date_year') || label.includes('end date year') || label === 'end year') {
         f.canonicalField = 'END_YEAR';
         f.confidence = 1.0;
         f.status = 'MATCHED';
+      } else if (label.includes('no objection') || label.includes('noc')) {
+        f.canonicalField = 'UNIVERSITY_NOC';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (label.includes('relocate') || label.includes('relocation')) {
+        f.canonicalField = 'RELOCATION';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (label.includes('office') && (label.includes('come') || label.includes('days a week') || label.includes('based'))) {
+        f.canonicalField = 'IN_OFFICE';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (label.includes('internship') && (label.includes('duration') || label.includes('6 months') || label.includes('24 weeks') || label.includes('full-time') || label.includes('full time') || label.includes('approx'))) {
+        f.canonicalField = 'INTERNSHIP_DURATION';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (label.includes('backlog') || label.includes('arrear')) {
+        f.canonicalField = 'BACKLOGS';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+      } else if (id === 'resume' || name.includes('resume') || label.includes('resume')) {
+        f.canonicalField = 'RESUME';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+        f.fieldType = 'file';
+        f.label = 'Resume / CV';
+      } else if (id.includes('cover_letter') || name.includes('cover_letter') || label.includes('cover letter')) {
+        f.canonicalField = 'COVER_LETTER';
+        f.confidence = 1.0;
+        f.status = 'MATCHED';
+        f.label = 'Cover Letter';
       } else if (name.includes('job_application[gender]')) {
         f.canonicalField = 'GENDER';
         f.confidence = 1.0;

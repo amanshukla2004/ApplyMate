@@ -329,8 +329,75 @@ export const SidePanel: React.FC = () => {
         }
       }
 
-      if (f.options && f.options.length > 0 && !val) {
-        val = f.options[0].value;
+      // Intelligent Month option mapper for education dates
+      if ((f.canonicalField === 'END_MONTH' || f.canonicalField === 'START_MONTH') && f.options && f.options.length > 0) {
+        const userMonth = f.canonicalField === 'END_MONTH' ? (activeEdu[0]?.endMonth || '06') : (activeEdu[0]?.startMonth || '08');
+        const monthNum = parseInt(userMonth, 10) || (f.canonicalField === 'END_MONTH' ? 6 : 8);
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        const targetName = monthNames[monthNum - 1];
+
+        for (const opt of f.options) {
+          const optVal = (opt.value || '').toLowerCase().trim();
+          const optText = (opt.label || '').toLowerCase().trim();
+          if (
+            optVal === String(monthNum) ||
+            optVal === String(monthNum).padStart(2, '0') ||
+            optText.includes(targetName) ||
+            optVal.includes(targetName.slice(0, 3))
+          ) {
+            val = opt.value || opt.label;
+            break;
+          }
+        }
+      }
+
+      // Intelligent Phone & Country Code mapper
+      if (f.canonicalField === 'PHONE') {
+        const fullPhone = activeProfile?.personal?.phone || '';
+        const digits = fullPhone.replace(/\D/g, '');
+        const nationalNum = digits.length > 10 && digits.startsWith('91') ? digits.slice(2) : digits;
+
+        if (f.options && f.options.length > 0) {
+          const matchedOpt = f.options.find((opt) => {
+            const valLower = (opt.value || '').toLowerCase().trim();
+            const textLower = (opt.label || '').toLowerCase().trim();
+            return (
+              valLower === '+91' ||
+              valLower === '91' ||
+              valLower === 'in' ||
+              textLower.includes('+91') ||
+              textLower.includes('india') ||
+              valLower.includes('mobile') ||
+              textLower.includes('mobile') ||
+              valLower.includes('cell') ||
+              textLower.includes('cell')
+            );
+          });
+          if (matchedOpt) {
+            val = matchedOpt.value || matchedOpt.label;
+          }
+        } else {
+          val = nationalNum.length === 10 ? nationalNum : fullPhone;
+        }
+      }
+
+      // Choice options value reconciliation (e.g. Yes -> 1/true/Yes)
+      if (f.options && f.options.length > 0) {
+        if (val) {
+          const normVal = val.toLowerCase().trim();
+          const matchedOpt = f.options.find(
+            (opt) =>
+              opt.value.toLowerCase().trim() === normVal ||
+              opt.label.toLowerCase().trim() === normVal ||
+              (normVal === 'yes' && (opt.value === '1' || opt.value === 'true' || opt.label.toLowerCase() === 'yes')) ||
+              (normVal === 'no' && (opt.value === '0' || opt.value === 'false' || opt.label.toLowerCase() === 'no'))
+          );
+          if (matchedOpt) {
+            val = matchedOpt.value || matchedOpt.label;
+          }
+        } else {
+          val = f.options[0].value || f.options[0].label;
+        }
       }
       values[f.id] = val;
 
@@ -384,6 +451,10 @@ export const SidePanel: React.FC = () => {
         return p.links.githubUrl || '';
       case 'PORTFOLIO_URL':
         return p.links.portfolioUrl || '';
+      case 'FACEBOOK_URL':
+        return (p.links as any)?.facebookUrl || (p.links as any)?.facebook || '';
+      case 'TWITTER_URL':
+        return (p.links as any)?.twitterUrl || (p.links as any)?.twitter || '';
       case 'COLLEGE':
         return edu[0]?.institution || '';
       case 'DEGREE':
@@ -420,6 +491,8 @@ export const SidePanel: React.FC = () => {
         return p.preferences.willingToRelocate ? 'Yes' : 'Yes';
       case 'BACKLOGS':
         return 'No';
+      case 'UNIVERSITY_NOC':
+        return 'Yes';
       case 'INTERNSHIP_DURATION':
         return 'Yes';
       case 'IN_OFFICE':
@@ -736,22 +809,86 @@ export const SidePanel: React.FC = () => {
                     <Pill variant={pillVariant}>{pillText}</Pill>
                   </div>
 
-                  {/* Choice questions (radio / checkbox) */}
+                  {/* Choice questions (radio / checkbox / select options) */}
                   {isChoice ? (
                     <div className="choice" role="group" aria-label={field.label}>
-                      {field.options!.map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          aria-pressed={fieldValues[field.id] === opt.value}
-                          onClick={() => {
-                            setFieldValues((prev) => ({ ...prev, [field.id]: opt.value }));
-                            setSelectedIds((prev) => new Set(prev).add(field.id));
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
+                      {field.options!.map((opt) => {
+                        const isPressed =
+                          fieldValues[field.id] === opt.value ||
+                          fieldValues[field.id]?.toLowerCase().trim() === opt.label.toLowerCase().trim() ||
+                          (fieldValues[field.id]?.toLowerCase().trim() === 'yes' && (opt.value === '1' || opt.value === 'true')) ||
+                          (fieldValues[field.id]?.toLowerCase().trim() === 'no' && (opt.value === '0' || opt.value === 'false'));
+                        return (
+                          <button
+                            key={opt.value || opt.label}
+                            type="button"
+                            aria-pressed={isPressed}
+                            onClick={() => {
+                              setFieldValues((prev) => ({ ...prev, [field.id]: opt.value || opt.label }));
+                              setSelectedIds((prev) => new Set(prev).add(field.id));
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : field.canonicalField === 'RESUME' ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: 'var(--soft)',
+                        borderRadius: '14px',
+                        border: '1px solid var(--line)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '18px' }}>📄</span>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600 }}>
+                            {resumes[0]?.fileName || 'Resume Vault (1 stored)'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                            Manage files in Resume Vault
+                          </div>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="soft" onClick={() => setActiveTab('resume')}>
+                        Resume Vault →
+                      </Button>
+                    </div>
+                  ) : field.canonicalField === 'COVER_LETTER' && (field.fieldType === 'file' || !field.fieldType || field.fieldType === 'text') ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: 'var(--soft)',
+                        borderRadius: '14px',
+                        border: '1px solid var(--line)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '18px' }}>✍️</span>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600 }}>Tailored Cover Letter</div>
+                          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Generate with AI</div>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="soft"
+                        onClick={() => {
+                          setActiveTab('ai');
+                          setAiMode('coverLetter');
+                        }}
+                      >
+                        Draft in AI Tab →
+                      </Button>
                     </div>
                   ) : isLongText ? (
                     <>
@@ -780,6 +917,7 @@ export const SidePanel: React.FC = () => {
                   ) : field.status === 'UNMATCHED' ? (
                     <select
                       className="in"
+                      style={{ colorScheme: 'dark light' }}
                       value={field.canonicalField || ''}
                       onChange={(e) => {
                         const canon = e.target.value as ApplicationField;

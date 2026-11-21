@@ -33,7 +33,9 @@ export interface EducationRecord {
   institution: string;
   degree: string;
   branch: string;
+  startMonth?: string;
   startYear: string;
+  endMonth?: string;
   graduationYear: string;
   cgpa: string;
   coursework?: string;

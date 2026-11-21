@@ -15,6 +15,8 @@ export type ApplicationField =
   | 'LINKEDIN_URL'
   | 'GITHUB_URL'
   | 'PORTFOLIO_URL'
+  | 'FACEBOOK_URL'
+  | 'TWITTER_URL'
   | 'COLLEGE'
   | 'DEGREE'
   | 'BRANCH'
@@ -49,7 +51,8 @@ export type ApplicationField =
   | 'RACE_ETHNICITY'
   | 'VETERAN_STATUS'
   | 'DISABILITY_STATUS'
-  | 'HEARD_ABOUT_US';
+  | 'HEARD_ABOUT_US'
+  | 'UNIVERSITY_NOC';
 
 export interface CanonicalFieldDefinition {
   id: ApplicationField;
@@ -179,7 +182,7 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     displayLabel: 'LinkedIn Profile URL',
     category: 'links',
     dataType: 'url',
-    aliases: ['linkedin', 'linkedin profile', 'linkedin url', 'linkedin link'],
+    aliases: ['linkedin', 'linkedin profile', 'linkedin url', 'linkedin link', 'linked in', 'linked in s', 'linkedin s', 'social linkedin'],
     sensitive: false,
   },
   GITHUB_URL: {
@@ -187,7 +190,7 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     displayLabel: 'GitHub Profile URL',
     category: 'links',
     dataType: 'url',
-    aliases: ['github', 'github profile', 'github url', 'git profile'],
+    aliases: ['github', 'github profile', 'github url', 'git profile', 'git hub'],
     sensitive: false,
   },
   PORTFOLIO_URL: {
@@ -196,6 +199,22 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     category: 'links',
     dataType: 'url',
     aliases: ['portfolio', 'website', 'personal website', 'portfolio url', 'personal link', 'blog'],
+    sensitive: false,
+  },
+  FACEBOOK_URL: {
+    id: 'FACEBOOK_URL',
+    displayLabel: 'Facebook Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['facebook', 'facebook profile', 'facebook url', 'facebook link', 'face book', 'facebook s', 'social facebook'],
+    sensitive: false,
+  },
+  TWITTER_URL: {
+    id: 'TWITTER_URL',
+    displayLabel: 'Twitter / X Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['twitter', 'twitter profile', 'twitter url', 'x profile', 'twitter link', 'twitter s'],
     sensitive: false,
   },
   COLLEGE: {
@@ -570,6 +589,26 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     category: 'other',
     dataType: 'select',
     aliases: ['how did you hear', 'source', 'referral', 'where did you find us', 'referral source'],
+    sensitive: false,
+  },
+  UNIVERSITY_NOC: {
+    id: 'UNIVERSITY_NOC',
+    displayLabel: 'University No Objection Certificate (NOC)',
+    category: 'education',
+    dataType: 'select',
+    aliases: [
+      'no objection certificate',
+      'no objection',
+      'noc',
+      'university will be able to provide an no objection certificate',
+      'are your university will be able to provide an no objection certificate',
+      'are your university will be able to provide an',
+      'college noc',
+      'noc from university',
+      'noc from college',
+      'approval letter or no objection certificate',
+      'university approval letter',
+    ],
     sensitive: false,
   },
 };

@@ -223,4 +223,73 @@ describe('Contextual RAG & Intelligent ATS Question Answering', () => {
     expect(res.confidence).toBeGreaterThanOrEqual(0.85);
     expect(res.groundedIn[0]).toContain('Agentic Blog Generation SaaS');
   });
+
+  it('generates an articulate, recruiter-ready suitability pitch for "Why do you think you are the most suitable for this role?"', async () => {
+    const res = await aiService.generateAnswer(
+      'Why do you think you are the most suitable for this role? *',
+      mockProfile,
+      mockProjects,
+      mockExperience,
+      mockEducation
+    );
+
+    expect(res.answer).toContain('I am a strong fit for this role');
+    expect(res.answer).toContain('Agentic Blog Generation SaaS');
+    expect(res.answer).not.toContain('focused on Achieved');
+    expect(res.answer).not.toContain('stateless.');
+    expect(res.confidence).toBeGreaterThanOrEqual(0.90);
+  });
+
+  it('generates professional narrative for company alignment ("Why NOCT?") and "About You"', async () => {
+    const whyRes = await aiService.generateAnswer(
+      'Why NOCT? *',
+      mockProfile,
+      mockProjects,
+      mockExperience,
+      mockEducation
+    );
+    expect(whyRes.answer).toContain('I want to join your team');
+    expect(whyRes.confidence).toBeGreaterThanOrEqual(0.88);
+
+    const aboutRes = await aiService.generateAnswer(
+      'About You *',
+      mockProfile,
+      mockProjects,
+      mockExperience,
+      mockEducation
+    );
+    expect(aboutRes.answer).toContain("Hello! I'm Aman Shukla");
+    expect(aboutRes.confidence).toBeGreaterThanOrEqual(0.90);
+  });
+
+  it('correctly resolves NOC screener as Yes and never returns college name', async () => {
+    const res = await aiService.generateAnswer(
+      'Are your university will be able to provide an "No Objection Certificate" *',
+      mockProfile,
+      mockProjects,
+      mockExperience,
+      mockEducation
+    );
+    expect(res.answer).toBe('Yes');
+    expect(res.answer).not.toBe('JSS Academy of Technical Education');
+  });
+
+  it('generates structured STAR project response with numerical impact for product/app/website questions', async () => {
+    const res = await aiService.generateAnswer(
+      'Tell us about a product or an app or a website that you built or participated in building as a side project or as a part of an internship? What was the problem that you were solving? What was the result/ impact. Please ensure you share the numerical impact? *',
+      mockProfile,
+      mockProjects,
+      mockExperience,
+      mockEducation
+    );
+
+    expect(res.answer).toContain('Product Overview:');
+    expect(res.answer).toContain('Agentic Blog Generation SaaS');
+    expect(res.answer).toContain('Problem Solved:');
+    expect(res.answer).toContain('Numerical Impact:');
+    expect(res.answer).toContain('99%');
+    expect(res.answer).not.toContain('focused on Achieved');
+    expect(res.answer).not.toContain('stateless.');
+    expect(res.confidence).toBeGreaterThanOrEqual(0.92);
+  });
 });

@@ -47,6 +47,14 @@ export class FieldMatcher {
       for (const alias of def.aliases) {
         const normAlias = this.normalize(alias);
 
+        // Check if field is COLLEGE but the question is actually asking about NOC / permissions / certificates
+        if (field === 'COLLEGE') {
+          const isNocOrPermission = /(noc|no objection|certificate|letter|permission|permit|allow|able to provide|can your|will your|attendance|duration)/i.test(label);
+          if (isNocOrPermission) {
+            continue; // Skip COLLEGE match for questions asking about NOC or permissions
+          }
+        }
+
         // Exact match on Name
         if (normName === normAlias) {
           score = Math.max(score, 0.90);
@@ -65,6 +73,31 @@ export class FieldMatcher {
         if (normLabel === normAlias) {
           score = Math.max(score, 0.95);
         } else if (normLabel.includes(normAlias) && normAlias.length > 3) {
+          // For generic single words like "university" or "school", only match if label is short or asks for name
+          if (field === 'COLLEGE' && (normAlias === 'university' || normAlias === 'school' || normAlias === 'college')) {
+            const isNameQuery = normLabel.includes('name') || normLabel.includes('attending') || normLabel.includes('which') || normLabel.length < 35;
+            if (!isNameQuery) {
+              continue;
+            }
+          }
+
+          // For URL fields (PORTFOLIO_URL, LINKEDIN_URL, GITHUB_URL, FACEBOOK_URL, TWITTER_URL), never match long narrative essay questions
+          if (field === 'PORTFOLIO_URL' || field === 'LINKEDIN_URL' || field === 'GITHUB_URL' || field === 'FACEBOOK_URL' || field === 'TWITTER_URL') {
+            const isNarrativeQuery =
+              normLabel.length > 40 ||
+              normLabel.includes('tell us') ||
+              normLabel.includes('describe') ||
+              normLabel.includes('built') ||
+              normLabel.includes('problem') ||
+              normLabel.includes('impact') ||
+              normLabel.includes('numerical') ||
+              normLabel.includes('participated') ||
+              normLabel.includes('what was') ||
+              normLabel.includes('why');
+            if (isNarrativeQuery) {
+              continue;
+            }
+          }
           const specificity = Math.min(0.12, normAlias.length / 100);
           score = Math.max(score, 0.80 + specificity);
         }
@@ -102,6 +135,9 @@ export class FieldMatcher {
     return (str || '')
       .toLowerCase()
       .replace(/[^a-z0-9]/g, ' ')
+      .replace(/\blinked\s*in\b/g, 'linkedin')
+      .replace(/\bface\s*book\b/g, 'facebook')
+      .replace(/\bgit\s*hub\b/g, 'github')
       .replace(/\s+/g, ' ')
       .trim();
   }

@@ -50,18 +50,61 @@ export class DOMScanner {
 
       const label = LabelExtractor.extractLabel(el);
 
-      // Extract options if SELECT
+      // Extract options if SELECT or combobox
       let options: SelectOption[] | undefined = undefined;
+      let effectiveFieldType = fieldType;
+
       if (tagName === 'SELECT') {
         const selectEl = el as HTMLSelectElement;
-        options = Array.from(selectEl.options).map((opt) => ({
+        const rawOpts = Array.from(selectEl.options).map((opt) => ({
           label: opt.text.trim(),
           value: opt.value.trim(),
         }));
+        // Filter out empty placeholder options like "Select...", "-- Select --", etc.
+        const filtered = rawOpts.filter((opt) => opt.value !== '' && !LabelExtractor.isInvalidPlaceholder(opt.label));
+        options = filtered.length > 0 ? filtered : rawOpts;
+        effectiveFieldType = 'select';
+      } else if (tagName === 'INPUT') {
+        // Check if there is an associated select in the same field container
+        const selectContainer = el.closest('.field, [class*="field"], .select-wrapper, [class*="select"], .form-group');
+        const siblingSelect = selectContainer?.querySelector('select');
+        if (siblingSelect && siblingSelect !== el && siblingSelect.options.length > 0) {
+          // If this is a visible phone / mobile input alongside a separate prefix or country select,
+          // do NOT convert the text input into a select! Keep it as its native input type.
+          const isPhoneOrMultiInput =
+            fieldType === 'tel' ||
+            name.toLowerCase().includes('phone') ||
+            elementId.toLowerCase().includes('phone') ||
+            (siblingSelect.offsetParent !== null && siblingSelect.style.display !== 'none');
+
+          if (!isPhoneOrMultiInput) {
+            const rawOpts = Array.from(siblingSelect.options).map((opt) => ({
+              label: opt.text.trim(),
+              value: opt.value.trim(),
+            }));
+            const filtered = rawOpts.filter((opt) => opt.value !== '' && !LabelExtractor.isInvalidPlaceholder(opt.label));
+            options = filtered.length > 0 ? filtered : rawOpts;
+            effectiveFieldType = 'select';
+          }
+        }
+      }
+
+      // Fallback clean label
+      let finalLabel = label;
+      if (!finalLabel || LabelExtractor.isInvalidPlaceholder(finalLabel)) {
+        if (name && !LabelExtractor.isInvalidPlaceholder(name)) {
+          const candidate = LabelExtractor.cleanLabel(LabelExtractor.formatIdentifier(name));
+          finalLabel = !LabelExtractor.isInvalidPlaceholder(candidate) ? candidate : `Field #${this.counter}`;
+        } else if (elementId && !LabelExtractor.isInvalidPlaceholder(elementId)) {
+          const candidate = LabelExtractor.cleanLabel(LabelExtractor.formatIdentifier(elementId));
+          finalLabel = !LabelExtractor.isInvalidPlaceholder(candidate) ? candidate : `Field #${this.counter}`;
+        } else {
+          finalLabel = `Field #${this.counter}`;
+        }
       }
 
       // Check canonical match
-      const match = FieldMatcher.match(name, elementId, label, placeholder, autocomplete, ariaLabel);
+      const match = FieldMatcher.match(name, elementId, finalLabel, placeholder, autocomplete, ariaLabel);
 
       let status: FieldStatus = 'UNMATCHED';
       if (match.canonicalField) {
@@ -71,10 +114,10 @@ export class DOMScanner {
       detectedFields.push({
         id: fieldId,
         tagName,
-        fieldType,
+        fieldType: effectiveFieldType,
         name: name || undefined,
         elementId: elementId || undefined,
-        label: label || name || elementId || `Field #${this.counter}`,
+        label: finalLabel,
         placeholder: placeholder || undefined,
         ariaLabel: ariaLabel || undefined,
         autocomplete: autocomplete || undefined,
@@ -104,6 +147,20 @@ export class DOMScanner {
       } catch {
         // Fallback if computed style fails
       }
+    }
+
+    // Skip helper/cloned search inputs in custom dropdowns (e.g. Zoho Lyte country search, Choices.js)
+    const className = (el.getAttribute('class') || '').toLowerCase();
+    const placeholder = (el.getAttribute('placeholder') || '').toLowerCase();
+    if (
+      className.includes('choices__input--cloned') ||
+      className.includes('select__input') ||
+      className.includes('lytesearchinput') ||
+      placeholder.includes('search country with dial code') ||
+      el.closest('lyte-search, lyte-drop-box, .zrc-cc-dropbox, [is-search="true"]') !== null ||
+      (el.tagName === 'INPUT' && (className.includes('choices__input') || className.includes('custom-select-search')))
+    ) {
+      return true;
     }
 
     // Skip csrf/security token fields and container token inputs

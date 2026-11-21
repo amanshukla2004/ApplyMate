@@ -123,15 +123,17 @@ async function handleFillFields(values: Record<string, string>) {
 let shadowToastTimeout: any = null;
 let globalToastFn: ((msg: string, isError?: boolean) => void) | null = null;
 
-function initFloatingWidget() {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById('happlymate-shadow-host') || document.getElementById('applymate-shadow-host')) return;
+function initFloatingWidget(): boolean {
+  if (typeof document === 'undefined' || !document.body) return false;
+  if (document.getElementById('happlymate-shadow-host') || document.getElementById('applymate-shadow-host')) {
+    return true;
+  }
 
-  // Don't mount widget on pages without interactive forms/inputs
+  // Check if interactive forms, inputs, or career sections exist on the page
   const hasInputs = document.querySelector(
-    'input:not([type="hidden"]):not([type="search"]), textarea, select, [role="textbox"]'
+    'input:not([type="hidden"]):not([type="search"]), textarea, select, [role="textbox"], form, [class*="form"], [class*="career"], [class*="apply"], [class*="job"], [class*="question"], [id*="career"], [id*="job"], [id*="apply"]'
   );
-  if (!hasInputs) return;
+  if (!hasInputs) return false;
 
   const host = document.createElement('div');
   host.id = 'happlymate-shadow-host';
@@ -162,6 +164,10 @@ function initFloatingWidget() {
       cursor: pointer;
       user-select: none;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .fab:hover {
+      box-shadow: 0 14px 28px rgba(43, 35, 64, 0.45);
+      transform: translateY(-1px);
     }
     .fab:active {
       transform: scale(0.98);
@@ -219,6 +225,7 @@ function initFloatingWidget() {
 
   const fab = document.createElement('button');
   fab.className = 'fab';
+  fab.title = 'HapplyMate 1-Click Autofill (Alt+A)';
   fab.innerHTML = `
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 3L3 21H7.5L9.5 16.5H14.5L16.5 21H21L12 3Z" fill="#ffffff"/>
@@ -255,6 +262,58 @@ function initFloatingWidget() {
   shadow.appendChild(style);
   shadow.appendChild(container);
   document.body.appendChild(host);
+  return true;
+}
+
+// In-Page Keyboard Shortcut Listener (Alt+A / Option+A)
+function initKeyboardShortcut() {
+  if (typeof window === 'undefined') return;
+
+  window.addEventListener(
+    'keydown',
+    (e: KeyboardEvent) => {
+      const isAlt = e.altKey || (!e.ctrlKey && e.metaKey);
+      const isKeyA = e.key === 'a' || e.key === 'A' || e.code === 'KeyA';
+
+      if (isAlt && isKeyA && !e.ctrlKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        initFloatingWidget();
+        executeAutofillFromProfile().catch((err) => {
+          console.warn('[HapplyMate] Autofill shortcut error:', err);
+        });
+      }
+    },
+    true // Capture phase to fire before page input handlers
+  );
+}
+
+// Dynamic Watcher to handle single-page apps (Zoho Recruit, Greenhouse, Workday, etc.)
+let widgetDebounceTimer: any = null;
+function initWidgetWatcher() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  initFloatingWidget();
+
+  // Sequential retries for SPAs loading content dynamically
+  setTimeout(initFloatingWidget, 400);
+  setTimeout(initFloatingWidget, 1200);
+  setTimeout(initFloatingWidget, 2500);
+  setTimeout(initFloatingWidget, 4500);
+
+  if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(() => {
+      clearTimeout(widgetDebounceTimer);
+      widgetDebounceTimer = setTimeout(() => {
+        initFloatingWidget();
+      }, 300);
+    });
+
+    const target = document.body || document.documentElement;
+    if (target) {
+      observer.observe(target, { childList: true, subtree: true });
+    }
+  }
 }
 
 async function executeAutofillFromProfile(): Promise<{ filledCount: number }> {
@@ -272,7 +331,37 @@ async function executeAutofillFromProfile(): Promise<{ filledCount: number }> {
     const values: Record<string, string> = {};
     for (const f of fields) {
       if (f.fieldType === 'file') continue;
-      const val = resolveCanonicalValue(f.canonicalField, profile, edu, exp, skills);
+      let val = resolveCanonicalValue(f.canonicalField, profile, edu, exp, skills);
+
+      if (f.canonicalField === 'PHONE') {
+        const fullPhone = profile.personal?.phone || '';
+        const digits = fullPhone.replace(/\D/g, '');
+        const nationalNum = digits.length > 10 && digits.startsWith('91') ? digits.slice(2) : digits;
+
+        if (f.options && f.options.length > 0) {
+          const matchedOpt = f.options.find((opt) => {
+            const valLower = (opt.value || '').toLowerCase().trim();
+            const textLower = (opt.label || '').toLowerCase().trim();
+            return (
+              valLower === '+91' ||
+              valLower === '91' ||
+              valLower === 'in' ||
+              textLower.includes('+91') ||
+              textLower.includes('india') ||
+              valLower.includes('mobile') ||
+              textLower.includes('mobile') ||
+              valLower.includes('cell') ||
+              textLower.includes('cell')
+            );
+          });
+          if (matchedOpt) {
+            val = matchedOpt.value || matchedOpt.label;
+          }
+        } else {
+          val = nationalNum.length === 10 ? nationalNum : fullPhone;
+        }
+      }
+
       if (val) {
         values[f.id] = val;
       }
@@ -394,6 +483,10 @@ function resolveCanonicalValue(
       return profile.links?.githubUrl || profile.links?.github || '';
     case 'PORTFOLIO_URL':
       return profile.links?.portfolioUrl || profile.links?.portfolio || '';
+    case 'FACEBOOK_URL':
+      return (profile.links as any)?.facebookUrl || (profile.links as any)?.facebook || '';
+    case 'TWITTER_URL':
+      return (profile.links as any)?.twitterUrl || (profile.links as any)?.twitter || '';
     case 'COLLEGE':
       return edu?.[0]?.institution || '';
     case 'DEGREE':
@@ -424,6 +517,8 @@ function resolveCanonicalValue(
       return profile.preferences?.willingToRelocate ? 'Yes' : 'Yes';
     case 'BACKLOGS':
       return 'No';
+    case 'UNIVERSITY_NOC':
+      return 'Yes';
     case 'INTERNSHIP_DURATION':
       return 'Yes';
     case 'IN_OFFICE':
@@ -618,15 +713,18 @@ function initWorkdayWizardWatcher() {
 }
 
 if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      initFloatingWidget();
-      initSubmitDetection();
-      initWorkdayWizardWatcher();
-    });
-  } else {
-    initFloatingWidget();
+  const startAll = () => {
+    initWidgetWatcher();
+    initKeyboardShortcut();
     initSubmitDetection();
     initWorkdayWizardWatcher();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startAll);
+    window.addEventListener('load', startAll);
+  } else {
+    startAll();
+    window.addEventListener('load', startAll);
   }
 }

@@ -72,4 +72,58 @@ describe('AutofillEngine', () => {
     await autofillEngine.fillField(checkboxField.id, 'true');
     expect(checkEl.checked).toBe(true);
   });
+
+  it('autofills mobile phone with separate country code dropdown and strips country code from text input', async () => {
+    document.body.innerHTML = `
+      <form id="phone-app">
+        <label for="phone_input">Mobile Phone *</label>
+        <div class="input-group">
+          <select id="country_code_select" name="countryCode">
+            <option value="">Select</option>
+            <option value="+1">United States (+1)</option>
+            <option value="+91">India (+91)</option>
+            <option value="+44">United Kingdom (+44)</option>
+          </select>
+          <input id="phone_input" name="mobilePhone" type="tel" />
+        </div>
+      </form>
+    `;
+
+    const detected = domScanner.scan();
+    expect(detected.length).toBe(2);
+
+    const selectField = detected.find((f) => f.elementId === 'country_code_select')!;
+    const inputField = detected.find((f) => f.elementId === 'phone_input')!;
+
+    // Test filling country code select
+    const selectEl = document.getElementById('country_code_select') as HTMLSelectElement;
+    await autofillEngine.fillField(selectField.id, '+91');
+    expect(selectEl.value).toBe('+91');
+
+    // Test filling phone text input: should strip +91 leaving 10-digit national number
+    const inputEl = document.getElementById('phone_input') as HTMLInputElement;
+    await autofillEngine.fillField(inputField.id, '+917983163187');
+    expect(inputEl.value).toBe('7983163187');
+  });
+
+  it('autofills mobile phone device type dropdown when presented with Mobile/Home/Work options', async () => {
+    document.body.innerHTML = `
+      <form id="device-app">
+        <label for="device_type">Phone Device Type</label>
+        <select id="device_type" name="phoneType">
+          <option value="">Select</option>
+          <option value="home">Home</option>
+          <option value="mobile">Mobile</option>
+          <option value="work">Work</option>
+        </select>
+      </form>
+    `;
+
+    const detected = domScanner.scan();
+    const selectField = detected.find((f) => f.elementId === 'device_type')!;
+
+    const selectEl = document.getElementById('device_type') as HTMLSelectElement;
+    await autofillEngine.fillField(selectField.id, 'Mobile');
+    expect(selectEl.value).toBe('mobile');
+  });
 });

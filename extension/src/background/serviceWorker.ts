@@ -1,4 +1,5 @@
 import { MessageRouter } from './messageRouter';
+import { TabManager } from './tabManager';
 
 // Initialize background message routing
 MessageRouter.init();
@@ -19,9 +20,10 @@ if (chrome.commands && chrome.commands.onCommand) {
   chrome.commands.onCommand.addListener(async (command) => {
     if (command === 'autofill_active_form') {
       try {
-        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (activeTab && activeTab.id) {
-          chrome.tabs.sendMessage(activeTab.id, { type: 'EXECUTE_AUTOFILL_SHORTCUT' }).catch((err) => {
+        const tab = await TabManager.getActiveTab();
+        if (tab && tab.id) {
+          await TabManager.ensureContentScriptInjected(tab.id);
+          chrome.tabs.sendMessage(tab.id, { type: 'EXECUTE_AUTOFILL_SHORTCUT' }).catch((err) => {
             console.warn('[HapplyMate] Shortcut message dispatch failed:', err);
           });
         }

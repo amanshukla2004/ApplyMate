@@ -6,6 +6,7 @@ import { WorkdayAdapter } from './workday/WorkdayAdapter';
 import { LinkedInAdapter } from './linkedin/LinkedInAdapter';
 import { GoogleFormsAdapter } from './google/GoogleFormsAdapter';
 import { AshbyAdapter } from './ashby/AshbyAdapter';
+import { ZohoRecruitAdapter } from './zohorecruit/ZohoRecruitAdapter';
 
 export class AdapterRegistry {
   private adapters: FormAdapter[] = [
@@ -13,6 +14,7 @@ export class AdapterRegistry {
     new GreenhouseAdapter(),
     new LeverAdapter(),
     new AshbyAdapter(),
+    new ZohoRecruitAdapter(),
     new WorkdayAdapter(),
     new LinkedInAdapter(),
   ];
