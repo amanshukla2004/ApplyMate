@@ -4,10 +4,12 @@ export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  maxWidth?: string;
+  style?: React.CSSProperties;
   children: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, maxWidth, style, children }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
       onCancel={handleCancel}
       className="glass"
       aria-labelledby="modal-title"
+      style={{ maxWidth: maxWidth || undefined, ...style }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h2 id="modal-title" style={{ fontSize: '20px' }}>{title}</h2>

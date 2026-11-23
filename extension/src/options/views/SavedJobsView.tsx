@@ -167,7 +167,7 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
             </div>
 
             <textarea
-              className="txt"
+              className="in"
               rows={4}
               value={quickSaveText}
               onChange={(e) => setQuickSaveText(e.target.value)}
@@ -208,7 +208,7 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
           />
           <input
             type="text"
-            className="txt"
+            className="in"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search saved jobs by title, company, email, subject, or keywords..."

@@ -3,7 +3,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Pill } from '../../components/ui/Pill';
 import { SavedJobRecord, SavedJobType, SavedJobStatus } from '../../types/savedJob';
-import { Copy, Check, ExternalLink, RefreshCw, Trash2, Mail, FileText, Code2 } from 'lucide-react';
+import { Copy, Check, ExternalLink, RefreshCw, Trash2, Mail, FileText, Code2, Sparkles } from 'lucide-react';
 
 export interface SavedJobDetailModalProps {
   isOpen: boolean;
@@ -26,6 +26,7 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isRerunning, setIsRerunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingRaw, setIsSavingRaw] = useState(false);
 
   // Editable Form State
   const [jobTitle, setJobTitle] = useState('');
@@ -39,6 +40,7 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
   const [formQuestionsText, setFormQuestionsText] = useState('');
   const [deadline, setDeadline] = useState('');
   const [summary, setSummary] = useState('');
+  const [rawTextInput, setRawTextInput] = useState('');
 
   // Populate form whenever active job changes
   useEffect(() => {
@@ -54,6 +56,7 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
       setFormQuestionsText((job.formQuestions || []).join('\n'));
       setDeadline(job.deadline || '');
       setSummary(job.summary || '');
+      setRawTextInput(job.rawText || '');
       setActiveTab('extracted');
     }
   }, [job]);
@@ -103,6 +106,29 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
     }
   };
 
+  const handleSaveRawOnly = async () => {
+    if (!job || !rawTextInput.trim() || isSavingRaw) return;
+    setIsSavingRaw(true);
+    try {
+      await onUpdate(job.id, { rawText: rawTextInput.trim() });
+      handleCopy(rawTextInput, 'saved-raw-alert');
+    } finally {
+      setIsSavingRaw(false);
+    }
+  };
+
+  const handleSaveRawAndRerun = async () => {
+    if (!job || !rawTextInput.trim() || isRerunning) return;
+    setIsRerunning(true);
+    try {
+      await onUpdate(job.id, { rawText: rawTextInput.trim() });
+      await onRerunExtraction(job.id);
+      setActiveTab('extracted');
+    } finally {
+      setIsRerunning(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this saved job?')) {
       await onDelete(job.id);
@@ -117,6 +143,7 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      maxWidth="680px"
       title={jobTitle || company ? `${jobTitle || 'Role'}${company ? ' at ' + company : ''}` : 'Saved Job Opportunity'}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -190,8 +217,8 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
                 style={{
                   background: 'rgba(139, 116, 240, 0.08)',
                   border: '1px solid rgba(139, 116, 240, 0.2)',
-                  borderRadius: '10px',
-                  padding: '10px 12px',
+                  borderRadius: '12px',
+                  padding: '10px 14px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
@@ -238,22 +265,22 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
             )}
 
             {/* Editable Fields Grid */}
-            <div className="grid-2">
+            <div className="grid2">
               <div>
-                <label className="lbl">Job Title</label>
+                <label className="f">Job Title</label>
                 <input
                   type="text"
-                  className="txt"
+                  className="in"
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   placeholder="e.g. Frontend Engineer"
                 />
               </div>
               <div>
-                <label className="lbl">Company</label>
+                <label className="f">Company</label>
                 <input
                   type="text"
-                  className="txt"
+                  className="in"
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   placeholder="e.g. Acme Corp"
@@ -261,11 +288,11 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
               </div>
             </div>
 
-            <div className="grid-2">
+            <div className="grid2">
               <div>
-                <label className="lbl">Application Type</label>
+                <label className="f">Application Type</label>
                 <select
-                  className="txt"
+                  className="in"
                   value={type}
                   onChange={(e) => setType(e.target.value as SavedJobType)}
                 >
@@ -275,9 +302,9 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
                 </select>
               </div>
               <div>
-                <label className="lbl">Status</label>
+                <label className="f">Status</label>
                 <select
-                  className="txt"
+                  className="in"
                   value={status}
                   onChange={(e) => setStatus(e.target.value as SavedJobStatus)}
                 >
@@ -288,13 +315,13 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
               </div>
             </div>
 
-            <div className="grid-2">
+            <div className="grid2">
               <div>
-                <label className="lbl">Apply Email</label>
+                <label className="f">Apply Email</label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <input
                     type="email"
-                    className="txt"
+                    className="in"
                     value={applyEmail}
                     onChange={(e) => setApplyEmail(e.target.value)}
                     placeholder="e.g. careers@company.com"
@@ -313,10 +340,10 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
                 </div>
               </div>
               <div>
-                <label className="lbl">Deadline</label>
+                <label className="f">Deadline</label>
                 <input
                   type="text"
-                  className="txt"
+                  className="in"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
                   placeholder="e.g. Next Friday, Dec 1st"
@@ -325,11 +352,11 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
             </div>
 
             <div>
-              <label className="lbl">Required Subject Line</label>
+              <label className="f">Required Subject Line</label>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <input
                   type="text"
-                  className="txt"
+                  className="in"
                   value={requiredSubject}
                   onChange={(e) => setRequiredSubject(e.target.value)}
                   placeholder="e.g. Application: Senior Frontend Developer - John Doe"
@@ -349,11 +376,11 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
             </div>
 
             <div>
-              <label className="lbl">Form Link</label>
+              <label className="f">Form Link</label>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <input
                   type="url"
-                  className="txt"
+                  className="in"
                   value={formLink}
                   onChange={(e) => setFormLink(e.target.value)}
                   placeholder="https://forms.gle/... or https://jobs.lever.co/..."
@@ -373,9 +400,9 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
             </div>
 
             <div>
-              <label className="lbl">Required Instructions</label>
+              <label className="f">Required Instructions</label>
               <textarea
-                className="txt"
+                className="in"
                 rows={2}
                 value={requiredInstructions}
                 onChange={(e) => setRequiredInstructions(e.target.value)}
@@ -384,9 +411,9 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
             </div>
 
             <div>
-              <label className="lbl">Form Questions (one question per line)</label>
+              <label className="f">Form Questions (one question per line)</label>
               <textarea
-                className="txt"
+                className="in"
                 rows={2}
                 value={formQuestionsText}
                 onChange={(e) => setFormQuestionsText(e.target.value)}
@@ -395,9 +422,9 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
             </div>
 
             <div>
-              <label className="lbl">Summary</label>
+              <label className="f">Summary (1-2 Sentences)</label>
               <textarea
-                className="txt"
+                className="in"
                 rows={2}
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
@@ -405,7 +432,22 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+            {/* Sticky Action Footer */}
+            <div
+              style={{
+                position: 'sticky',
+                bottom: '-24px',
+                background: 'var(--base)',
+                paddingTop: '12px',
+                paddingBottom: '8px',
+                borderTop: '1px solid var(--border-glass)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '8px',
+                marginTop: '10px',
+                zIndex: 10,
+              }}
+            >
               <Button type="button" variant="soft" onClick={onClose}>
                 Cancel
               </Button>
@@ -418,39 +460,76 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
 
         {/* TAB 2: Original Raw Text */}
         {activeTab === 'original' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                Exact pasted text stored untouched:
-              </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
+                  Original Raw Job Text
+                </span>
+                <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: 'var(--muted)' }}>
+                  Edit or paste full post details below to re-run AI extraction and auto-fill all fields.
+                </p>
+              </div>
               <Button
                 type="button"
                 variant="soft"
                 size="sm"
-                onClick={() => handleCopy(job.rawText, 'modal-raw')}
+                onClick={() => handleCopy(rawTextInput, 'modal-raw')}
               >
                 {copiedKey === 'modal-raw' ? <Check size={13} style={{ marginRight: '4px', color: '#10B981' }} /> : <Copy size={13} style={{ marginRight: '4px' }} />}
                 <span>{copiedKey === 'modal-raw' ? 'Copied Raw Text!' : 'Copy Original Text'}</span>
               </Button>
             </div>
 
+            <textarea
+              className="in"
+              rows={12}
+              value={rawTextInput}
+              onChange={(e) => setRawTextInput(e.target.value)}
+              placeholder="Paste full job posting, email instructions (e.g. hr@xyz.com with subject 'Application...'), or form questions here..."
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                fontFamily: 'monospace',
+                fontSize: '12.5px',
+                lineHeight: '1.5',
+                minHeight: '200px',
+              }}
+            />
+
+            {/* Sticky Action Footer for Raw Text */}
             <div
               style={{
-                background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid var(--border-glass)',
-                borderRadius: '8px',
-                padding: '12px',
-                maxHeight: '340px',
-                overflowY: 'auto',
-                fontFamily: 'monospace',
-                fontSize: '12px',
-                lineHeight: '1.5',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                color: 'var(--ink)',
+                position: 'sticky',
+                bottom: '-24px',
+                background: 'var(--base)',
+                paddingTop: '12px',
+                paddingBottom: '8px',
+                borderTop: '1px solid var(--border-glass)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '8px',
+                marginTop: '10px',
+                zIndex: 10,
               }}
             >
-              {job.rawText}
+              <Button
+                type="button"
+                variant="soft"
+                disabled={isSavingRaw || !rawTextInput.trim()}
+                onClick={handleSaveRawOnly}
+              >
+                {isSavingRaw ? 'Saving...' : copiedKey === 'saved-raw-alert' ? '✓ Saved!' : 'Save Raw Text'}
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={isRerunning || !rawTextInput.trim()}
+                onClick={handleSaveRawAndRerun}
+              >
+                <Sparkles size={14} style={{ marginRight: '5px' }} />
+                {isRerunning ? 'Extracting with AI...' : 'Save & Re-run AI Extraction'}
+              </Button>
             </div>
           </div>
         )}

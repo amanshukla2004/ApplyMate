@@ -33,6 +33,8 @@ export const Popup: React.FC = () => {
   const [platform, setPlatform] = useState<string>('');
   const [autofillSuccess, setAutofillSuccess] = useState<boolean>(false);
   const [autofillError, setAutofillError] = useState<string | null>(null);
+  const [isSavingActiveJob, setIsSavingActiveJob] = useState<boolean>(false);
+  const [saveActiveSuccess, setSaveActiveSuccess] = useState<boolean>(false);
   const [profilePayload, setProfilePayload] = useState<{
     profile: any;
     edu: any[];
@@ -250,6 +252,41 @@ export const Popup: React.FC = () => {
     } catch (err) {
       console.warn('Failed to save job:', err);
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveActiveJob = async () => {
+    if (typeof chrome === 'undefined' || !chrome.tabs || isSavingActiveJob) return;
+    setIsSavingActiveJob(true);
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { type: 'SCRAPE_JOB_DESCRIPTION' }, (res) => {
+          const scraped = res?.data;
+          const title = scraped?.title || activeTabTitle || 'Job Opportunity';
+          const company = scraped?.company || platform || '';
+          const body = scraped?.text || '';
+          const payloadText = `${title}${company ? ' at ' + company : ''}\nURL: ${activeTabUrl}\n\n${body}`.trim();
+
+          if (chrome.runtime?.sendMessage) {
+            chrome.runtime.sendMessage({ type: 'SAVE_RAW_JOB', data: { text: payloadText } }, (saveRes) => {
+              setIsSavingActiveJob(false);
+              if (saveRes?.success) {
+                setSaveActiveSuccess(true);
+                refreshRecentJobs();
+                setTimeout(() => setSaveActiveSuccess(false), 2500);
+              }
+            });
+          } else {
+            setIsSavingActiveJob(false);
+          }
+        });
+      } else {
+        setIsSavingActiveJob(false);
+      }
+    } catch (err) {
+      console.warn('Failed to save active job:', err);
+      setIsSavingActiveJob(false);
     }
   };
 
@@ -540,6 +577,46 @@ export const Popup: React.FC = () => {
             )}
           </button>
         )}
+
+        {/* 1-Click Save Active Job Posting */}
+        {isWebPage && !isNewTab && (
+          <button
+            onClick={handleSaveActiveJob}
+            disabled={isSavingActiveJob}
+            style={{
+              marginTop: detectedCount > 0 ? '4px' : '6px',
+              background: saveActiveSuccess
+                ? '#10B981'
+                : 'rgba(139, 116, 240, 0.16)',
+              border: '1px solid rgba(139, 116, 240, 0.35)',
+              borderRadius: '10px',
+              padding: '8px 12px',
+              color: saveActiveSuccess ? '#FFFFFF' : '#CDBFFF',
+              fontWeight: 600,
+              fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              cursor: isSavingActiveJob ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {saveActiveSuccess ? (
+              <>
+                <Check size={13} />
+                <span>Job Saved to Collection!</span>
+              </>
+            ) : isSavingActiveJob ? (
+              <span>Saving Active Job...</span>
+            ) : (
+              <>
+                <BookmarkPlus size={13} />
+                <span>Save This Job Posting</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Quick Save Job Accordion */}
@@ -598,6 +675,7 @@ export const Popup: React.FC = () => {
         {isSaveOpen && (
           <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <textarea
+              id="quick-save-textarea"
               value={jobInput}
               onChange={(e) => setJobInput(e.target.value)}
               placeholder="Paste job description, email instructions (e.g. hr@xyz.com with subject 'Application...'), or form link..."
@@ -704,24 +782,50 @@ export const Popup: React.FC = () => {
             >
               Recent Saved Jobs
             </span>
-            <button
-              onClick={() => openOptions('saved-jobs')}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#A5B4FC',
-                fontSize: '11px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '2px',
-                cursor: 'pointer',
-                padding: 0,
-              }}
-            >
-              <span>View all</span>
-              <ArrowRight size={11} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => {
+                  setIsSaveOpen(true);
+                  setTimeout(() => {
+                    document.getElementById('quick-save-textarea')?.focus();
+                  }, 50);
+                }}
+                style={{
+                  background: 'rgba(139, 116, 240, 0.15)',
+                  border: '1px solid rgba(139, 116, 240, 0.3)',
+                  borderRadius: '6px',
+                  color: '#CDBFFF',
+                  fontSize: '10.5px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  cursor: 'pointer',
+                  padding: '2px 7px',
+                }}
+              >
+                <BookmarkPlus size={10} />
+                <span>+ Save New</span>
+              </button>
+              <button
+                onClick={() => openOptions('saved-jobs')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#A5B4FC',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                <span>View all</span>
+                <ArrowRight size={11} />
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
