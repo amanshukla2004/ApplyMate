@@ -22,6 +22,8 @@ import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
 import { applicationService } from '../services/applicationService';
 import { SavedJobRecord } from '../types/savedJob';
+import { UserProfile, EducationRecord, ExperienceRecord, SkillItem } from '../types/profile';
+import { safeOpenExternalUrl, safeCopyToClipboard } from '../utils/security';
 
 export const Popup: React.FC = () => {
   const [readiness, setReadiness] = useState<number>(0);
@@ -36,10 +38,10 @@ export const Popup: React.FC = () => {
   const [isSavingActiveJob, setIsSavingActiveJob] = useState<boolean>(false);
   const [saveActiveSuccess, setSaveActiveSuccess] = useState<boolean>(false);
   const [profilePayload, setProfilePayload] = useState<{
-    profile: any;
-    edu: any[];
-    exp: any[];
-    skills: any[];
+    profile: UserProfile | null;
+    edu: EducationRecord[];
+    exp: ExperienceRecord[];
+    skills: SkillItem[];
   } | null>(null);
 
   // Quick Save Job state
@@ -290,12 +292,14 @@ export const Popup: React.FC = () => {
     }
   };
 
-  const handleCopy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => {
-      setCopiedKey(null);
-    }, 1500);
+  const handleCopy = async (text: string, key: string) => {
+    const success = await safeCopyToClipboard(text);
+    if (success) {
+      setCopiedKey(key);
+      setTimeout(() => {
+        setCopiedKey(null);
+      }, 1500);
+    }
   };
 
   const handleToggleApplied = (job: SavedJobRecord) => {
@@ -973,7 +977,7 @@ export const Popup: React.FC = () => {
 
                     {job.formLink && (
                       <button
-                        onClick={() => window.open(job.formLink!, '_blank')}
+                        onClick={() => safeOpenExternalUrl(job.formLink)}
                         title={`Open link: ${job.formLink}`}
                         style={{
                           background: 'rgba(255, 255, 255, 0.05)',

@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Pill } from '../../components/ui/Pill';
 import { SavedJobRecord, SavedJobType, SavedJobStatus } from '../../types/savedJob';
 import { Copy, Check, ExternalLink, RefreshCw, Trash2, Mail, FileText, Code2, Sparkles } from 'lucide-react';
+import { safeOpenExternalUrl, safeCopyToClipboard } from '../../utils/security';
 
 export interface SavedJobDetailModalProps {
   isOpen: boolean;
@@ -63,10 +64,12 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
 
   if (!job) return null;
 
-  const handleCopy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
+  const handleCopy = async (text: string, key: string) => {
+    const success = await safeCopyToClipboard(text);
+    if (success) {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    }
   };
 
   const handleSaveChanges = async (e: React.FormEvent) => {
@@ -255,7 +258,7 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
                     type="button"
                     variant="soft"
                     size="sm"
-                    onClick={() => window.open(formLink, '_blank')}
+                    onClick={() => safeOpenExternalUrl(formLink)}
                   >
                     <ExternalLink size={13} style={{ marginRight: '4px' }} />
                     <span>Open Form Link</span>
@@ -390,7 +393,7 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
                     type="button"
                     variant="soft"
                     size="sm"
-                    onClick={() => window.open(formLink, '_blank')}
+                    onClick={() => safeOpenExternalUrl(formLink)}
                     title="Open form link"
                   >
                     <ExternalLink size={14} />

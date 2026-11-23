@@ -5,6 +5,7 @@ import { Pill, PillVariant } from '../../components/ui/Pill';
 import { Chip } from '../../components/ui/Chip';
 import { SavedJobRecord, SavedJobStatus } from '../../types/savedJob';
 import { SavedJobDetailModal } from './SavedJobDetailModal';
+import { safeOpenExternalUrl, safeCopyToClipboard } from '../../utils/security';
 import {
   BookmarkPlus,
   Search,
@@ -46,11 +47,13 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
   const [selectedJob, setSelectedJob] = useState<SavedJobRecord | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const handleCopy = (e: React.MouseEvent, text: string, key: string) => {
+  const handleCopy = async (e: React.MouseEvent, text: string, key: string) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 1800);
+    const success = await safeCopyToClipboard(text);
+    if (success) {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 1800);
+    }
   };
 
   const handleQuickSave = async (e: React.FormEvent) => {
@@ -410,7 +413,7 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(job.formLink!, '_blank');
+                        safeOpenExternalUrl(job.formLink);
                       }}
                       title={`Open form: ${job.formLink}`}
                     >

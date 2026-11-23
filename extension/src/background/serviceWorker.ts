@@ -1,9 +1,28 @@
 import { MessageRouter } from './messageRouter';
 import { TabManager } from './tabManager';
 import { profileService } from '../services/profileService';
+import { savedJobRepository } from '../services/savedJob/savedJobRepository';
+import { JobExtractorService } from '../services/savedJob/jobExtractorService';
 
 // Initialize background message routing
 MessageRouter.init();
+
+// Self-healing: Reconcile any saved jobs stuck in 'pending' status due to prior SW suspension
+(async () => {
+  try {
+    const allJobs = await savedJobRepository.getAll();
+    const pendingJobs = allJobs.filter((j) => j.extractionStatus === 'pending');
+    for (const job of pendingJobs) {
+      const extracted = await JobExtractorService.extract(job.rawText);
+      await savedJobRepository.update(job.id, {
+        ...extracted,
+        status: extracted.extractionStatus === 'failed' ? 'needs-review' : 'to-apply',
+      });
+    }
+  } catch (reconcileErr) {
+    console.warn('[HapplyMate] Startup job reconciliation skipped/failed:', reconcileErr);
+  }
+})();
 
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('[HapplyMate] Extension installed/updated:', details.reason);
