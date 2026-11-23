@@ -28,8 +28,8 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
   }
 
   if (message.type === 'EXECUTE_AUTOFILL_SHORTCUT') {
-    executeAutofillFromProfile().then((res) => {
-      sendResponse({ success: true, ...res });
+    executeAutofillFromProfile((message as any).data).then((res) => {
+      sendResponse({ success: res.filledCount > 0, ...res });
     }).catch((err) => {
       sendResponse({ success: false, error: err?.message });
     });
@@ -345,15 +345,56 @@ function initWidgetWatcher() {
   }
 }
 
-async function executeAutofillFromProfile(): Promise<{ filledCount: number }> {
+async function executeAutofillFromProfile(passedProfileData?: {
+  profile?: any;
+  edu?: any[];
+  exp?: any[];
+  skills?: any[];
+}): Promise<{ filledCount: number; error?: string }> {
   try {
-    const profileRes = await chrome.runtime.sendMessage({ type: 'GET_USER_PROFILE' });
-    if (!profileRes || !profileRes.success || !profileRes.data?.profile) {
-      if (globalToastFn) globalToastFn('Open Options to set up profile first', true);
-      return { filledCount: 0 };
+    let profileData = passedProfileData;
+    if (!profileData || !profileData.profile) {
+      try {
+        const profileRes = await chrome.runtime.sendMessage({ type: 'GET_USER_PROFILE' });
+        if (profileRes && profileRes.success && profileRes.data?.profile) {
+          profileData = profileRes.data;
+        } else {
+          const errMsg = profileRes?.error || 'Profile not found';
+          console.warn('[HapplyMate] GET_USER_PROFILE failed:', errMsg);
+          if (globalToastFn) globalToastFn('Open Options to set up profile first', true);
+          return { filledCount: 0, error: errMsg };
+        }
+      } catch (err: any) {
+        console.warn('[HapplyMate] GET_USER_PROFILE message error:', err);
+        if (globalToastFn) globalToastFn('Open Options to set up profile first', true);
+        return { filledCount: 0, error: err?.message };
+      }
     }
 
-    const { profile, edu, exp, skills } = profileRes.data;
+    if (!profileData || !profileData.profile) {
+      return { filledCount: 0, error: 'Profile not available' };
+    }
+
+    const { profile, edu = [], exp = [], skills = [] } = profileData;
+
+    // Check if profile has any actual personal data
+    const p = profile?.personal;
+    const hasAnyData = Boolean(
+      p?.firstName ||
+      p?.lastName ||
+      p?.fullName ||
+      p?.email ||
+      p?.phone ||
+      (edu && edu.length > 0) ||
+      (exp && exp.length > 0) ||
+      (skills && skills.length > 0)
+    );
+
+    if (!hasAnyData) {
+      if (globalToastFn) globalToastFn('Open Options to set up profile first', true);
+      return { filledCount: 0, error: 'Profile is empty' };
+    }
+
     const adapter = adapterRegistry.getActiveAdapter();
     const fields = await adapter.scanForm();
 
@@ -399,7 +440,7 @@ async function executeAutofillFromProfile(): Promise<{ filledCount: number }> {
     const count = Object.keys(values).length;
     if (count === 0) {
       if (globalToastFn) globalToastFn('No fillable fields matched', true);
-      return { filledCount: 0 };
+      return { filledCount: 0, error: 'No fillable fields matched' };
     }
 
     const results = await adapter.fillFields(values);
@@ -423,9 +464,9 @@ async function executeAutofillFromProfile(): Promise<{ filledCount: number }> {
     }
 
     return { filledCount: successful };
-  } catch (err) {
+  } catch (err: any) {
     if (globalToastFn) globalToastFn('Could not fill form', true);
-    return { filledCount: 0 };
+    return { filledCount: 0, error: err?.message };
   }
 }
 

@@ -128,6 +128,7 @@ export class MessageRouter {
 
       case 'GET_USER_PROFILE': {
         try {
+          profileService.clearCache();
           const [profile, edu, exp, skills] = await Promise.all([
             profileService.getProfile(),
             profileService.getEducation(),
@@ -139,6 +140,7 @@ export class MessageRouter {
             data: { profile, edu, exp, skills },
           };
         } catch (err) {
+          console.error('[HapplyMate Background] GET_USER_PROFILE failed:', err);
           return { success: false, error: (err as Error).message };
         }
       }

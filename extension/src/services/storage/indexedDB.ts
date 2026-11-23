@@ -90,11 +90,24 @@ class IndexedDBClient {
         }
       };
 
+      request.onblocked = () => {
+        console.warn('[IndexedDB] Database upgrade blocked by another open tab/connection.');
+      };
+
       request.onsuccess = () => {
-        resolve(request.result);
+        const db = request.result;
+        db.onversionchange = () => {
+          db.close();
+          this.dbPromise = null;
+        };
+        db.onclose = () => {
+          this.dbPromise = null;
+        };
+        resolve(db);
       };
 
       request.onerror = () => {
+        this.dbPromise = null;
         reject(request.error);
       };
     });

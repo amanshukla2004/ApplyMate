@@ -32,6 +32,13 @@ export const Popup: React.FC = () => {
   const [isWebPage, setIsWebPage] = useState<boolean>(false);
   const [platform, setPlatform] = useState<string>('');
   const [autofillSuccess, setAutofillSuccess] = useState<boolean>(false);
+  const [autofillError, setAutofillError] = useState<string | null>(null);
+  const [profilePayload, setProfilePayload] = useState<{
+    profile: any;
+    edu: any[];
+    exp: any[];
+    skills: any[];
+  } | null>(null);
 
   // Quick Save Job state
   const [isSaveOpen, setIsSaveOpen] = useState<boolean>(false);
@@ -76,6 +83,7 @@ export const Popup: React.FC = () => {
         );
         setReadiness(score);
         setHasResume(resumes.length > 0);
+        setProfilePayload({ profile, edu: education, exp: experience, skills });
 
         if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
           chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -184,17 +192,41 @@ export const Popup: React.FC = () => {
   const triggerDirectAutofill = async () => {
     if (typeof chrome === 'undefined' || !chrome.tabs) return;
     try {
+      setAutofillError(null);
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { type: 'EXECUTE_AUTOFILL_SHORTCUT' }, () => {
-          setAutofillSuccess(true);
-          setTimeout(() => {
-            window.close();
-          }, 1200);
-        });
+        chrome.tabs.sendMessage(
+          tab.id,
+          {
+            type: 'EXECUTE_AUTOFILL_SHORTCUT',
+            data: profilePayload || undefined,
+          },
+          (res) => {
+            if (chrome.runtime?.lastError) {
+              const errMsg = chrome.runtime.lastError.message || 'Page not responding';
+              console.warn('[Popup] Autofill shortcut failed:', errMsg);
+              setAutofillError(errMsg);
+              setTimeout(() => setAutofillError(null), 3000);
+              return;
+            }
+            if (res?.success && res.filledCount > 0) {
+              setAutofillSuccess(true);
+              setTimeout(() => {
+                window.close();
+              }, 1200);
+            } else {
+              const errMsg = res?.error || 'No matching fields found';
+              console.warn('[Popup] Autofill finished with 0 filled fields:', res);
+              setAutofillError(errMsg);
+              setTimeout(() => setAutofillError(null), 3000);
+            }
+          }
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Direct autofill trigger failed:', err);
+      setAutofillError(err?.message || 'Autofill trigger failed');
+      setTimeout(() => setAutofillError(null), 3000);
     }
   };
 
@@ -470,6 +502,8 @@ export const Popup: React.FC = () => {
               marginTop: '4px',
               background: autofillSuccess
                 ? '#10B981'
+                : autofillError
+                ? '#EF4444'
                 : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               border: 'none',
               borderRadius: '10px',
@@ -482,7 +516,9 @@ export const Popup: React.FC = () => {
               justifyContent: 'center',
               gap: '6px',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+              boxShadow: autofillError
+                ? '0 4px 12px rgba(239, 68, 68, 0.35)'
+                : '0 4px 12px rgba(16, 185, 129, 0.35)',
               transition: 'all 0.15s ease',
             }}
           >
@@ -490,6 +526,11 @@ export const Popup: React.FC = () => {
               <>
                 <CheckCircle2 size={15} />
                 <span>Autofilled Successfully!</span>
+              </>
+            ) : autofillError ? (
+              <>
+                <Zap size={14} />
+                <span style={{ fontSize: '11.5px' }}>{autofillError}</span>
               </>
             ) : (
               <>
