@@ -1,5 +1,6 @@
 import { indexedDBClient, STORES } from './indexedDB';
 import { chromeStorageClient } from './chromeStorage';
+import { profileService } from '../profileService';
 import {
   UserProfile,
   EducationRecord,
@@ -63,6 +64,9 @@ export class StorageService {
       return rest;
     });
 
+    // Strip sensitive secrets (API keys) from exported backup
+    const { aiApiKey: _, ...safeSettings } = settings;
+
     return {
       exportedAt: new Date().toISOString(),
       version: '1.0.0',
@@ -75,62 +79,95 @@ export class StorageService {
       projects,
       answers,
       applications,
-      settings,
+      settings: safeSettings as AppSettings,
     };
   }
 
-  async importAllData(data: Partial<ExportData>): Promise<boolean> {
-    if (data.profile) {
-      await indexedDBClient.put(STORES.PROFILES, data.profile);
+  private sanitizePayload<T>(input: T, depth = 0): T {
+    if (depth > 10) return null as unknown as T;
+    if (!input || typeof input !== 'object') {
+      if (typeof input === 'string' && input.length > 50000) {
+        return input.slice(0, 50000) as unknown as T;
+      }
+      return input;
     }
-    if (data.education && Array.isArray(data.education)) {
-      for (const item of data.education) {
+    if (Array.isArray(input)) {
+      const capped = input.slice(0, 1000);
+      return capped.map((item) => this.sanitizePayload(item, depth + 1)) as unknown as T;
+    }
+    const clean: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        continue;
+      }
+      // Never import or overwrite active AI API keys from external JSON backups
+      if (k === 'aiApiKey') {
+        continue;
+      }
+      clean[k] = v && typeof v === 'object' ? this.sanitizePayload(v, depth + 1) : (typeof v === 'string' && v.length > 50000 ? v.slice(0, 50000) : v);
+    }
+    return clean as T;
+  }
+
+  async importAllData(data: Partial<ExportData>): Promise<boolean> {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid import data format');
+    }
+    const safeData = this.sanitizePayload(data);
+
+    if (safeData.profile) {
+      await indexedDBClient.put(STORES.PROFILES, safeData.profile);
+    }
+    if (safeData.education && Array.isArray(safeData.education)) {
+      for (const item of safeData.education) {
         await indexedDBClient.put(STORES.EDUCATION, item);
       }
     }
-    if (data.experience && Array.isArray(data.experience)) {
-      for (const item of data.experience) {
+    if (safeData.experience && Array.isArray(safeData.experience)) {
+      for (const item of safeData.experience) {
         await indexedDBClient.put(STORES.EXPERIENCE, item);
       }
     }
-    if (data.skills && Array.isArray(data.skills)) {
-      for (const item of data.skills) {
+    if (safeData.skills && Array.isArray(safeData.skills)) {
+      for (const item of safeData.skills) {
         await indexedDBClient.put(STORES.SKILLS, item);
       }
     }
-    if (data.certificates && Array.isArray(data.certificates)) {
+    if (safeData.certificates && Array.isArray(safeData.certificates)) {
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         await new Promise<void>((resolve) => {
-          chrome.storage.local.set({ applymate_certificates: data.certificates }, () => resolve());
+          chrome.storage.local.set({ applymate_certificates: safeData.certificates }, () => resolve());
         });
       } else {
-        localStorage.setItem('applymate_certificates', JSON.stringify(data.certificates));
+        localStorage.setItem('applymate_certificates', JSON.stringify(safeData.certificates));
       }
     }
-    if (data.projects && Array.isArray(data.projects)) {
-      for (const item of data.projects) {
+    if (safeData.projects && Array.isArray(safeData.projects)) {
+      for (const item of safeData.projects) {
         await indexedDBClient.put(STORES.PROJECTS, item);
       }
     }
-    if (data.answers && Array.isArray(data.answers)) {
-      for (const item of data.answers) {
+    if (safeData.answers && Array.isArray(safeData.answers)) {
+      for (const item of safeData.answers) {
         await indexedDBClient.put(STORES.ANSWERS, item);
       }
     }
-    if (data.applications && Array.isArray(data.applications)) {
-      for (const item of data.applications) {
+    if (safeData.applications && Array.isArray(safeData.applications)) {
+      for (const item of safeData.applications) {
         await indexedDBClient.put(STORES.APPLICATIONS, item);
       }
     }
-    if (data.settings) {
-      await chromeStorageClient.saveSettings(data.settings);
+    if (safeData.settings) {
+      await chromeStorageClient.saveSettings(safeData.settings);
     }
+    profileService.clearCache();
     return true;
   }
 
   async wipeAllData(): Promise<void> {
     await indexedDBClient.clearAllStores();
     await chromeStorageClient.clearSettings();
+    profileService.clearCache();
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.remove(['applymate_certificates']);
     } else {

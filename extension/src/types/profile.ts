@@ -25,6 +25,7 @@ export interface ProfessionalLinks {
   githubUrl: string;
   portfolioUrl?: string;
   personalWebsite?: string;
+  resumeDriveUrl?: string;
   otherLinks?: { label: string; url: string }[];
 }
 

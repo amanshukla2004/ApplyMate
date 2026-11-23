@@ -126,4 +126,30 @@ describe('AutofillEngine', () => {
     await autofillEngine.fillField(selectField.id, 'Mobile');
     expect(selectEl.value).toBe('mobile');
   });
+
+  it('autofills radio group correctly selecting positive option and not toggling opposite option', async () => {
+    document.body.innerHTML = `
+      <form id="radio-app">
+        <label>Are you authorized to work?</label>
+        <input id="radio_yes" type="radio" name="authorized" value="yes" />
+        <input id="radio_no" type="radio" name="authorized" value="no" />
+      </form>
+    `;
+
+    const detected = domScanner.scan();
+    const yesField = detected.find((f) => f.elementId === 'radio_yes')!;
+    const noField = detected.find((f) => f.elementId === 'radio_no')!;
+
+    const yesEl = document.getElementById('radio_yes') as HTMLInputElement;
+    const noEl = document.getElementById('radio_no') as HTMLInputElement;
+
+    await autofillEngine.fillField(yesField.id, 'yes');
+    expect(yesEl.checked).toBe(true);
+    expect(noEl.checked).toBe(false);
+
+    // If filling with 'no', it should select the 'no' option
+    await autofillEngine.fillField(noField.id, 'no');
+    expect(noEl.checked).toBe(true);
+    expect(yesEl.checked).toBe(false);
+  });
 });

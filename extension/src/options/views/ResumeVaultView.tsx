@@ -33,6 +33,11 @@ export const ResumeVaultView: React.FC<ResumeVaultViewProps> = ({
   const [parsingMessage, setParsingMessage] = useState<string | null>(null);
 
   const processAndParseFile = async (file: File, autoUpload = true) => {
+    if (file.size > 15 * 1024 * 1024) {
+      alert('File size exceeds 15 MB limit. Please select a standard resume PDF under 15 MB.');
+      return;
+    }
+
     setIsParsing(true);
     setParsingMessage('Extracting text client-side...');
 

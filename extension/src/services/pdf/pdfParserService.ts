@@ -26,6 +26,10 @@ export class PDFParserService {
       bytes = new Uint8Array(fileOrBuffer as any);
     }
 
+    if (bytes.byteLength > 15 * 1024 * 1024) {
+      throw new Error('File size exceeds 15 MB limit. Please upload a standard resume document.');
+    }
+
     const binaryString = this.uint8ArrayToString(bytes);
 
     // Verify PDF header

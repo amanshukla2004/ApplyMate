@@ -126,6 +126,26 @@ export const LinksView: React.FC<LinksViewProps> = ({ links, onChange }) => {
               <p className="hint">Optional personal website, blog or portfolio link.</p>
             )}
           </div>
+
+          <div style={{ gridColumn: 'span 2' }}>
+            <label className="f" htmlFor="res-drive">
+              Resume Drive / Cloud Link (URL)
+              <span style={{ color: '#10B981', fontSize: '11px', marginLeft: '6px', fontWeight: 600 }}>• Essential for Google Forms & Startups</span>
+            </label>
+            <input
+              className="in"
+              id="res-drive"
+              type="url"
+              placeholder="https://drive.google.com/file/d/..."
+              value={links.resumeDriveUrl || ''}
+              onChange={(e) => validateUrl('resumeDriveUrl', e.target.value)}
+            />
+            {errors.resumeDriveUrl ? (
+              <p className="hint err" role="alert">{errors.resumeDriveUrl}</p>
+            ) : (
+              <p className="hint">Public Google Drive, Dropbox, or Notion link to your resume. Auto-fills forms that ask for a link instead of a PDF upload.</p>
+            )}
+          </div>
         </form>
       </Card>
     </div>

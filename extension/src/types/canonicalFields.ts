@@ -17,6 +17,7 @@ export type ApplicationField =
   | 'PORTFOLIO_URL'
   | 'FACEBOOK_URL'
   | 'TWITTER_URL'
+  | 'RESUME_URL'
   | 'COLLEGE'
   | 'DEGREE'
   | 'BRANCH'
@@ -215,6 +216,35 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     category: 'links',
     dataType: 'url',
     aliases: ['twitter', 'twitter profile', 'twitter url', 'x profile', 'twitter link', 'twitter s'],
+    sensitive: false,
+  },
+  RESUME_URL: {
+    id: 'RESUME_URL',
+    displayLabel: 'Resume Drive / Cloud Link (URL)',
+    category: 'links',
+    dataType: 'url',
+    aliases: [
+      'resume link',
+      'resume url',
+      'resume drive link',
+      'drive link to resume',
+      'google drive link to resume',
+      'drive link',
+      'google drive link',
+      'cv link',
+      'cv url',
+      'link to resume',
+      'link to your resume',
+      'link to your cv',
+      'public resume link',
+      'shareable resume link',
+      'drive link of resume',
+      'drive link of cv',
+      'resume / cv link',
+      'link of resume',
+      'link of cv',
+      'resume link drive',
+    ],
     sensitive: false,
   },
   COLLEGE: {

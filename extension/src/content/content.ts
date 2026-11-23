@@ -226,24 +226,53 @@ function initFloatingWidget(): boolean {
   const fab = document.createElement('button');
   fab.className = 'fab';
   fab.title = 'HapplyMate 1-Click Autofill (Alt+A)';
-  fab.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 3L3 21H7.5L9.5 16.5H14.5L16.5 21H21L12 3Z" fill="#ffffff"/>
-      <path d="M12 8.5L13.8 13.5H10.2L12 8.5Z" fill="#8B74F0"/>
-      <path d="M9.5 14.5L14.5 14.5L12 9.5Z" fill="#ffffff" opacity="0.9"/>
-    </svg>
-    <span>HapplyMate Autofill</span>
-  `;
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const fabSvg = document.createElementNS(svgNS, 'svg');
+  fabSvg.setAttribute('width', '18');
+  fabSvg.setAttribute('height', '18');
+  fabSvg.setAttribute('viewBox', '0 0 24 24');
+  fabSvg.setAttribute('fill', 'none');
+  fabSvg.setAttribute('aria-hidden', 'true');
+
+  const p1 = document.createElementNS(svgNS, 'path');
+  p1.setAttribute('d', 'M12 3L3 21H7.5L9.5 16.5H14.5L16.5 21H21L12 3Z');
+  p1.setAttribute('fill', '#ffffff');
+
+  const p2 = document.createElementNS(svgNS, 'path');
+  p2.setAttribute('d', 'M12 8.5L13.8 13.5H10.2L12 8.5Z');
+  p2.setAttribute('fill', '#8B74F0');
+
+  const p3 = document.createElementNS(svgNS, 'path');
+  p3.setAttribute('d', 'M9.5 14.5L14.5 14.5L12 9.5Z');
+  p3.setAttribute('fill', '#ffffff');
+  p3.setAttribute('opacity', '0.9');
+
+  fabSvg.appendChild(p1);
+  fabSvg.appendChild(p2);
+  fabSvg.appendChild(p3);
+
+  const fabText = document.createElement('span');
+  fabText.textContent = 'HapplyMate Autofill';
+
+  fab.appendChild(fabSvg);
+  fab.appendChild(fabText);
 
   const triggerToast = (msg: string, isError = false, onRetry?: () => void) => {
     clearTimeout(shadowToastTimeout);
     toast.className = `toast ${isError ? 'bad' : ''} show`;
-    toast.innerHTML = isError && onRetry
-      ? `<span>${msg}</span><button id="toast-rt">Retry</button>`
-      : `<span>${msg}</span>`;
+    toast.textContent = '';
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = msg;
+    toast.appendChild(textSpan);
 
     if (isError && onRetry) {
-      toast.querySelector('#toast-rt')?.addEventListener('click', onRetry);
+      const retryBtn = document.createElement('button');
+      retryBtn.id = 'toast-rt';
+      retryBtn.textContent = 'Retry';
+      retryBtn.addEventListener('click', onRetry);
+      toast.appendChild(retryBtn);
     }
 
     shadowToastTimeout = setTimeout(() => {
@@ -487,6 +516,8 @@ function resolveCanonicalValue(
       return (profile.links as any)?.facebookUrl || (profile.links as any)?.facebook || '';
     case 'TWITTER_URL':
       return (profile.links as any)?.twitterUrl || (profile.links as any)?.twitter || '';
+    case 'RESUME_URL':
+      return profile.links?.resumeDriveUrl || (profile.links as any)?.resumeUrl || '';
     case 'COLLEGE':
       return edu?.[0]?.institution || '';
     case 'DEGREE':

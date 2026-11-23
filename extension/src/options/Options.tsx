@@ -18,6 +18,7 @@ import { CertificatesView } from './views/CertificatesView';
 import { ResumeVaultView } from './views/ResumeVaultView';
 import { AnswerBankView } from './views/AnswerBankView';
 import { PipelineView } from './views/PipelineView';
+import { SavedJobsView } from './views/SavedJobsView';
 import { SettingsView } from './views/SettingsView';
 import { SaveBar } from './views/SaveBar';
 
@@ -26,6 +27,8 @@ import { resumeService } from '../services/resumeService';
 import { projectService } from '../services/projectService';
 import { answerService } from '../services/answerService';
 import { applicationService } from '../services/applicationService';
+import { savedJobRepository } from '../services/savedJob/savedJobRepository';
+import { JobExtractorService } from '../services/savedJob/jobExtractorService';
 import { storageService } from '../services/storage/storageService';
 import { chromeStorageClient } from '../services/storage/chromeStorage';
 import { PDFParserService } from '../services/pdf/pdfParserService';
@@ -47,6 +50,7 @@ import {
   JobPreferences,
   CertificateRecord,
 } from '../types/profile';
+import { SavedJobRecord } from '../types/savedJob';
 
 type SectionId =
   | 'overview'
@@ -62,6 +66,7 @@ type SectionId =
   | 'vault'
   | 'answers'
   | 'pipeline'
+  | 'saved-jobs'
   | 'settings';
 
 export const Options: React.FC = () => {
@@ -80,6 +85,7 @@ export const Options: React.FC = () => {
   const [certificateList, setCertificateList] = useState<CertificateRecord[]>([]);
   const [answerList, setAnswerList] = useState<SavedAnswer[]>([]);
   const [applicationList, setApplicationList] = useState<ApplicationRecord[]>([]);
+  const [savedJobList, setSavedJobList] = useState<SavedJobRecord[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   // Phone states
@@ -91,11 +97,15 @@ export const Options: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    const hash = window.location.hash.replace('#', '');
+    if (hash === 'saved-jobs') {
+      setActiveSection('saved-jobs');
+    }
   }, []);
 
   const loadData = async () => {
     try {
-      const [p, edu, exp, sk, res, proj, ans, apps, setts] = await Promise.all([
+      const [p, edu, exp, sk, res, proj, ans, apps, setts, savedJobs] = await Promise.all([
         profileService.getProfile(),
         profileService.getEducation(),
         profileService.getExperience(),
@@ -105,6 +115,7 @@ export const Options: React.FC = () => {
         answerService.getAnswers(),
         applicationService.getApplications(),
         chromeStorageClient.getSettings(),
+        savedJobRepository.getAll(),
       ]);
 
       setProfile(p);
@@ -116,6 +127,7 @@ export const Options: React.FC = () => {
       setProjectList(proj);
       setAnswerList(ans);
       setApplicationList(apps);
+      setSavedJobList(savedJobs);
       setSettings(setts);
 
       // Load certificates from local storage
@@ -437,6 +449,14 @@ export const Options: React.FC = () => {
             >
               Pipeline
             </button>
+            <button
+              type="button"
+              className="nav"
+              aria-current={activeSection === 'saved-jobs' ? 'page' : undefined}
+              onClick={() => setActiveSection('saved-jobs')}
+            >
+              Saved Jobs
+            </button>
 
             <button
               type="button"
@@ -706,6 +726,65 @@ export const Options: React.FC = () => {
                   await applicationService.deleteApplication(id);
                   setApplicationList(await applicationService.getApplications());
                   showToast('Application removed');
+                }}
+              />
+            )}
+
+            {activeSection === 'saved-jobs' && (
+              <SavedJobsView
+                savedJobs={savedJobList}
+                onUpdateJob={async (id, partial) => {
+                  await savedJobRepository.update(id, partial);
+                  setSavedJobList(await savedJobRepository.getAll());
+                  showToast('Saved job updated');
+                }}
+                onDeleteJob={async (id) => {
+                  await savedJobRepository.delete(id);
+                  setSavedJobList(await savedJobRepository.getAll());
+                  showToast('Job removed from saved list');
+                }}
+                onRerunExtraction={async (id) => {
+                  showToast('Re-running AI extraction...');
+                  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+                    chrome.runtime.sendMessage({ type: 'RERUN_JOB_EXTRACTION', id }, async (res) => {
+                      setSavedJobList(await savedJobRepository.getAll());
+                      if (res?.success) {
+                        showToast('AI extraction completed!');
+                      } else {
+                        showToast(res?.error || 'Extraction completed with fallback');
+                      }
+                    });
+                  } else {
+                    const existing = await savedJobRepository.getById(id);
+                    if (existing) {
+                      const extracted = await JobExtractorService.extract(existing.rawText);
+                      await savedJobRepository.update(id, extracted);
+                      setSavedJobList(await savedJobRepository.getAll());
+                      showToast('AI extraction completed!');
+                    }
+                  }
+                }}
+                onSaveRawJob={async (text) => {
+                  if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+                    chrome.runtime.sendMessage({ type: 'SAVE_RAW_JOB', data: { text } }, async () => {
+                      setSavedJobList(await savedJobRepository.getAll());
+                      showToast('Job saved! AI extraction running in background.');
+                    });
+                  } else {
+                    const initial = JobExtractorService.extractHeuristically(text);
+                    const newJob: SavedJobRecord = {
+                      id: `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                      rawText: text,
+                      ...initial,
+                      status: 'to-apply',
+                      extractionStatus: 'pending',
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    };
+                    await savedJobRepository.save(newJob);
+                    setSavedJobList(await savedJobRepository.getAll());
+                    showToast('Job saved!');
+                  }
                 }}
               />
             )}

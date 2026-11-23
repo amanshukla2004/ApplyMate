@@ -243,7 +243,9 @@ export class AutofillEngine {
   private fillRadio(input: HTMLInputElement, value: string): void {
     const normVal = value.toLowerCase().trim();
     const radioVal = input.value.toLowerCase().trim();
-    if (radioVal === normVal || normVal === 'yes') {
+    const isYesMatch = ['yes', 'true', '1'].includes(normVal) && ['yes', 'true', '1'].includes(radioVal);
+    const isNoMatch = ['no', 'false', '0'].includes(normVal) && ['no', 'false', '0'].includes(radioVal);
+    if (radioVal === normVal || isYesMatch || isNoMatch) {
       input.click();
     }
   }

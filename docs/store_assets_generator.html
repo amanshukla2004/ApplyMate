@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HapplyMate – Chrome Web Store Visual Assets Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 25px rgba(20, 184, 166, 0.25);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-6 md:p-12">
+  <div class="max-w-6xl mx-auto space-y-10">
+
+    <!-- Header Section -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-white/10">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-3">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Chrome Web Store Compliance Engine
+        </div>
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+          Store Visual Assets Generator
+        </h1>
+        <p class="text-slate-400 text-sm md:text-base mt-2 max-w-2xl">
+          Instantly generate, preview, and download official 1280×800 px screenshots and 440×280 px promotional banners formatted specifically for Google Chrome Web Store Developer Console.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="downloadAllBtn" class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center gap-2 transition-all transform active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          Download All Assets (5 Files)
+        </button>
+      </div>
+    </header>
+
+    <!-- Asset Cards Grid -->
+    <div class="grid grid-cols-1 gap-12">
+
+      <!-- Asset 1: Small Promo Banner (440x280) -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="px-2.5 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono font-bold">440 × 280 px</span>
+            <h2 class="text-xl font-bold text-white mt-1">1. Small Promotional Tile</h2>
+            <p class="text-slate-400 text-xs mt-0.5">Required for featured extensions and Chrome Web Store search card placements.</p>
+          </div>
+          <button onclick="downloadAsset('canvasPromo', 'happlymate-promo-440x280.png')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download Tile PNG
+          </button>
+        </div>
+
+        <div class="flex justify-center p-4 bg-slate-950/60 rounded-xl border border-white/5 overflow-hidden">
+          <canvas id="canvasPromo" width="440" height="280" class="rounded-lg shadow-2xl border border-white/10 max-w-full h-auto"></canvas>
+        </div>
+      </section>
+
+      <!-- Asset 2: Screenshot 1 - Form Autofill (1280x800) -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">1280 × 800 px</span>
+            <h2 class="text-xl font-bold text-white mt-1">2. Screenshot 1: Universal 1-Click Form Autofill</h2>
+            <p class="text-slate-400 text-xs mt-0.5">Demonstrating active ATS job application with HapplyMate SidePanel and Alt+A in-page pill.</p>
+          </div>
+          <button onclick="downloadAsset('canvasShot1', 'happlymate-screenshot1-autofill-1280x800.png')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download Screenshot 1
+          </button>
+        </div>
+
+        <div class="flex justify-center p-4 bg-slate-950/60 rounded-xl border border-white/5 overflow-hidden">
+          <canvas id="canvasShot1" width="1280" height="800" class="rounded-lg shadow-2xl border border-white/10 w-full max-w-4xl h-auto"></canvas>
+        </div>
+      </section>
+
+      <!-- Asset 3: Screenshot 2 - Resume Vault & Onboarding (1280x800) -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">1280 × 800 px</span>
+            <h2 class="text-xl font-bold text-white mt-1">3. Screenshot 2: Zero-Cloud Resume Vault & Rapid Onboarding</h2>
+            <p class="text-slate-400 text-xs mt-0.5">Demonstrating 3-step setup, drag-and-drop PDF extraction, and local-first privacy security.</p>
+          </div>
+          <button onclick="downloadAsset('canvasShot2', 'happlymate-screenshot2-onboarding-1280x800.png')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download Screenshot 2
+          </button>
+        </div>
+
+        <div class="flex justify-center p-4 bg-slate-950/60 rounded-xl border border-white/5 overflow-hidden">
+          <canvas id="canvasShot2" width="1280" height="800" class="rounded-lg shadow-2xl border border-white/10 w-full max-w-4xl h-auto"></canvas>
+        </div>
+      </section>
+
+      <!-- Asset 4: Screenshot 3 - RAG Answer Bank (1280x800) -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">1280 × 800 px</span>
+            <h2 class="text-xl font-bold text-white mt-1">4. Screenshot 3: Contextual RAG Answer Bank & AI Copilot</h2>
+            <p class="text-slate-400 text-xs mt-0.5">Demonstrating instant retrieval of candidate facts and tailored answers for tricky open-ended questions.</p>
+          </div>
+          <button onclick="downloadAsset('canvasShot3', 'happlymate-screenshot3-rag-bank-1280x800.png')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download Screenshot 3
+          </button>
+        </div>
+
+        <div class="flex justify-center p-4 bg-slate-950/60 rounded-xl border border-white/5 overflow-hidden">
+          <canvas id="canvasShot3" width="1280" height="800" class="rounded-lg shadow-2xl border border-white/10 w-full max-w-4xl h-auto"></canvas>
+        </div>
+      </section>
+
+      <!-- Asset 5: Screenshot 4 - Kanban CRM (1280x800) -->
+      <section class="glass-card rounded-2xl p-6 md:p-8 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span class="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">1280 × 800 px</span>
+            <h2 class="text-xl font-bold text-white mt-1">5. Screenshot 4: 5-Stage Job Application Pipeline CRM</h2>
+            <p class="text-slate-400 text-xs mt-0.5">Demonstrating visual status board, platform badges, search filtering, and CSV export.</p>
+          </div>
+          <button onclick="downloadAsset('canvasShot4', 'happlymate-screenshot4-crm-1280x800.png')" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download Screenshot 4
+          </button>
+        </div>
+
+        <div class="flex justify-center p-4 bg-slate-950/60 rounded-xl border border-white/5 overflow-hidden">
+          <canvas id="canvasShot4" width="1280" height="800" class="rounded-lg shadow-2xl border border-white/10 w-full max-w-4xl h-auto"></canvas>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Store Upload Checklist -->
+    <footer class="glass-card rounded-2xl p-8 border border-white/10 space-y-4">
+      <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <span class="text-emerald-400">📋</span> Chrome Web Store Developer Console Checklist
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+        <div class="space-y-2">
+          <p><strong class="text-white">1. Package Upload:</strong> Upload <code class="bg-black/40 px-1 py-0.5 rounded text-emerald-400">ApplyMate/extension/happlymate.zip</code></p>
+          <p><strong class="text-white">2. Store Icon:</strong> Found in <code class="bg-black/40 px-1 py-0.5 rounded text-emerald-400">extension/public/icons/icon128.png</code> (128×128)</p>
+          <p><strong class="text-white">3. Screenshots:</strong> Upload the 4 downloaded 1280×800 PNG images above</p>
+        </div>
+        <div class="space-y-2">
+          <p><strong class="text-white">4. Promotional Banner:</strong> Upload the 440×280 tile above</p>
+          <p><strong class="text-white">5. Visibility:</strong> Select <strong class="text-indigo-400">Unlisted</strong> for beta testing</p>
+          <p><strong class="text-white">6. Privacy Policy:</strong> Host on GitHub Pages (<code class="bg-black/40 px-1 py-0.5 rounded text-emerald-400">https://&lt;user&gt;.github.io/ApplyMate/PRIVACY_POLICY.html</code>)</p>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Canvas Painting Scripts -->
+  <script>
+    // Helper: Round Rectangle
+    function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+      if (typeof radius === 'number') {
+        radius = {tl: radius, tr: radius, br: radius, bl: radius};
+      }
+      ctx.beginPath();
+      ctx.moveTo(x + radius.tl, y);
+      ctx.lineTo(x + width - radius.tr, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+      ctx.lineTo(x + width, y + height - radius.br);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+      ctx.lineTo(x + radius.bl, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+      ctx.lineTo(x, y + radius.tl);
+      ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+      ctx.closePath();
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+
+    // Draw Promo Tile (440 x 280)
+    function drawPromoTile() {
+      const c = document.getElementById('canvasPromo');
+      const ctx = c.getContext('2d');
+      const W = 440, H = 280;
+
+      // Dark Cosmic Gradient
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0, '#090D16');
+      grad.addColorStop(0.5, '#0F172A');
+      grad.addColorStop(1, '#1E1B4B');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Ambient Glow
+      const glow = ctx.createRadialGradient(W/2, H/2 - 20, 20, W/2, H/2 - 20, 160);
+      glow.addColorStop(0, 'rgba(16, 185, 129, 0.22)');
+      glow.addColorStop(0.6, 'rgba(99, 102, 241, 0.15)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      // Logo Emblem Circle
+      ctx.fillStyle = '#064E3B';
+      ctx.beginPath();
+      ctx.arc(W/2, 85, 42, 0, Math.PI * 2);
+      ctx.fill();
+
+      const emblemGrad = ctx.createLinearGradient(W/2 - 38, 47, W/2 + 38, 123);
+      emblemGrad.addColorStop(0, '#10B981');
+      emblemGrad.addColorStop(1, '#059669');
+      ctx.fillStyle = emblemGrad;
+      ctx.beginPath();
+      ctx.arc(W/2, 85, 38, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rocket Monogram Icon
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(W/2 - 12, 82, 4.5, 0, Math.PI * 2);
+      ctx.arc(W/2 + 12, 82, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cheerful Smile Curve
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(W/2, 84, 18, 0.25 * Math.PI, 0.75 * Math.PI, false);
+      ctx.stroke();
+
+      // Title: HapplyMate
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 30px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('HapplyMate', W/2, 162);
+
+      // Subtitle
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '500 13px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('The AI Career Co-Pilot & Autofill Assistant', W/2, 188);
+
+      // Feature Badges
+      const badges = ['⚡ 1-Click Alt+A', '🔒 100% Local-First', '🎯 Zero Telemetry'];
+      let bx = W/2 - 165;
+      badges.forEach((b) => {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, bx, 218, 104, 28, 14, true, true);
+
+        ctx.fillStyle = '#E2E8F0';
+        ctx.font = '600 10.5px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(b, bx + 52, 236);
+        bx += 114;
+      });
+    }
+
+    // Draw Screenshot 1 (1280 x 800) - Universal Autofill
+    function drawScreenshot1() {
+      const c = document.getElementById('canvasShot1');
+      const ctx = c.getContext('2d');
+      const W = 1280, H = 800;
+
+      // Dark Background
+      ctx.fillStyle = '#0B0F19';
+      ctx.fillRect(0, 0, W, H);
+
+      // Top Title Bar in image
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      roundRect(ctx, 40, 30, W - 80, 60, 16, true, false);
+      ctx.fillStyle = '#10B981';
+      ctx.font = 'bold 12px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('FEATURE SPOTLIGHT // 01', 65, 55);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Universal 1-Click Job Form Autofill (Workday, Greenhouse, Ashby, Lever)', 65, 78);
+
+      // Left: Simulated Web Application Job Page
+      ctx.fillStyle = '#111827';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      roundRect(ctx, 40, 110, 780, 650, 16, true, true);
+
+      // ATS Form Header
+      ctx.fillStyle = '#1F2937';
+      roundRect(ctx, 40, 110, 780, 50, {tl: 16, tr: 16, bl: 0, br: 0}, true, false);
+      // Window dots
+      ctx.fillStyle = '#EF4444'; ctx.beginPath(); ctx.arc(65, 135, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#F59E0B'; ctx.beginPath(); ctx.arc(83, 135, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#10B981'; ctx.beginPath(); ctx.arc(101, 135, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#94A3B8'; ctx.font = '500 12px "JetBrains Mono", monospace';
+      ctx.fillText('https://boards.greenhouse.io/stripe/jobs/4092102', 125, 139);
+
+      // Job Title in form
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Staff Frontend Engineer – Core Infrastructure', 70, 200);
+      ctx.fillStyle = '#94A3B8'; ctx.font = '14px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Stripe • San Francisco, CA (or Remote) • Full-Time', 70, 225);
+
+      // Input Field Form Rows
+      const formFields = [
+        { label: 'Full Name *', value: 'Alex Morgan', type: 'matched' },
+        { label: 'Email Address *', value: 'alex.morgan@alumni.stanford.edu', type: 'matched' },
+        { label: 'Phone Number *', value: '+1 (415) 555-0192', type: 'matched' },
+        { label: 'LinkedIn Profile URL *', value: 'https://linkedin.com/in/alexmorgan-dev', type: 'matched' },
+        { label: 'GitHub Profile URL', value: 'https://github.com/alexmorgan-code', type: 'matched' },
+        { label: 'Portfolio / Website', value: 'https://alexmorgan.io', type: 'matched' }
+      ];
+
+      let fy = 270;
+      formFields.forEach((f) => {
+        ctx.fillStyle = '#E2E8F0'; ctx.font = '600 13px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(f.label, 70, fy);
+
+        // Input Box (Highlighted in subtle emerald outline)
+        ctx.fillStyle = '#1E293B';
+        ctx.strokeStyle = '#10B981';
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, 70, fy + 8, 720, 42, 8, true, true);
+
+        // Autofilled Value
+        ctx.fillStyle = '#F8FAFC'; ctx.font = '500 14px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(f.value, 84, fy + 34);
+
+        // Little emerald check badge inside input
+        ctx.fillStyle = '#10B981';
+        ctx.font = 'bold 12px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('⚡ 98% Match', 775, fy + 34);
+        ctx.textAlign = 'left';
+
+        fy += 78;
+      });
+
+      // Right: HapplyMate SidePanel
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.4)';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, 845, 110, 395, 650, 16, true, true);
+
+      // SidePanel Header
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      roundRect(ctx, 845, 110, 395, 65, {tl: 16, tr: 16, bl: 0, br: 0}, true, false);
+
+      ctx.fillStyle = '#10B981';
+      ctx.beginPath(); ctx.arc(875, 142, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('H', 870, 147);
+
+      ctx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('HapplyMate Copilot', 900, 142);
+      ctx.fillStyle = '#94A3B8'; ctx.font = '11px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('6 Fields Detected • Greenhouse Adapter Active', 900, 157);
+
+      // SidePanel Autofill CTA Button
+      const btnGrad = ctx.createLinearGradient(865, 190, 1220, 190);
+      btnGrad.addColorStop(0, '#10B981'); btnGrad.addColorStop(1, '#059669');
+      ctx.fillStyle = btnGrad;
+      roundRect(ctx, 865, 190, 355, 46, 10, true, false);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ Autofill Form (Alt + A)', 865 + 355/2, 219);
+      ctx.textAlign = 'left';
+
+      // Detected Fields List inside SidePanel
+      let sy = 260;
+      formFields.slice(0, 4).forEach((f) => {
+        ctx.fillStyle = '#1E293B';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, 865, sy, 355, 76, 10, true, true);
+
+        ctx.fillStyle = '#F8FAFC'; ctx.font = '600 13px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(f.label.replace(' *', ''), 880, sy + 25);
+
+        ctx.fillStyle = '#10B981'; ctx.font = '600 11px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('98% Confident', 1205, sy + 25);
+        ctx.textAlign = 'left';
+
+        ctx.fillStyle = '#94A3B8'; ctx.font = '500 12px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(f.value, 880, sy + 52);
+
+        sy += 88;
+      });
+
+      // Bottom Security Guarantee Banner
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.25)';
+      roundRect(ctx, 865, 670, 355, 65, 10, true, true);
+      ctx.fillStyle = '#10B981'; ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('🛡️ Zero-Cloud Privacy Guarantee', 880, 695);
+      ctx.fillStyle = '#94A3B8'; ctx.font = '11px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('All autofill computations run 100% locally in browser.', 880, 715);
+    }
+
+    // Draw Screenshot 2 (1280 x 800) - Resume Vault & Onboarding
+    function drawScreenshot2() {
+      const c = document.getElementById('canvasShot2');
+      const ctx = c.getContext('2d');
+      const W = 1280, H = 800;
+
+      // Dark Background
+      ctx.fillStyle = '#0B0F19';
+      ctx.fillRect(0, 0, W, H);
+
+      // Top Title Bar
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      roundRect(ctx, 40, 30, W - 80, 60, 16, true, false);
+      ctx.fillStyle = '#6366F1';
+      ctx.font = 'bold 12px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('FEATURE SPOTLIGHT // 02', 65, 55);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Zero-Cloud PDF Resume Vault & 3-Step Rapid Onboarding Wizard', 65, 78);
+
+      // Main Container (Onboarding Showcase)
+      ctx.fillStyle = '#111827';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      roundRect(ctx, 40, 110, W - 80, 650, 16, true, true);
+
+      // Onboarding Wizard Stepper
+      const steps = [
+        { num: '1', title: 'Upload Resume PDF', state: 'active' },
+        { num: '2', title: 'Verify Profile Details', state: 'next' },
+        { num: '3', title: 'Ready to Autofill!', state: 'next' }
+      ];
+
+      let stX = 140;
+      steps.forEach((st, idx) => {
+        // Step bubble
+        ctx.fillStyle = st.state === 'active' ? '#10B981' : '#1F2937';
+        ctx.beginPath(); ctx.arc(stX, 170, 18, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(st.num, stX, 175);
+
+        // Step Label
+        ctx.fillStyle = st.state === 'active' ? '#FFFFFF' : '#64748B';
+        ctx.font = '600 14px "Plus Jakarta Sans", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(st.title, stX + 28, 175);
+
+        if (idx < 2) {
+          ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(stX + 180, 170); ctx.lineTo(stX + 270, 170); ctx.stroke();
+        }
+        stX += 340;
+      });
+
+      // Split View: Left Dropzone, Right Parsed Profile
+      // Dropzone Area
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.5)';
+      ctx.strokeStyle = '#10B981';
+      ctx.lineWidth = 2;
+      roundRect(ctx, 70, 220, 520, 490, 14, true, true);
+
+      // PDF File Icon
+      ctx.fillStyle = '#EF4444';
+      roundRect(ctx, 290, 290, 80, 96, 8, true, false);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 16px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('PDF', 330, 345);
+
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 18px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Alex_Morgan_Staff_SWE_Resume.pdf', 330, 425);
+      ctx.fillStyle = '#10B981'; ctx.font = '500 13px "JetBrains Mono", monospace';
+      ctx.fillText('✔ Extracted in 18ms via Client-Side Decompression', 330, 452);
+
+      ctx.fillStyle = '#94A3B8'; ctx.font = '13px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('100% Private • Stored securely in your browser IndexedDB', 330, 490);
+
+      // Right: Auto-Extracted Candidate Record
+      ctx.fillStyle = '#1E293B';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      roundRect(ctx, 620, 220, 570, 490, 14, true, true);
+
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 16px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Auto-Extracted Candidate Profile Data', 650, 260);
+
+      const profileBadges = [
+        { label: 'Candidate Name', val: 'Alex Morgan' },
+        { label: 'Target Title', val: 'Staff Frontend Engineer' },
+        { label: 'Email', val: 'alex.morgan@alumni.stanford.edu' },
+        { label: 'Phone', val: '+1 (415) 555-0192' },
+        { label: 'Education', val: 'Stanford University (B.S. Computer Science, 3.92)' }
+      ];
+
+      let py = 295;
+      profileBadges.forEach((pb) => {
+        ctx.fillStyle = '#334155'; ctx.font = '500 12px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(pb.label, 650, py);
+        ctx.fillStyle = '#F8FAFC'; ctx.font = '600 14px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(pb.val, 650, py + 22);
+        py += 46;
+      });
+
+      // Extracted Skills Badges
+      ctx.fillStyle = '#334155'; ctx.font = '500 12px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('18 Verified Skills Extracted', 650, 530);
+
+      const skillList = ['TypeScript', 'React 18', 'Next.js', 'Web Vitals', 'TailwindCSS', 'GraphQL', 'Vite', 'Vitest', 'Node.js', 'System Design'];
+      let skX = 650, skY = 550;
+      skillList.forEach((sk, i) => {
+        ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.3)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, skX, skY, 95, 28, 6, true, true);
+        ctx.fillStyle = '#C7D2FE'; ctx.font = '600 11px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(sk, skX + 47, skY + 18);
+        skX += 105;
+        if ((i + 1) % 5 === 0) {
+          skX = 650;
+          skY += 38;
+        }
+      });
+      ctx.textAlign = 'left';
+
+      // 1-Click Proceed CTA Button
+      const saveBtnGrad = ctx.createLinearGradient(650, 640, 1150, 640);
+      saveBtnGrad.addColorStop(0, '#10B981'); saveBtnGrad.addColorStop(1, '#059669');
+      ctx.fillStyle = saveBtnGrad;
+      roundRect(ctx, 650, 640, 510, 44, 8, true, false);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Confirm & Complete Onboarding →', 650 + 510/2, 668);
+      ctx.textAlign = 'left';
+    }
+
+    // Draw Screenshot 3 (1280 x 800) - RAG Answer Bank
+    function drawScreenshot3() {
+      const c = document.getElementById('canvasShot3');
+      const ctx = c.getContext('2d');
+      const W = 1280, H = 800;
+
+      // Dark Background
+      ctx.fillStyle = '#0B0F19';
+      ctx.fillRect(0, 0, W, H);
+
+      // Top Title Bar
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      roundRect(ctx, 40, 30, W - 80, 60, 16, true, false);
+      ctx.fillStyle = '#8B5CF6';
+      ctx.font = 'bold 12px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('FEATURE SPOTLIGHT // 03', 65, 55);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Contextual RAG Answer Bank & AI Copilot for Behavioral Questions', 65, 78);
+
+      // Main Outer Card
+      ctx.fillStyle = '#111827';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      roundRect(ctx, 40, 110, W - 80, 650, 16, true, true);
+
+      // Application Question Box
+      ctx.fillStyle = '#1E293B';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      roundRect(ctx, 70, 140, W - 140, 130, 12, true, true);
+
+      ctx.fillStyle = '#94A3B8'; ctx.font = '600 12px "JetBrains Mono", monospace';
+      ctx.fillText('ATS FORM QUESTION DETECTED:', 95, 170);
+
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 17px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('“Describe a high-impact technical challenge you led and how you resolved it.”', 95, 202);
+
+      ctx.fillStyle = '#10B981'; ctx.font = '500 12px "JetBrains Mono", monospace';
+      ctx.fillText('⚡ 96.4% Semantic Match to Answer Bank Record: "Distributed Performance Optimization"', 95, 235);
+
+      // Grounded Facts Retrieval Box
+      ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.25)';
+      roundRect(ctx, 70, 290, W - 140, 85, 10, true, true);
+
+      ctx.fillStyle = '#C7D2FE'; ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('🔍 Contextual RAG Facts Retrieved from Candidate Vault:', 95, 318);
+
+      ctx.fillStyle = '#E2E8F0'; ctx.font = '13px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('• Led frontend Core Web Vitals overhaul across 40+ microfrontends reducing LCP from 3.2s to 0.8s.', 95, 342);
+      ctx.fillText('• Engineered virtualized table rendering 100k rows at 60fps with zero memory leaks.', 95, 360);
+
+      // Generated Response Box with 1-Click Copy
+      ctx.fillStyle = '#1E293B';
+      ctx.strokeStyle = '#10B981';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, 70, 395, W - 140, 260, 12, true, true);
+
+      ctx.fillStyle = '#10B981'; ctx.font = 'bold 13px "JetBrains Mono", monospace';
+      ctx.fillText('AI COPILOT GROUNDED ANSWER (READY TO INSERT):', 95, 430);
+
+      const answerLines = [
+        "In my previous role as Senior Engineer, our e-commerce dashboard suffered from severe 3.2s LCP bottlenecks on heavy catalog pages.",
+        "To resolve this, I spearheaded a core architectural refactor: replacing monolithic bundle trees with route-level code splitting,",
+        "introducing an in-memory WeakMap cache for recurring GraphQL queries, and authoring a custom canvas-accelerated virtual list.",
+        "This reduced p95 render latency by 75%, boosted conversion rates by 8.4%, and established company-wide performance budgets."
+      ];
+
+      let ay = 465;
+      ctx.fillStyle = '#F8FAFC'; ctx.font = '14px/24px "Plus Jakarta Sans", sans-serif';
+      answerLines.forEach((al) => {
+        ctx.fillText(al, 95, ay);
+        ay += 26;
+      });
+
+      // 1-Click Copy / Insert Buttons
+      ctx.fillStyle = '#10B981';
+      roundRect(ctx, 95, 595, 180, 40, 8, true, false);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚡ Insert into Form', 95 + 90, 620);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      roundRect(ctx, 290, 595, 160, 40, 8, true, false);
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillText('📋 Copy to Clipboard', 290 + 80, 620);
+      ctx.textAlign = 'left';
+    }
+
+    // Draw Screenshot 4 (1280 x 800) - Kanban CRM
+    function drawScreenshot4() {
+      const c = document.getElementById('canvasShot4');
+      const ctx = c.getContext('2d');
+      const W = 1280, H = 800;
+
+      // Dark Background
+      ctx.fillStyle = '#0B0F19';
+      ctx.fillRect(0, 0, W, H);
+
+      // Top Title Bar
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      roundRect(ctx, 40, 30, W - 80, 60, 16, true, false);
+      ctx.fillStyle = '#F59E0B';
+      ctx.font = 'bold 12px "JetBrains Mono", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('FEATURE SPOTLIGHT // 04', 65, 55);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('Built-in Job Application Pipeline CRM & Tracking Board', 65, 78);
+
+      // Outer Board Container
+      ctx.fillStyle = '#111827';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      roundRect(ctx, 40, 110, W - 80, 650, 16, true, true);
+
+      // Top Filter Bar inside CRM
+      ctx.fillStyle = '#1E293B';
+      roundRect(ctx, 65, 135, W - 130, 45, 8, true, false);
+      ctx.fillStyle = '#94A3B8'; ctx.font = '13px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText('🔍 Search applications by company, role, or ATS platform...', 85, 163);
+
+      ctx.fillStyle = '#10B981';
+      roundRect(ctx, W - 230, 142, 140, 32, 6, true, false);
+      ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('📥 Export CSV', W - 160, 163);
+      ctx.textAlign = 'left';
+
+      // 4 Kanban Columns
+      const columns = [
+        {
+          title: 'SAVED', count: '4', color: '#94A3B8',
+          cards: [
+            { comp: 'Airbnb', role: 'Staff Frontend Architect', ats: 'Greenhouse', date: '2d ago', match: '96%' },
+            { comp: 'Figma', role: 'Senior Systems Engineer', ats: 'Ashby', date: '3d ago', match: '92%' }
+          ]
+        },
+        {
+          title: 'APPLIED', count: '12', color: '#6366F1',
+          cards: [
+            { comp: 'Stripe', role: 'Staff Frontend Engineer', ats: 'Greenhouse', date: 'Yesterday', match: '98%' },
+            { comp: 'Datadog', role: 'Principal UI Platform', ats: 'Workday', date: '4d ago', match: '94%' }
+          ]
+        },
+        {
+          title: 'INTERVIEWING', count: '3', color: '#F59E0B',
+          cards: [
+            { comp: 'Vercel', role: 'Tech Lead – Next.js', ats: 'Lever', date: 'Today at 2pm', match: '99%' }
+          ]
+        },
+        {
+          title: 'OFFER RECEIVED', count: '1', color: '#10B981',
+          cards: [
+            { comp: 'Linear', role: 'Senior Product Engineer', ats: 'Ashby', date: 'Signed!', match: '100%' }
+          ]
+        }
+      ];
+
+      let colX = 65;
+      const colWidth = 270;
+      columns.forEach((col) => {
+        // Column Header
+        ctx.fillStyle = col.color;
+        ctx.beginPath(); ctx.arc(colX + 10, 215, 5, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 13px "JetBrains Mono", monospace';
+        ctx.fillText(col.title, colX + 24, 219);
+
+        ctx.fillStyle = '#64748B'; ctx.font = '600 12px "JetBrains Mono", monospace';
+        ctx.fillText(`(${col.count})`, colX + 160, 219);
+
+        // Cards inside column
+        let cardY = 240;
+        col.cards.forEach((card) => {
+          ctx.fillStyle = '#1E293B';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+          ctx.lineWidth = 1;
+          roundRect(ctx, colX, cardY, colWidth, 125, 10, true, true);
+
+          ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 15px "Plus Jakarta Sans", sans-serif';
+          ctx.fillText(card.comp, colX + 16, cardY + 28);
+
+          ctx.fillStyle = '#94A3B8'; ctx.font = '500 12.5px "Plus Jakarta Sans", sans-serif';
+          ctx.fillText(card.role, colX + 16, cardY + 52);
+
+          // Platform Badge
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+          roundRect(ctx, colX + 16, cardY + 75, 80, 22, 4, true, false);
+          ctx.fillStyle = '#E2E8F0'; ctx.font = '600 10px "JetBrains Mono", monospace';
+          ctx.fillText(card.ats, colX + 26, cardY + 90);
+
+          // Match % Badge
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+          roundRect(ctx, colX + 105, cardY + 75, 65, 22, 4, true, false);
+          ctx.fillStyle = '#10B981'; ctx.font = 'bold 10px "JetBrains Mono", monospace';
+          ctx.fillText(card.match, colX + 115, cardY + 90);
+
+          // Date
+          ctx.fillStyle = '#64748B'; ctx.font = '11px "Plus Jakarta Sans", sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText(card.date, colX + colWidth - 16, cardY + 90);
+          ctx.textAlign = 'left';
+
+          cardY += 140;
+        });
+
+        colX += colWidth + 24;
+      });
+    }
+
+    // Single Asset Download Trigger
+    function downloadAsset(canvasId, filename) {
+      const canvas = document.getElementById(canvasId);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Download All Trigger
+    document.getElementById('downloadAllBtn').addEventListener('click', () => {
+      const items = [
+        { id: 'canvasPromo', name: 'happlymate-promo-440x280.png' },
+        { id: 'canvasShot1', name: 'happlymate-screenshot1-autofill-1280x800.png' },
+        { id: 'canvasShot2', name: 'happlymate-screenshot2-onboarding-1280x800.png' },
+        { id: 'canvasShot3', name: 'happlymate-screenshot3-rag-bank-1280x800.png' },
+        { id: 'canvasShot4', name: 'happlymate-screenshot4-crm-1280x800.png' }
+      ];
+
+      items.forEach((item, index) => {
+        setTimeout(() => {
+          downloadAsset(item.id, item.name);
+        }, index * 300);
+      });
+    });
+
+    // Initialize all canvas rendering when window loads
+    window.addEventListener('DOMContentLoaded', () => {
+      drawPromoTile();
+      drawScreenshot1();
+      drawScreenshot2();
+      drawScreenshot3();
+      drawScreenshot4();
+    });
+  </script>
+</body>
+</html>

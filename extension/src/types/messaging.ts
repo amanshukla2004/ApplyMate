@@ -1,4 +1,5 @@
 import { ApplicationField } from './canonicalFields';
+import { SavedJobRecord } from './savedJob';
 
 export interface SelectOption {
   label: string;
@@ -56,7 +57,13 @@ export type ExtensionMessage =
   | { type: 'EXECUTE_AUTOFILL_SHORTCUT' }
   | { type: 'SCRAPE_JOB_DESCRIPTION' }
   | { type: 'WORKDAY_STEP_CHANGED'; data: { stepTitle: string; fields: DetectedField[]; website: WebsiteMetadata } }
-  | { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string; platform?: string } };
+  | { type: 'RECORD_APPLICATION'; data: { companyName?: string; jobTitle?: string; jobUrl?: string; platform?: string } }
+  | { type: 'SAVE_RAW_JOB'; data: { text: string } }
+  | { type: 'GET_RECENT_SAVED_JOBS'; limit?: number }
+  | { type: 'GET_ALL_SAVED_JOBS' }
+  | { type: 'UPDATE_SAVED_JOB'; id: string; partial: Partial<SavedJobRecord> }
+  | { type: 'DELETE_SAVED_JOB'; id: string }
+  | { type: 'RERUN_JOB_EXTRACTION'; id: string };
 
 export type MessageResponse<T = unknown> = {
   success: boolean;

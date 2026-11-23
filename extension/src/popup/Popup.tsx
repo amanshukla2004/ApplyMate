@@ -7,12 +7,21 @@ import {
   CheckCircle2,
   Sparkles,
   ShieldCheck,
+  BookmarkPlus,
+  Mail,
+  Copy,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Check,
+  ArrowRight,
 } from 'lucide-react';
 import { Ring } from '../components/ui/Ring';
 import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
 import { applicationService } from '../services/applicationService';
+import { SavedJobRecord } from '../types/savedJob';
 
 export const Popup: React.FC = () => {
   const [readiness, setReadiness] = useState<number>(0);
@@ -24,11 +33,30 @@ export const Popup: React.FC = () => {
   const [platform, setPlatform] = useState<string>('');
   const [autofillSuccess, setAutofillSuccess] = useState<boolean>(false);
 
+  // Quick Save Job state
+  const [isSaveOpen, setIsSaveOpen] = useState<boolean>(false);
+  const [jobInput, setJobInput] = useState<string>('');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [recentSavedJobs, setRecentSavedJobs] = useState<SavedJobRecord[]>([]);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const refreshRecentJobs = () => {
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage({ type: 'GET_RECENT_SAVED_JOBS', limit: 4 }, (res) => {
+        if (res?.success && Array.isArray(res.data)) {
+          setRecentSavedJobs(res.data);
+        }
+      });
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
     async function loadData() {
       try {
+        refreshRecentJobs();
         const [profile, education, experience, skills, resumes] = await Promise.all([
           profileService.getProfile(),
           profileService.getEducation(),
@@ -170,13 +198,61 @@ export const Popup: React.FC = () => {
     }
   };
 
+  const handleQuickSaveJob = async () => {
+    if (!jobInput.trim() || isSaving) return;
+    setIsSaving(true);
+    try {
+      if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+        chrome.runtime.sendMessage({ type: 'SAVE_RAW_JOB', data: { text: jobInput.trim() } }, (res) => {
+          setIsSaving(false);
+          if (res?.success) {
+            setSaveSuccess(true);
+            setJobInput('');
+            refreshRecentJobs();
+            setTimeout(() => {
+              setSaveSuccess(false);
+            }, 2500);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to save job:', err);
+      setIsSaving(false);
+    }
+  };
+
+  const handleCopy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => {
+      setCopiedKey(null);
+    }, 1500);
+  };
+
+  const handleToggleApplied = (job: SavedJobRecord) => {
+    const nextStatus = job.status === 'applied' ? 'to-apply' : 'applied';
+    if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage(
+        { type: 'UPDATE_SAVED_JOB', id: job.id, partial: { status: nextStatus } },
+        (res) => {
+          if (res?.success) {
+            setRecentSavedJobs((prev) =>
+              prev.map((j) => (j.id === job.id ? { ...j, status: nextStatus } : j))
+            );
+          }
+        }
+      );
+    }
+  };
+
   const isNewTab = !isWebPage || activeTabUrl.includes('chrome://') || activeTabTitle.toLowerCase().includes('new tab');
 
   return (
     <div
       style={{
         width: '350px',
-        minHeight: '480px',
+        maxHeight: '600px',
+        overflowY: 'auto',
         boxSizing: 'border-box',
         padding: '16px',
         background: '#0D0B17',
@@ -424,6 +500,360 @@ export const Popup: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* Quick Save Job Accordion */}
+      <div
+        style={{
+          background: 'rgba(255, 255, 255, 0.035)',
+          border: '1px solid rgba(139, 116, 240, 0.28)',
+          borderRadius: '14px',
+          overflow: 'hidden',
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.2)',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <button
+          onClick={() => setIsSaveOpen(!isSaveOpen)}
+          style={{
+            width: '100%',
+            background: isSaveOpen ? 'rgba(139, 116, 240, 0.12)' : 'transparent',
+            border: 'none',
+            padding: '10px 12px',
+            color: '#F8FAFC',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                width: '28px',
+                height: '28px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #8B74F0 0%, #6366F1 100%)',
+                display: 'grid',
+                placeItems: 'center',
+                color: '#FFFFFF',
+                flexShrink: 0,
+              }}
+            >
+              <BookmarkPlus size={15} />
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#F8FAFC' }}>
+                Save a Job
+              </div>
+              <div style={{ fontSize: '11px', color: '#94A3B8' }}>
+                Paste post, email, or form link
+              </div>
+            </div>
+          </div>
+          {isSaveOpen ? <ChevronUp size={16} color="#94A3B8" /> : <ChevronDown size={16} color="#94A3B8" />}
+        </button>
+
+        {isSaveOpen && (
+          <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <textarea
+              value={jobInput}
+              onChange={(e) => setJobInput(e.target.value)}
+              placeholder="Paste job description, email instructions (e.g. hr@xyz.com with subject 'Application...'), or form link..."
+              rows={3}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                background: 'rgba(0, 0, 0, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                color: '#F8FAFC',
+                fontSize: '11.5px',
+                lineHeight: '1.4',
+                resize: 'none',
+                fontFamily: 'inherit',
+                outline: 'none',
+              }}
+            />
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '10.5px', color: '#CDBFFF', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Sparkles size={11} />
+                <span>Auto-extracted in background</span>
+              </span>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={() => {
+                    setJobInput('');
+                    setIsSaveOpen(false);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    padding: '5px 9px',
+                    fontSize: '11px',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!jobInput.trim() || isSaving}
+                  onClick={handleQuickSaveJob}
+                  style={{
+                    background: saveSuccess
+                      ? '#10B981'
+                      : !jobInput.trim() || isSaving
+                      ? 'rgba(139, 116, 240, 0.3)'
+                      : 'linear-gradient(135deg, #8B74F0 0%, #6366F1 100%)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '5px 12px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    color: '#FFFFFF',
+                    cursor: !jobInput.trim() || isSaving ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  {saveSuccess ? (
+                    <>
+                      <Check size={12} />
+                      <span>Saved!</span>
+                    </>
+                  ) : isSaving ? (
+                    'Saving...'
+                  ) : (
+                    'Save'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Recent Saved Jobs List */}
+      {recentSavedJobs.length > 0 && (
+        <div
+          style={{
+            background: 'rgba(255, 255, 255, 0.035)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '16px',
+            padding: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: '#64748B',
+                textTransform: 'uppercase',
+                letterSpacing: '0.6px',
+              }}
+            >
+              Recent Saved Jobs
+            </span>
+            <button
+              onClick={() => openOptions('saved-jobs')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#A5B4FC',
+                fontSize: '11px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2px',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <span>View all</span>
+              <ArrowRight size={11} />
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {recentSavedJobs.map((job) => {
+              const displayTitle = job.jobTitle
+                ? `${job.jobTitle}${job.company ? ' · ' + job.company : ''}`
+                : job.company
+                ? job.company
+                : job.summary
+                ? job.summary.slice(0, 48) + '...'
+                : job.rawText.slice(0, 40) + '...';
+
+              return (
+                <div
+                  key={job.id}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    borderRadius: '10px',
+                    padding: '8px 10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+                      <span
+                        style={{
+                          fontSize: '9.5px',
+                          fontWeight: 700,
+                          padding: '2px 5px',
+                          borderRadius: '4px',
+                          background:
+                            job.type === 'email'
+                              ? 'rgba(139, 116, 240, 0.18)'
+                              : job.type === 'form'
+                              ? 'rgba(16, 185, 129, 0.18)'
+                              : 'rgba(255, 255, 255, 0.08)',
+                          color:
+                            job.type === 'email'
+                              ? '#CDBFFF'
+                              : job.type === 'form'
+                              ? '#6EE7B7'
+                              : '#CBD5E1',
+                        }}
+                      >
+                        {job.type === 'email' ? 'Email' : job.type === 'form' ? 'Form' : 'Other'}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: '#F1F5F9',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '180px',
+                        }}
+                        title={displayTitle}
+                      >
+                        {displayTitle}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleToggleApplied(job)}
+                      title={job.status === 'applied' ? 'Mark To-Apply' : 'Mark Applied'}
+                      style={{
+                        background:
+                          job.status === 'applied'
+                            ? 'rgba(16, 185, 129, 0.15)'
+                            : 'rgba(255, 255, 255, 0.06)',
+                        border:
+                          job.status === 'applied'
+                            ? '1px solid rgba(16, 185, 129, 0.3)'
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        color: job.status === 'applied' ? '#6EE7B7' : '#94A3B8',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                    >
+                      {job.status === 'applied' ? (
+                        <>
+                          <Check size={10} />
+                          <span>Applied</span>
+                        </>
+                      ) : (
+                        <span>To Apply</span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* 1-Click Action Bar */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                    {job.applyEmail && (
+                      <button
+                        onClick={() => handleCopy(job.applyEmail!, `${job.id}-email`)}
+                        title={`Copy ${job.applyEmail}`}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '5px',
+                          padding: '2px 6px',
+                          fontSize: '10px',
+                          color: copiedKey === `${job.id}-email` ? '#6EE7B7' : '#CBD5E1',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                      >
+                        {copiedKey === `${job.id}-email` ? <Check size={10} /> : <Mail size={10} />}
+                        <span>{copiedKey === `${job.id}-email` ? 'Copied' : job.applyEmail}</span>
+                      </button>
+                    )}
+
+                    {job.requiredSubject && (
+                      <button
+                        onClick={() => handleCopy(job.requiredSubject!, `${job.id}-subj`)}
+                        title={`Copy subject: ${job.requiredSubject}`}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '5px',
+                          padding: '2px 6px',
+                          fontSize: '10px',
+                          color: copiedKey === `${job.id}-subj` ? '#6EE7B7' : '#CBD5E1',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                      >
+                        {copiedKey === `${job.id}-subj` ? <Check size={10} /> : <Copy size={10} />}
+                        <span>{copiedKey === `${job.id}-subj` ? 'Copied Subj' : 'Subject'}</span>
+                      </button>
+                    )}
+
+                    {job.formLink && (
+                      <button
+                        onClick={() => window.open(job.formLink!, '_blank')}
+                        title={`Open link: ${job.formLink}`}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '5px',
+                          padding: '2px 6px',
+                          fontSize: '10px',
+                          color: '#A5B4FC',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                      >
+                        <ExternalLink size={10} />
+                        <span>Open Form</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Main Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

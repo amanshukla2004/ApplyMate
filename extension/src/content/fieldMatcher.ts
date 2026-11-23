@@ -5,7 +5,37 @@ export interface MatchResult {
   confidence: number;
 }
 
+interface PrecomputedAlias {
+  raw: string;
+  norm: string;
+  len: number;
+}
+
+interface PrecomputedFieldDef {
+  field: ApplicationField;
+  aliases: PrecomputedAlias[];
+}
+
 export class FieldMatcher {
+  private static _precomputedFields: PrecomputedFieldDef[] | null = null;
+
+  private static getPrecomputedFields(): PrecomputedFieldDef[] {
+    if (!this._precomputedFields) {
+      this._precomputedFields = Object.entries(CANONICAL_FIELDS).map(([key, def]) => ({
+        field: key as ApplicationField,
+        aliases: def.aliases.map((alias) => {
+          const norm = this.normalize(alias);
+          return {
+            raw: alias,
+            norm,
+            len: norm.length,
+          };
+        }),
+      }));
+    }
+    return this._precomputedFields;
+  }
+
   /**
    * Matches element metadata against canonical fields using multi-stage analysis.
    */
@@ -27,8 +57,11 @@ export class FieldMatcher {
     let bestField: ApplicationField | undefined = undefined;
     let maxScore = 0;
 
-    for (const [key, def] of Object.entries(CANONICAL_FIELDS)) {
-      const field = key as ApplicationField;
+    const fields = this.getPrecomputedFields();
+
+    for (let fIdx = 0; fIdx < fields.length; fIdx++) {
+      const def = fields[fIdx];
+      const field = def.field;
       let score = 0;
 
       // 1. Autocomplete match (High precision when standard)
@@ -43,9 +76,12 @@ export class FieldMatcher {
         if (field === 'ZIP_CODE' && normAuto.includes('postal-code')) score = Math.max(score, 0.95);
       }
 
-      // Check aliases across attributes
-      for (const alias of def.aliases) {
-        const normAlias = this.normalize(alias);
+      // Check aliases across attributes using precomputed normalized strings
+      const aliases = def.aliases;
+      for (let aIdx = 0; aIdx < aliases.length; aIdx++) {
+        const aliasObj = aliases[aIdx];
+        const normAlias = aliasObj.norm;
+        const aliasLen = aliasObj.len;
 
         // Check if field is COLLEGE but the question is actually asking about NOC / permissions / certificates
         if (field === 'COLLEGE') {
@@ -58,21 +94,21 @@ export class FieldMatcher {
         // Exact match on Name
         if (normName === normAlias) {
           score = Math.max(score, 0.90);
-        } else if (normName.includes(normAlias) && normAlias.length > 3) {
+        } else if (aliasLen > 3 && normName.includes(normAlias)) {
           score = Math.max(score, 0.75);
         }
 
         // Exact match on ID
         if (normId === normAlias) {
           score = Math.max(score, 0.85);
-        } else if (normId.includes(normAlias) && normAlias.length > 3) {
+        } else if (aliasLen > 3 && normId.includes(normAlias)) {
           score = Math.max(score, 0.70);
         }
 
         // Exact match on Label
         if (normLabel === normAlias) {
           score = Math.max(score, 0.95);
-        } else if (normLabel.includes(normAlias) && normAlias.length > 3) {
+        } else if (aliasLen > 3 && normLabel.includes(normAlias)) {
           // For generic single words like "university" or "school", only match if label is short or asks for name
           if (field === 'COLLEGE' && (normAlias === 'university' || normAlias === 'school' || normAlias === 'college')) {
             const isNameQuery = normLabel.includes('name') || normLabel.includes('attending') || normLabel.includes('which') || normLabel.length < 35;
@@ -81,8 +117,8 @@ export class FieldMatcher {
             }
           }
 
-          // For URL fields (PORTFOLIO_URL, LINKEDIN_URL, GITHUB_URL, FACEBOOK_URL, TWITTER_URL), never match long narrative essay questions
-          if (field === 'PORTFOLIO_URL' || field === 'LINKEDIN_URL' || field === 'GITHUB_URL' || field === 'FACEBOOK_URL' || field === 'TWITTER_URL') {
+          // For URL fields (PORTFOLIO_URL, LINKEDIN_URL, GITHUB_URL, FACEBOOK_URL, TWITTER_URL, RESUME_URL), never match long narrative essay questions
+          if (field === 'PORTFOLIO_URL' || field === 'LINKEDIN_URL' || field === 'GITHUB_URL' || field === 'FACEBOOK_URL' || field === 'TWITTER_URL' || field === 'RESUME_URL') {
             const isNarrativeQuery =
               normLabel.length > 40 ||
               normLabel.includes('tell us') ||
@@ -98,7 +134,7 @@ export class FieldMatcher {
               continue;
             }
           }
-          const specificity = Math.min(0.12, normAlias.length / 100);
+          const specificity = Math.min(0.12, aliasLen / 100);
           score = Math.max(score, 0.80 + specificity);
         }
 

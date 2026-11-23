@@ -3,6 +3,7 @@ import { Backdrop } from '../components/ui/Backdrop';
 import { Button } from '../components/ui/Button';
 import { Pill } from '../components/ui/Pill';
 import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
+import { OnboardingWizard } from '../components/onboarding/OnboardingWizard';
 import { DetectedField, WebsiteMetadata } from '../types/messaging';
 import { CANONICAL_FIELDS, ApplicationField } from '../types/canonicalFields';
 import { profileService } from '../services/profileService';
@@ -31,6 +32,7 @@ export const SidePanel: React.FC = () => {
   const [experienceList, setExperienceList] = useState<ExperienceRecord[]>([]);
   const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
   const [projectList, setProjectList] = useState<ProjectRecord[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Form detection state
   const [isScanning, setIsScanning] = useState(false);
@@ -200,6 +202,11 @@ export const SidePanel: React.FC = () => {
       setExperienceList(exp);
       setSkillsList(sk);
       setProjectList(prj);
+
+      // Prompt 3-step rapid onboarding if profile has no name and no resume yet
+      if (!p?.personal?.firstName && r.length === 0) {
+        setShowOnboarding(true);
+      }
 
       // Auto-scan on load so detected fields appear immediately
       handleScanForm(p, edu);
@@ -455,6 +462,8 @@ export const SidePanel: React.FC = () => {
         return (p.links as any)?.facebookUrl || (p.links as any)?.facebook || '';
       case 'TWITTER_URL':
         return (p.links as any)?.twitterUrl || (p.links as any)?.twitter || '';
+      case 'RESUME_URL':
+        return p.links?.resumeDriveUrl || (p.links as any)?.resumeUrl || '';
       case 'COLLEGE':
         return edu[0]?.institution || '';
       case 'DEGREE':
@@ -610,14 +619,33 @@ export const SidePanel: React.FC = () => {
     setTimeout(() => setCopiedKey(null), 1800);
   };
 
-  // Counts
+  // Counts & Readiness Score (Endowed Progress)
   const matchedCount = fields.filter((f) => f.status === 'MATCHED').length;
   const reviewCount = fields.filter((f) => f.status === 'NEEDS_REVIEW').length;
   const unknownCount = fields.filter((f) => f.status === 'UNMATCHED').length;
 
+  const calculateReadiness = (): number => {
+    let score = 25; // Endowed progress base
+    if (profile?.personal?.firstName && profile?.personal?.email) score += 25;
+    if (profile?.personal?.phone) score += 15;
+    if (resumes.length > 0) score += 20;
+    if (skillsList.length > 0 || profile?.links?.linkedInUrl) score += 15;
+    return Math.min(100, score);
+  };
+  const readinessScore = calculateReadiness();
+
   return (
     <div className="panel glass" style={{ position: 'relative' }}>
       <Backdrop />
+
+      {showOnboarding && (
+        <OnboardingWizard
+          profile={profile}
+          resumes={resumes}
+          onComplete={() => setShowOnboarding(false)}
+          onProfileUpdated={loadAllData}
+        />
+      )}
 
       {/* Header */}
       <div className="ph">
@@ -625,21 +653,31 @@ export const SidePanel: React.FC = () => {
           <HapplyMateLogo size={28} />
           <span style={{ fontWeight: 700, fontSize: '17px' }}>HapplyMate</span>
         </div>
-        <Pill variant="i">
-          {websiteInfo?.adapterName || 'Google Forms'}
-        </Pill>
-        <button
-          type="button"
-          className="icon"
-          aria-label="Settings"
-          onClick={() => {
-            if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
-              chrome.runtime.openOptionsPage();
-            }
-          }}
-        >
-          ⚙
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            type="button"
+            className="btn-tour-pill"
+            onClick={() => setShowOnboarding(true)}
+            title="Launch 3-step rapid onboarding setup"
+          >
+            ✨ Setup ({readinessScore}%)
+          </button>
+          <Pill variant={readinessScore === 100 ? 'm' : 'i'}>
+            {websiteInfo?.adapterName || 'Google Forms'}
+          </Pill>
+          <button
+            type="button"
+            className="icon"
+            aria-label="Settings"
+            onClick={() => {
+              if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
+                chrome.runtime.openOptionsPage();
+              }
+            }}
+          >
+            ⚙
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -921,9 +959,14 @@ export const SidePanel: React.FC = () => {
                       value={field.canonicalField || ''}
                       onChange={(e) => {
                         const canon = e.target.value as ApplicationField;
-                        const val = resolveProfileValue(canon);
-                        setFieldValues((prev) => ({ ...prev, [field.id]: val }));
-                        setSelectedIds((prev) => new Set(prev).add(field.id));
+                        if (canon) {
+                          field.canonicalField = canon;
+                          field.status = 'MATCHED';
+                          field.confidence = 1.0;
+                          const val = resolveProfileValue(canon);
+                          setFieldValues((prev) => ({ ...prev, [field.id]: val }));
+                          setSelectedIds((prev) => new Set(prev).add(field.id));
+                        }
                       }}
                     >
                       <option value="">Map to a profile field…</option>
@@ -934,25 +977,51 @@ export const SidePanel: React.FC = () => {
                       ))}
                     </select>
                   ) : (
-                    <div className="vrow">
-                      <input
-                        className="in"
-                        aria-label={`${field.label} value`}
-                        value={fieldValues[field.id] || ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFieldValues((prev) => ({ ...prev, [field.id]: val }));
-                          if (val) setSelectedIds((prev) => new Set(prev).add(field.id));
-                        }}
-                      />
-                      <Button
-                        variant="soft"
-                        size="sm"
-                        aria-label={`Copy ${field.label}`}
-                        onClick={() => copyToClipboard(field.id, fieldValues[field.id] || '')}
-                      >
-                        {copiedKey === field.id ? 'Copied' : 'Copy'}
-                      </Button>
+                    <div>
+                      {field.canonicalField && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px', color: 'var(--muted)' }}>
+                          <span>Mapped: <strong style={{ color: 'var(--primary)' }}>{CANONICAL_FIELDS[field.canonicalField]?.displayLabel || field.canonicalField}</strong></span>
+                          <select
+                            style={{ fontSize: '10.5px', background: 'transparent', border: 'none', color: 'var(--muted)', cursor: 'pointer', outline: 'none' }}
+                            value={field.canonicalField}
+                            onChange={(e) => {
+                              const newCanon = e.target.value as ApplicationField;
+                              if (newCanon) {
+                                field.canonicalField = newCanon;
+                                const newVal = resolveProfileValue(newCanon);
+                                setFieldValues((prev) => ({ ...prev, [field.id]: newVal }));
+                              }
+                            }}
+                          >
+                            <option value="" disabled>Change mapping…</option>
+                            {Object.keys(CANONICAL_FIELDS).map((k) => (
+                              <option key={k} value={k}>
+                                {CANONICAL_FIELDS[k as ApplicationField].displayLabel}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <div className="vrow">
+                        <input
+                          className="in"
+                          aria-label={`${field.label} value`}
+                          value={fieldValues[field.id] || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFieldValues((prev) => ({ ...prev, [field.id]: val }));
+                            if (val) setSelectedIds((prev) => new Set(prev).add(field.id));
+                          }}
+                        />
+                        <Button
+                          variant="soft"
+                          size="sm"
+                          aria-label={`Copy ${field.label}`}
+                          onClick={() => copyToClipboard(field.id, fieldValues[field.id] || '')}
+                        >
+                          {copiedKey === field.id ? 'Copied' : 'Copy'}
+                        </Button>
+                      </div>
                     </div>
                   )}
 

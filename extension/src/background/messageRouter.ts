@@ -3,12 +3,27 @@ import { ExtensionMessage } from '../types/messaging';
 import { profileService } from '../services/profileService';
 import { applicationService } from '../services/applicationService';
 import { ApplicationRecord } from '../types/profile';
+import { savedJobRepository } from '../services/savedJob/savedJobRepository';
+import { JobExtractorService } from '../services/savedJob/jobExtractorService';
+import { SavedJobRecord } from '../types/savedJob';
 
 export class MessageRouter {
   static init(): void {
     if (typeof chrome === 'undefined' || !chrome.runtime) return;
 
-    chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
+      // Security Boundary: Validate that message originates exclusively from our extension
+      if (sender.id && sender.id !== chrome.runtime.id) {
+        sendResponse({ success: false, error: 'Unauthorized message sender' });
+        return false;
+      }
+
+      // Validate message structure
+      if (!message || typeof message !== 'object' || typeof message.type !== 'string') {
+        sendResponse({ success: false, error: 'Malformed message payload' });
+        return false;
+      }
+
       // Keep channel open for async response
       this.handleMessage(message)
         .then((res) => sendResponse(res))
@@ -161,6 +176,115 @@ export class MessageRouter {
           };
           await applicationService.saveApplication(newApp);
           return { success: true, data: newApp };
+        } catch (err) {
+          return { success: false, error: (err as Error).message };
+        }
+      }
+
+      case 'SAVE_RAW_JOB': {
+        try {
+          const rawText = (message as { type: 'SAVE_RAW_JOB'; data: { text: string } }).data?.text || '';
+          if (!rawText.trim()) {
+            return { success: false, error: 'Cannot save empty job text' };
+          }
+
+          const now = new Date().toISOString();
+          const newId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+          // Deterministic heuristic extraction for immediate non-blocking UI display
+          const initialExtraction = JobExtractorService.extractHeuristically(rawText);
+          const initialRecord: SavedJobRecord = {
+            id: newId,
+            rawText,
+            ...initialExtraction,
+            status: 'to-apply',
+            extractionStatus: 'pending',
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          await savedJobRepository.save(initialRecord);
+
+          // Asynchronously perform full LLM extraction in background service worker
+          (async () => {
+            try {
+              const extracted = await JobExtractorService.extract(rawText);
+              await savedJobRepository.update(newId, {
+                ...extracted,
+                status: extracted.extractionStatus === 'failed' ? 'needs-review' : 'to-apply',
+              });
+            } catch (bgErr) {
+              console.error('[MessageRouter] Background job extraction error:', bgErr);
+              await savedJobRepository.update(newId, {
+                extractionStatus: 'failed',
+                extractionError: bgErr instanceof Error ? bgErr.message : String(bgErr),
+                status: 'needs-review',
+              });
+            }
+          })();
+
+          return { success: true, data: initialRecord };
+        } catch (err) {
+          return { success: false, error: (err as Error).message };
+        }
+      }
+
+      case 'GET_RECENT_SAVED_JOBS': {
+        try {
+          const limit = (message as { type: 'GET_RECENT_SAVED_JOBS'; limit?: number }).limit || 5;
+          const jobs = await savedJobRepository.getRecent(limit);
+          return { success: true, data: jobs };
+        } catch (err) {
+          return { success: false, error: (err as Error).message };
+        }
+      }
+
+      case 'GET_ALL_SAVED_JOBS': {
+        try {
+          const jobs = await savedJobRepository.getAll();
+          return { success: true, data: jobs };
+        } catch (err) {
+          return { success: false, error: (err as Error).message };
+        }
+      }
+
+      case 'UPDATE_SAVED_JOB': {
+        try {
+          const { id, partial } = message as { type: 'UPDATE_SAVED_JOB'; id: string; partial: Partial<SavedJobRecord> };
+          const updated = await savedJobRepository.update(id, partial);
+          return { success: true, data: updated };
+        } catch (err) {
+          return { success: false, error: (err as Error).message };
+        }
+      }
+
+      case 'DELETE_SAVED_JOB': {
+        try {
+          const { id } = message as { type: 'DELETE_SAVED_JOB'; id: string };
+          const deleted = await savedJobRepository.delete(id);
+          return { success: true, data: deleted };
+        } catch (err) {
+          return { success: false, error: (err as Error).message };
+        }
+      }
+
+      case 'RERUN_JOB_EXTRACTION': {
+        try {
+          const { id } = message as { type: 'RERUN_JOB_EXTRACTION'; id: string };
+          const existing = await savedJobRepository.getById(id);
+          if (!existing) {
+            return { success: false, error: `Saved job with id ${id} not found` };
+          }
+
+          await savedJobRepository.update(id, { extractionStatus: 'pending' });
+
+          const extracted = await JobExtractorService.extract(existing.rawText);
+          const updated = await savedJobRepository.update(id, {
+            ...extracted,
+            status: extracted.extractionStatus === 'failed' ? 'needs-review' : existing.status,
+          });
+
+          return { success: true, data: updated };
         } catch (err) {
           return { success: false, error: (err as Error).message };
         }

@@ -78,4 +78,14 @@ describe('FieldMatcher', () => {
     expect(r3.canonicalField).toBe('FACEBOOK_URL');
     expect(r3.confidence).toBeGreaterThanOrEqual(0.85);
   });
+
+  it('correctly matches Resume Drive Link and Google Drive URL', () => {
+    const r1 = FieldMatcher.match('resume_link', 'resume_url', 'Resume Link');
+    expect(r1.canonicalField).toBe('RESUME_URL');
+    expect(r1.confidence).toBeGreaterThanOrEqual(0.85);
+
+    const r2 = FieldMatcher.match('', '', 'Google Drive link to resume *');
+    expect(r2.canonicalField).toBe('RESUME_URL');
+    expect(r2.confidence).toBeGreaterThanOrEqual(0.85);
+  });
 });

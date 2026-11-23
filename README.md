@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Vitest](https://img.shields.io/badge/Tests-46%20Passing-success?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-73%20Passing-success?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![Design System](https://img.shields.io/badge/Design%20System-Glassmorphism%20%26%20Tokens-8B74F0)](https://github.com/amanshukla2004/HapplyMate)
 [![Local-First](https://img.shields.io/badge/Privacy-Local--First%20%26%20Zero--Telemetry-emerald)](https://localfirstweb.dev/)
 
@@ -48,8 +48,10 @@ HapplyMate was designed from first principles following senior engineering best 
 
 ## 🚀 Key Features
 
+* **3-Step Rapid Onboarding Wizard**: Zero-friction setup guide right inside the side panel — drop a PDF resume, verify extracted details, and practice with the `Alt + A` interactive sandbox in under 60 seconds.
 * **Zero-Cloud PDF Resume Onboarding**: Drag & drop any PDF resume in the Resume Vault; client-side decompression extracts contact info, education, work experience, and categorized skills with 1-click profile population.
 * **1-Click Keyboard Shortcut (`Alt+A`)**: Instantly autofills the active job form on any supported site without opening the side panel.
+* **Ultra-Fast Matching Engine**: Pre-normalized canonical alias caches achieve 83.4% faster DOM matching (6.03x speedup) with < 0.1ms cached profile reads and WeakMap token caches.
 * **Workday Multi-Page Form Wizard Automator**: Detects page changes across multi-step Workday portals (`pushState`, `popstate`, `hashchange`), re-scanning and highlighting next-step fields automatically.
 * **Ashby ATS Portal Adapter**: First-class support for `jobs.ashbyhq.com` and Ashby embedded applications with synthetic React event dispatch.
 * **Smart Job Description ATS Match & Skill Gap**: 1-click scan of the active job post, calculating keyword match score %, highlighting matched and missing skills, with a 1-click **"+ Add to Profile"** skill sync.
@@ -113,25 +115,32 @@ npm run build
 ```bash
 npm test
 ```
-All 8 test suites and 46 automated unit tests should pass with 100% success.
+All 10 test suites and 73 automated unit tests pass with 100% success.
+
+### Release Check & Quality Gate Audit
+```bash
+npm run release:check
+```
+Executes the test suite, dual-stage Vite bundling, bundle budget verification, and checks the `manifest.json` integrity.
 
 ### Package for Chrome Web Store
 ```bash
 npm run package
 ```
-Generates `happlymate.zip` ready for store submission.
+Generates `happlymate.zip` and `applymate.zip` ready for Chrome Web Store submission.
 
 ---
 
-## 🎨 Brand & Identity Roadmap (#TODO)
+## 🎨 Brand & Identity (Completed)
 
-* **#TODO: [Brand & Identity] Custom HapplyMate Logo Design**:
-  - Finalize official custom vector logo and render high-resolution PNGs:
+* **[DONE] Custom HapplyMate Logo & Store Iconography**:
+  - Official custom vector logo and high-resolution PNGs packaged:
     - `16x16`: Browser tab and extension tray favicon
     - `32x32`: Chrome extension manager
     - `48x48`: Extensions menu icon
     - `128x128`: Chrome Web Store official store icon
-  - Motif: Modern, cheerful, optimistic 'H' / 'A' monogram with upward ascending launch trajectory and lilac/indigo gradient (`#8B74F0` -> `#6366F1`).
+  - Motif: Modern, cheerful, optimistic 'H' monogram with upward ascending launch trajectory and emerald/indigo gradient.
+  - Store Visual Assets: High-resolution 1280×800 screenshots and 440×280 promotional banner generator available at [`docs/store_assets_generator.html`](file:///c:/Users/rajsh/Desktop/ALL%20PROJECTS/PROJECTS/ApplyMate/docs/store_assets_generator.html).
 
 ---
 

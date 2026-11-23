@@ -43,12 +43,29 @@ const INITIAL_PROFILE: UserProfile = {
 };
 
 export class ProfileService {
+  private cachedProfile: UserProfile | null = null;
+  private cachedEducation: EducationRecord[] | null = null;
+  private cachedExperience: ExperienceRecord[] | null = null;
+  private cachedSkills: SkillItem[] | null = null;
+
+  clearCache(): void {
+    this.cachedProfile = null;
+    this.cachedEducation = null;
+    this.cachedExperience = null;
+    this.cachedSkills = null;
+  }
+
   async getProfile(): Promise<UserProfile> {
+    if (this.cachedProfile) {
+      return this.cachedProfile;
+    }
     const profile = await indexedDBClient.getById<UserProfile>(STORES.PROFILES, DEFAULT_PROFILE_ID);
     if (!profile) {
       await indexedDBClient.put(STORES.PROFILES, INITIAL_PROFILE);
+      this.cachedProfile = INITIAL_PROFILE;
       return INITIAL_PROFILE;
     }
+    this.cachedProfile = profile;
     return profile;
   }
 
@@ -67,7 +84,9 @@ export class ProfileService {
     if (updated.personal.firstName || updated.personal.lastName) {
       updated.personal.fullName = `${updated.personal.firstName} ${updated.personal.lastName}`.trim();
     }
-    return indexedDBClient.put(STORES.PROFILES, updated);
+    const saved = await indexedDBClient.put(STORES.PROFILES, updated);
+    this.cachedProfile = saved;
+    return saved;
   }
 
   async updatePreferences(preferences: Partial<JobPreferences>): Promise<UserProfile> {
@@ -79,41 +98,62 @@ export class ProfileService {
 
   // Education CRUD
   async getEducation(): Promise<EducationRecord[]> {
-    return indexedDBClient.getAll<EducationRecord>(STORES.EDUCATION);
+    if (this.cachedEducation) return this.cachedEducation;
+    const res = await indexedDBClient.getAll<EducationRecord>(STORES.EDUCATION);
+    this.cachedEducation = res;
+    return res;
   }
 
   async saveEducation(record: EducationRecord): Promise<EducationRecord> {
-    return indexedDBClient.put(STORES.EDUCATION, record);
+    const saved = await indexedDBClient.put(STORES.EDUCATION, record);
+    this.cachedEducation = null;
+    return saved;
   }
 
   async deleteEducation(id: string): Promise<boolean> {
-    return indexedDBClient.delete(STORES.EDUCATION, id);
+    const res = await indexedDBClient.delete(STORES.EDUCATION, id);
+    this.cachedEducation = null;
+    return res;
   }
 
   // Experience CRUD
   async getExperience(): Promise<ExperienceRecord[]> {
-    return indexedDBClient.getAll<ExperienceRecord>(STORES.EXPERIENCE);
+    if (this.cachedExperience) return this.cachedExperience;
+    const res = await indexedDBClient.getAll<ExperienceRecord>(STORES.EXPERIENCE);
+    this.cachedExperience = res;
+    return res;
   }
 
   async saveExperience(record: ExperienceRecord): Promise<ExperienceRecord> {
-    return indexedDBClient.put(STORES.EXPERIENCE, record);
+    const saved = await indexedDBClient.put(STORES.EXPERIENCE, record);
+    this.cachedExperience = null;
+    return saved;
   }
 
   async deleteExperience(id: string): Promise<boolean> {
-    return indexedDBClient.delete(STORES.EXPERIENCE, id);
+    const res = await indexedDBClient.delete(STORES.EXPERIENCE, id);
+    this.cachedExperience = null;
+    return res;
   }
 
   // Skills CRUD
   async getSkills(): Promise<SkillItem[]> {
-    return indexedDBClient.getAll<SkillItem>(STORES.SKILLS);
+    if (this.cachedSkills) return this.cachedSkills;
+    const res = await indexedDBClient.getAll<SkillItem>(STORES.SKILLS);
+    this.cachedSkills = res;
+    return res;
   }
 
   async saveSkill(skill: SkillItem): Promise<SkillItem> {
-    return indexedDBClient.put(STORES.SKILLS, skill);
+    const saved = await indexedDBClient.put(STORES.SKILLS, skill);
+    this.cachedSkills = null;
+    return saved;
   }
 
   async deleteSkill(id: string): Promise<boolean> {
-    return indexedDBClient.delete(STORES.SKILLS, id);
+    const res = await indexedDBClient.delete(STORES.SKILLS, id);
+    this.cachedSkills = null;
+    return res;
   }
 
   // Profile Completeness Score (0-100%)

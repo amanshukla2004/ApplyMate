@@ -1,5 +1,5 @@
 const DB_NAME = 'JobMateDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const STORES = {
   PROFILES: 'profiles',
@@ -10,6 +10,7 @@ export const STORES = {
   PROJECTS: 'projects',
   ANSWERS: 'answers',
   APPLICATIONS: 'applications',
+  SAVED_JOBS: 'saved_jobs',
 } as const;
 
 type StoreName = (typeof STORES)[keyof typeof STORES];
@@ -78,6 +79,14 @@ class IndexedDBClient {
           const store = db.createObjectStore(STORES.APPLICATIONS, { keyPath: 'id' });
           store.createIndex('status', 'status', { unique: false });
           store.createIndex('companyName', 'companyName', { unique: false });
+        }
+
+        // Saved Jobs store
+        if (!db.objectStoreNames.contains(STORES.SAVED_JOBS)) {
+          const store = db.createObjectStore(STORES.SAVED_JOBS, { keyPath: 'id' });
+          store.createIndex('status', 'status', { unique: false });
+          store.createIndex('type', 'type', { unique: false });
+          store.createIndex('createdAt', 'createdAt', { unique: false });
         }
       };
 

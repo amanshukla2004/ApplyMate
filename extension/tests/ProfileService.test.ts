@@ -4,6 +4,7 @@ import { indexedDBClient } from '../src/services/storage/indexedDB';
 
 describe('ProfileService', () => {
   beforeEach(async () => {
+    profileService.clearCache();
     await indexedDBClient.clearAllStores();
   });
 
