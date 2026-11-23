@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 // @ts-ignore
 import { JSDOM } from 'jsdom';
@@ -8,7 +8,9 @@ import { ZohoRecruitAdapter } from '../src/adapters/zohorecruit/ZohoRecruitAdapt
 
 describe('Zoho Recruit User Dump Test', () => {
   it('extracts labels and scans fields from user dump without dropdown search pollution', async () => {
-    const htmlPath = resolve(__dirname, '../../scratch/user_dump.html');
+    const fixturePath = resolve(__dirname, './fixtures/user_dump.html');
+    const scratchPath = resolve(__dirname, '../../scratch/user_dump.html');
+    const htmlPath = existsSync(fixturePath) ? fixturePath : scratchPath;
     const html = readFileSync(htmlPath, 'utf8');
     const dom = new JSDOM(html, { url: 'https://citygreens.zohorecruit.in/jobs/Careers/120768000006381240' });
     const doc = dom.window.document;
