@@ -152,5 +152,9 @@ scratch/
 **/*.md
 !README.md
 !readme.md
+!README2.md
+!readme2.md
 !**/README.md
 !**/readme.md
+!**/README2.md
+!**/readme2.md
