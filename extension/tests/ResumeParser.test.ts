@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ResumeParserService } from '../src/services/pdf/resumeParserService';
 import { PDFParserService } from '../src/services/pdf/pdfParserService';
+import { extractBulletPoints } from '../src/options/views/ProjectsView';
 
 describe('ResumeParserService', () => {
   const sampleResumeText = `
@@ -127,10 +128,14 @@ https://blogwho.onrender.com/
     expect(parsed.projects[0].githubUrl).toContain('airBnbApp');
     expect(parsed.projects[0].liveUrl).toContain('nox-hotelmanagement.vercel.app');
     expect(parsed.projects[0].shortDescription).toContain('reduction in transaction errors');
+    // Verify all bullet points are extracted into detailedDescription
+    expect(parsed.projects[0].detailedDescription).toContain('reduction in transaction errors');
+    expect(parsed.projects[0].detailedDescription).toContain('Coordinated secure payment workflows');
 
     expect(parsed.projects[1].name).toBe('BLOGWHO');
     expect(parsed.projects[1].githubUrl).toContain('Agentic_blog_generation_Saas');
     expect(parsed.projects[1].liveUrl).toContain('blogwho.onrender.com');
+    expect(parsed.projects[1].detailedDescription).toContain('role-scoped access control');
   });
 });
 
@@ -165,5 +170,33 @@ endobj
 
     expect(text).toContain('Jane Smith');
     expect(text).toContain('jane.smith@example.com');
+  });
+});
+
+describe('extractBulletPoints', () => {
+  it('correctly stitches wrapped PDF lines into full bullet points', () => {
+    const rawDescription = `• Achieved a 99% reduction in transaction errors by eliminating inventory double-booking conflicts through row-level
+pessimistic locking in PostgreSQL.
+• Coordinated secure payment workflows by integrating the Stripe SDK and webhook event handling.`;
+
+    const bullets = extractBulletPoints(rawDescription);
+    expect(bullets.length).toBe(2);
+    expect(bullets[0]).toBe(
+      'Achieved a 99% reduction in transaction errors by eliminating inventory double-booking conflicts through row-level pessimistic locking in PostgreSQL.'
+    );
+    expect(bullets[1]).toBe(
+      'Coordinated secure payment workflows by integrating the Stripe SDK and webhook event handling.'
+    );
+  });
+
+  it('handles non-bulleted multi-line text with wrapped lines', () => {
+    const raw = `Collaborated on system architecture to design an autonomous LangGraph router, enabling automated data
+extraction across endpoints.
+Built custom tool bindings for streaming responses.`;
+
+    const bullets = extractBulletPoints(raw);
+    expect(bullets.length).toBe(2);
+    expect(bullets[0]).toContain('autonomous LangGraph router, enabling automated data extraction across endpoints.');
+    expect(bullets[1]).toBe('Built custom tool bindings for streaming responses.');
   });
 });

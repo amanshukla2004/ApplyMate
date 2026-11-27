@@ -105,7 +105,12 @@ export const Options: React.FC = () => {
       case 'links':
         return !profile.links?.linkedInUrl && !profile.links?.githubUrl;
       case 'prefs':
-        return !profile.preferences?.preferredTitles || profile.preferences.preferredTitles.length === 0;
+        return (
+          (!profile.preferences?.preferredTitles || profile.preferences.preferredTitles.length === 0) &&
+          !profile.preferences?.noticePeriodDays &&
+          !profile.preferences?.workAuthorizationStatus &&
+          (!profile.preferences?.preferredLocations || profile.preferences.preferredLocations.length === 0)
+        );
       case 'edu':
         return educationList.length === 0 || !educationList.some(e => e.institution && e.institution !== 'N/A');
       case 'exp':

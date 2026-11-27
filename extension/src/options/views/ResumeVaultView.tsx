@@ -273,11 +273,15 @@ export const ResumeVaultView: React.FC<ResumeVaultViewProps> = ({
                     {proj.technologies && proj.technologies.length > 0 && (
                       <span className="hint">({proj.technologies.join(', ')})</span>
                     )}
-                    {proj.shortDescription && (
+                    {proj.detailedDescription ? (
+                      <div className="hint" style={{ fontSize: '12px', marginTop: '2px', whiteSpace: 'pre-line', lineHeight: 1.4 }}>
+                        {proj.detailedDescription}
+                      </div>
+                    ) : proj.shortDescription ? (
                       <div className="hint" style={{ fontSize: '12px', marginTop: '2px' }}>
                         {proj.shortDescription}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 ))}
               </div>

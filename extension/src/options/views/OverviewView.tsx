@@ -52,7 +52,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
   // Calculate missing essential sections that need candidate attention to hit 100%
   const missingSections: { label: string; section: string }[] = [];
-  if (!profile?.preferences?.preferredTitles || profile.preferences.preferredTitles.length === 0) {
+  if (
+    (!profile?.preferences?.preferredTitles || profile.preferences.preferredTitles.length === 0) &&
+    !profile?.preferences?.noticePeriodDays &&
+    !profile?.preferences?.workAuthorizationStatus
+  ) {
     missingSections.push({ label: 'Preferences', section: 'prefs' });
   }
   if (experienceCount === 0) {

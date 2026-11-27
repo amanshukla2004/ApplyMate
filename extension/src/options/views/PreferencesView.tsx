@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Chip } from '../../components/ui/Chip';
 import { JobPreferences } from '../../types/profile';
@@ -12,6 +12,16 @@ const NOTICE_PICKS = ['Immediate', '15 Days', '30 Days', '60 Days', '90 Days'];
 const WORK_MODELS: ('Flexible' | 'Remote' | 'Hybrid' | 'On-site')[] = ['Flexible', 'Remote', 'Hybrid', 'On-site'];
 
 export const PreferencesView: React.FC<PreferencesViewProps> = ({ preferences, onChange }) => {
+  const [locationsInput, setLocationsInput] = useState((preferences.preferredLocations || []).join(', '));
+  const [titlesInput, setTitlesInput] = useState((preferences.preferredTitles || []).join(', '));
+
+  useEffect(() => {
+    setLocationsInput((preferences.preferredLocations || []).join(', '));
+  }, [preferences.preferredLocations]);
+
+  useEffect(() => {
+    setTitlesInput((preferences.preferredTitles || []).join(', '));
+  }, [preferences.preferredTitles]);
   return (
     <div className="view" id="v-prefs">
       <Card>
@@ -93,15 +103,42 @@ export const PreferencesView: React.FC<PreferencesViewProps> = ({ preferences, o
               className="in"
               id="pref-loc"
               placeholder="e.g. Bengaluru, Remote, San Francisco"
-              value={(preferences.preferredLocations || []).join(', ')}
-              onChange={(e) =>
-                onChange(
-                  'preferredLocations',
-                  e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
-                )
-              }
+              value={locationsInput}
+              onChange={(e) => {
+                const val = e.target.value;
+                setLocationsInput(val);
+                const parsed = val.split(',').map((s) => s.trim()).filter(Boolean);
+                onChange('preferredLocations', parsed);
+              }}
+              onBlur={() => {
+                const parsed = locationsInput.split(',').map((s) => s.trim()).filter(Boolean);
+                setLocationsInput(parsed.join(', '));
+                onChange('preferredLocations', parsed);
+              }}
             />
             <p className="hint">Comma-separated target cities or countries.</p>
+          </div>
+
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label className="f" htmlFor="pref-titles">Target job titles</label>
+            <input
+              className="in"
+              id="pref-titles"
+              placeholder="e.g. Software Engineer, Full Stack Developer, Frontend Engineer"
+              value={titlesInput}
+              onChange={(e) => {
+                const val = e.target.value;
+                setTitlesInput(val);
+                const parsed = val.split(',').map((s) => s.trim()).filter(Boolean);
+                onChange('preferredTitles', parsed);
+              }}
+              onBlur={() => {
+                const parsed = titlesInput.split(',').map((s) => s.trim()).filter(Boolean);
+                setTitlesInput(parsed.join(', '));
+                onChange('preferredTitles', parsed);
+              }}
+            />
+            <p className="hint">Comma-separated job roles you are actively targeting.</p>
           </div>
 
           <div>

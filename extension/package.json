@@ -1,6 +1,6 @@
 {
   "name": "happlied-extension",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "happlied - Personal Job Application Assistant & Career Copilot Chrome Extension",
   "private": true,
   "type": "module",

@@ -338,12 +338,29 @@ export class ResumeParserService {
     );
 
     let currentProject: ProjectRecord | null = null;
+    let currentBullets: string[] = [];
 
     const usedUrls = new Set<string>();
+
+    const finalizeCurrentProject = () => {
+      if (!currentProject) return;
+      if (currentBullets.length > 0) {
+        const cleanedBullets = currentBullets.map((b) => b.trim()).filter((b) => b.length > 5);
+        if (cleanedBullets.length > 0) {
+          currentProject.shortDescription = cleanedBullets[0];
+          currentProject.detailedDescription = cleanedBullets
+            .map((b) => (b.startsWith('•') ? b : `• ${b}`))
+            .join('\n');
+          currentProject.achievements = currentProject.detailedDescription;
+          currentProject.keyFeatures = currentProject.detailedDescription;
+        }
+      }
+    };
 
     for (let i = projHeaderIdx + 1; i < lines.length; i++) {
       const line = lines[i];
       if (/^(technical skills|skills|experience|education|achievements|certifications|awards)/i.test(line)) {
+        finalizeCurrentProject();
         break;
       }
 
@@ -353,6 +370,9 @@ export class ResumeParserService {
         /spring|react|python|fastapi|java|postgres|sql|langgraph|langchain|docker|node|typescript|hotel|blog|agent|platform|demo|github/i.test(line);
 
       if (isTitleLine) {
+        finalizeCurrentProject();
+        currentBullets = [];
+
         const parts = line.split(/[|—]/).map((p) => p.trim()).filter(Boolean);
         const rawName = parts[0];
         const name = rawName.split(/[-–]/)[0].trim();
@@ -419,19 +439,35 @@ export class ResumeParserService {
           technologies,
         };
         projects.push(currentProject);
-      } else if (currentProject && line.length > 20) {
-        // Bullet point or descriptive line for current project
-        const bullet = line.replace(/^[•\-\*\s]+/, '').trim();
-        if (bullet.length > 10) {
-          if (!currentProject.shortDescription) {
-            currentProject.shortDescription = bullet;
+      } else if (currentProject) {
+        // Skip links markers or standalone date lines
+        if (line.startsWith('http') || line.startsWith('[EMBEDDED_LINKS]')) {
+          continue;
+        }
+        if (
+          line.length < 35 &&
+          /^(demo|github|live|code|link|repo|view|\d{4}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b)/i.test(line)
+        ) {
+          continue;
+        }
+
+        const isBulletStart = /^[•\-\*–—\u2022\u2023\u25E6\u2043\u2219]|\b\d+\.\s/.test(line);
+        const cleanContent = line.replace(/^[•\-\*–—\u2022\u2023\u25E6\u2043\u2219\d.]+\s*/, '').trim();
+
+        if (isBulletStart) {
+          if (cleanContent.length > 0) {
+            currentBullets.push(cleanContent);
           }
-          currentProject.detailedDescription = currentProject.detailedDescription
-            ? `${currentProject.detailedDescription}\n${bullet}`
-            : bullet;
+        } else if (currentBullets.length > 0) {
+          // Wrapped line / continuation line of the previous bullet point in PDF extraction
+          currentBullets[currentBullets.length - 1] += ' ' + line.trim();
+        } else if (line.trim().length > 10) {
+          currentBullets.push(line.trim());
         }
       }
     }
+
+    finalizeCurrentProject();
 
     return projects;
   }

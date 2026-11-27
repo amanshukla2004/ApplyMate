@@ -11,6 +11,66 @@ export interface ProjectsViewProps {
   onDelete: (id: string) => Promise<void>;
 }
 
+/**
+ * Extracts and cleans individual bullet points from multi-line or wrapped project descriptions.
+ */
+export function extractBulletPoints(text: string): string[] {
+  if (!text || !text.trim()) return [];
+
+  const rawLines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (rawLines.length === 0) return [];
+
+  const hasBulletMarkers = rawLines.some((l) => /^[•\-\*–—\u2022\u2023\u25E6\u2043\u2219]|\b\d+\.\s/.test(l));
+  const bullets: string[] = [];
+
+  if (hasBulletMarkers) {
+    for (const line of rawLines) {
+      const isNewBullet = /^[•\-\*–—\u2022\u2023\u25E6\u2043\u2219]|\b\d+\.\s/.test(line);
+      const cleanContent = line.replace(/^[•\-\*–—\u2022\u2023\u25E6\u2043\u2219\d.]+\s*/, '').trim();
+
+      if (isNewBullet) {
+        if (cleanContent) bullets.push(cleanContent);
+      } else if (bullets.length > 0) {
+        bullets[bullets.length - 1] += ' ' + line;
+      } else {
+        bullets.push(line);
+      }
+    }
+  } else {
+    for (const line of rawLines) {
+      if (bullets.length === 0) {
+        bullets.push(line);
+      } else {
+        const prev = bullets[bullets.length - 1];
+        const isContinuation = !/[.!?]$/.test(prev) || /^[a-z]/.test(line);
+        if (isContinuation) {
+          bullets[bullets.length - 1] += ' ' + line;
+        } else {
+          bullets.push(line);
+        }
+      }
+    }
+  }
+
+  return bullets.filter(Boolean);
+}
+
+/**
+ * Gets the most comprehensive description available for a project.
+ */
+export function getProjectDescription(proj: ProjectRecord): string {
+  const detailed = proj.detailedDescription?.trim() || '';
+  const short = proj.shortDescription?.trim() || '';
+  if (detailed && detailed.length >= short.length) {
+    return detailed;
+  }
+  return short || detailed;
+}
+
 export const ProjectsView: React.FC<ProjectsViewProps> = ({
   projectList,
   onSave,
@@ -43,7 +103,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setLiveUrl(proj.liveUrl || '');
     setGithubUrl(proj.githubUrl || '');
     setTechStack((proj.technologies || []).join(', '));
-    setShortDescription(proj.shortDescription || proj.detailedDescription || '');
+    setShortDescription(getProjectDescription(proj));
     setFormError('');
     setModalOpen(true);
   };
@@ -60,14 +120,18 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       .map((t) => t.trim())
       .filter(Boolean);
 
+    const descTrimmed = shortDescription.trim();
+    const bulletsList = extractBulletPoints(descTrimmed);
+    const firstBullet = bulletsList[0] || descTrimmed;
+
     const record: ProjectRecord = {
       id: editingItem?.id || `proj-${Date.now()}`,
       name: name.trim(),
       liveUrl: liveUrl.trim(),
       githubUrl: githubUrl.trim(),
       technologies: techArray,
-      shortDescription: shortDescription.trim(),
-      detailedDescription: shortDescription.trim(),
+      shortDescription: firstBullet,
+      detailedDescription: descTrimmed,
     };
 
     await onSave(record);
@@ -88,46 +152,75 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             <p className="hint">Add your key portfolio projects for autofill & AI drafting.</p>
           </div>
         ) : (
-          projectList.map((proj) => (
-            <Card key={proj.id}>
-              <h3 style={{ fontSize: '18px' }}>{proj.name}</h3>
-              {proj.liveUrl && (
-                <a
-                  href={proj.liveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: 'var(--accent)', fontSize: '13px', textDecoration: 'none' }}
-                >
-                  {proj.liveUrl}
-                </a>
-              )}
-              <div className="row" style={{ margin: '10px 0' }}>
-                {(proj.technologies || []).map((t) => (
-                  <Pill key={t} variant="a">
-                    {t}
-                  </Pill>
-                ))}
-              </div>
-              {(proj.shortDescription || proj.detailedDescription) && (
-                <p style={{ fontSize: '14px', color: 'var(--muted)', margin: '8px 0' }}>
-                  {proj.shortDescription || proj.detailedDescription}
-                </p>
-              )}
-              <div className="row" style={{ marginTop: '12px' }}>
-                <Button variant="soft" size="sm" onClick={() => openEdit(proj)}>
-                  Edit
-                </Button>
-                <Button
-                  variant="soft"
-                  size="sm"
-                  aria-label={`Remove ${proj.name}`}
-                  onClick={() => onDelete(proj.id)}
-                >
-                  Remove
-                </Button>
-              </div>
-            </Card>
-          ))
+          projectList.map((proj) => {
+            const fullDesc = getProjectDescription(proj);
+            const bullets = extractBulletPoints(fullDesc);
+
+            return (
+              <Card key={proj.id}>
+                <h3 style={{ fontSize: '18px' }}>{proj.name}</h3>
+
+                <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', margin: '4px 0 6px 0' }}>
+                  {proj.liveUrl && (
+                    <a
+                      href={proj.liveUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: 'var(--accent)', fontSize: '13px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      🔗 {proj.liveUrl}
+                    </a>
+                  )}
+                  {proj.githubUrl && (
+                    <a
+                      href={proj.githubUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: 'var(--muted)', fontSize: '13px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      📂 GitHub
+                    </a>
+                  )}
+                </div>
+
+                <div className="row" style={{ margin: '8px 0' }}>
+                  {(proj.technologies || []).map((t) => (
+                    <Pill key={t} variant="a">
+                      {t}
+                    </Pill>
+                  ))}
+                </div>
+
+                {bullets.length > 1 ? (
+                  <ul style={{ margin: '8px 0 12px 0', paddingLeft: '18px', fontSize: '13.5px', color: 'var(--muted)', lineHeight: 1.55 }}>
+                    {bullets.map((b, i) => (
+                      <li key={i} style={{ marginBottom: '4px' }}>
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                ) : bullets.length === 1 ? (
+                  <p style={{ fontSize: '14px', color: 'var(--muted)', margin: '8px 0 12px 0', lineHeight: 1.5 }}>
+                    {bullets[0]}
+                  </p>
+                ) : null}
+
+                <div className="row" style={{ marginTop: 'auto', paddingTop: '8px' }}>
+                  <Button variant="soft" size="sm" onClick={() => openEdit(proj)}>
+                    Edit
+                  </Button>
+                  <Button
+                    variant="soft"
+                    size="sm"
+                    aria-label={`Remove ${proj.name}`}
+                    onClick={() => onDelete(proj.id)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </Card>
+            );
+          })
         )}
       </div>
 
@@ -179,15 +272,18 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               />
             </div>
             <div>
-              <label className="f" htmlFor="pr-d">Description</label>
+              <label className="f" htmlFor="pr-d">Description & bullet points</label>
               <textarea
                 className="in"
                 id="pr-d"
-                rows={3}
-                placeholder="Short description of what the project does..."
+                rows={5}
+                placeholder="Enter bullet points (one per line) or project description..."
                 value={shortDescription}
                 onChange={(e) => setShortDescription(e.target.value)}
               />
+              <span className="hint" style={{ fontSize: '11px', display: 'block', marginTop: '4px' }}>
+                Tip: Add multiple bullet points separated by newlines or •
+              </span>
             </div>
             {formError && <p className="hint err" role="alert">{formError}</p>}
           </div>
