@@ -64,7 +64,7 @@ function parseZipEntries(zipBuffer) {
 }
 
 console.log('\n\x1b[1m\x1b[34m========================================\x1b[0m');
-console.log('\x1b[1m\x1b[34m   HapplyMate Release Verification      \x1b[0m');
+console.log('\x1b[1m\x1b[34m     happlied Release Verification      \x1b[0m');
 console.log('\x1b[1m\x1b[34m========================================\x1b[0m\n');
 
 // 1. Verify dist directory exists
@@ -101,10 +101,15 @@ if (!fs.existsSync(manifestPath)) {
     }
 
     // Name & Description
-    if (manifest.name && manifest.name.toLowerCase().includes('happlymate')) {
-      logPass(`Name contains HapplyMate: "${manifest.name}"`);
+    if (
+      manifest.name &&
+      (manifest.name.toLowerCase().includes('happlied') ||
+        manifest.name.toLowerCase().includes('happlymate') ||
+        manifest.name.toLowerCase().includes('applymate'))
+    ) {
+      logPass(`Name matches brand identity: "${manifest.name}"`);
     } else {
-      logFail(`Manifest name does not match HapplyMate: "${manifest.name}"`);
+      logFail(`Manifest name does not match happlied / HapplyMate: "${manifest.name}"`);
     }
 
     // Content Security Policy
@@ -202,7 +207,7 @@ if (leakedFiles.length === 0) {
 }
 
 // 4. Verify ZIP packages if they exist
-const zipNames = ['happlymate.zip', 'applymate.zip'];
+const zipNames = ['happlied.zip', 'happlymate.zip', 'applymate.zip'];
 for (const zipName of zipNames) {
   const zipPath = path.join(extensionRoot, zipName);
   if (fs.existsSync(zipPath)) {
