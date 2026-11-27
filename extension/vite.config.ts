@@ -18,6 +18,7 @@ export default defineConfig({
         popup: resolve(__dirname, 'popup.html'),
         sidepanel: resolve(__dirname, 'sidepanel.html'),
         options: resolve(__dirname, 'options.html'),
+        testportal: resolve(__dirname, 'test-portal.html'),
         background: resolve(__dirname, 'src/background/serviceWorker.ts'),
       },
       output: {

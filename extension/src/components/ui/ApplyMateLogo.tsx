@@ -8,7 +8,7 @@ import React from 'react';
  * - 48x48 px (Chrome extension menu & permissions dialog)
  * - 128x128 px (Chrome Web Store official icon & installation banner)
  * Motif requirements: A joyful, modern geometric emblem uniting 'H' & 'A' with
- * an upward launch arrow and a subtle optimistic smile curve in brand violet (#8B74F0 -> #6366F1).
+ * an upward launch arrow and a subtle optimistic smile curve in brand charcoal and sage (#4C4541 -> #AEAC78).
  */
 
 export interface HapplyMateLogoProps {
@@ -24,11 +24,11 @@ export const HapplyMateLogo: React.FC<HapplyMateLogoProps> = ({ size = 32, class
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: `${Math.round(size * 0.28)}px`,
-        background: 'linear-gradient(135deg, #8B74F0 0%, #6366F1 50%, #4F46E5 100%)',
+        background: 'linear-gradient(135deg, #4C4541 0%, #35302E 50%, #201D1C 100%)',
         display: 'grid',
         placeItems: 'center',
         flex: 'none',
-        boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
+        boxShadow: '0 4px 14px rgba(76, 69, 65, 0.35)',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -62,7 +62,7 @@ export const HapplyMateLogo: React.FC<HapplyMateLogoProps> = ({ size = 32, class
         {/* Inner joyful chevron highlight */}
         <path
           d="M12 7.2L8 13.5H16L12 7.2Z"
-          fill="#6366F1"
+          fill="#AEAC78"
         />
         {/* Subtle optimistic smile arc accent at the base */}
         <path

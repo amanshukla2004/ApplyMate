@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Backdrop } from '../components/ui/Backdrop';
-import { Button } from '../components/ui/Button';
+import { Sun, Moon, HelpCircle, Zap, Sparkles, ShieldCheck } from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
 import { Toast } from '../components/ui/Toast';
-import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { useTheme } from '../hooks/useTheme';
 
 import { OverviewView } from './views/OverviewView';
@@ -93,7 +92,75 @@ export const Options: React.FC = () => {
   const [phoneNumberOnly, setPhoneNumberOnly] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
-  const { isDarkMode, toggleTheme, isCalm, toggleCalm } = useTheme();
+  const { isDarkMode, toggleTheme } = useTheme();
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+
+  const isTabIncomplete = (sec: SectionId): boolean => {
+    if (!profile) return false;
+    switch (sec) {
+      case 'personal':
+        return !profile.personal?.firstName || !profile.personal?.email || !profile.personal?.phone;
+      case 'address':
+        return !profile.address?.city;
+      case 'links':
+        return !profile.links?.linkedInUrl && !profile.links?.githubUrl;
+      case 'prefs':
+        return !profile.preferences?.preferredTitles || profile.preferences.preferredTitles.length === 0;
+      case 'edu':
+        return educationList.length === 0;
+      case 'exp':
+        return experienceList.length === 0;
+      case 'skills':
+        return skillsList.length === 0;
+      case 'proj':
+        return projectList.length === 0;
+      case 'certs':
+        return certificateList.length === 0;
+      case 'vault':
+        return resumeList.length === 0;
+      default:
+        return false;
+    }
+  };
+
+  const renderNavButton = (id: SectionId, label: string, extraStyle?: React.CSSProperties) => {
+    const incomplete = isTabIncomplete(id);
+    return (
+      <button
+        type="button"
+        className="nav"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          ...extraStyle,
+        }}
+        aria-current={activeSection === id ? 'page' : undefined}
+        onClick={() => setActiveSection(id)}
+        title={incomplete ? `${label} (Needs attention)` : label}
+      >
+        <span>{label}</span>
+        {incomplete && (
+          <span
+            title="Some information is not filled in"
+            style={{
+              fontSize: '11px',
+              lineHeight: 1,
+              marginLeft: '6px',
+              color: '#B45309',
+              background: '#FDF1D6',
+              border: '1px solid #F2C46A',
+              padding: '1px 4px',
+              borderRadius: '4px',
+              fontWeight: 700,
+            }}
+          >
+            ⚠️
+          </span>
+        )}
+      </button>
+    );
+  };
 
   useEffect(() => {
     loadData();
@@ -214,9 +281,7 @@ export const Options: React.FC = () => {
   const greetingTime = hours < 12 ? 'morning' : hours < 18 ? 'afternoon' : 'evening';
   const hasName = Boolean(profile?.personal?.firstName?.trim());
   const firstName = profile?.personal?.firstName?.trim() || '';
-  const lastName = profile?.personal?.lastName?.trim() || '';
-  const greetingHeading = hasName ? `Good ${greetingTime}, ${firstName}` : 'Welcome to HapplyMate';
-  const initials = hasName ? `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase() : '👋';
+  const greetingHeading = hasName ? `Good ${greetingTime}, ${firstName}` : 'Welcome to happlied';
   const formattedDate = new Date().toLocaleDateString('en', {
     weekday: 'long',
     day: 'numeric',
@@ -308,186 +373,129 @@ export const Options: React.FC = () => {
   };
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh' }}>
-      <Backdrop />
-
-      {/* Top Header */}
-      <header className="top">
-        <div className="brand">
-          <HapplyMateLogo size={32} />
-          <span>HapplyMate</span>
-        </div>
-        <div className="row">
-          <Button variant="soft" size="sm" onClick={toggleCalm} aria-pressed={isCalm}>
-            Calm mode: {isCalm ? 'on' : 'off'}
-          </Button>
-          <Button
-            variant="soft"
-            size="sm"
-            onClick={toggleTheme}
-            aria-label="Switch between light and dark theme"
+    <div className="options-shell">
+      {/* Top Header - 64px Google Forms Spec */}
+      <header className="top-bar-gforms">
+        {/* Left: Brand name in cursive continuous writing */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span
+            style={{
+              fontFamily: "'Dancing Script', 'Caveat', 'Segoe Script', 'Brush Script MT', cursive, sans-serif",
+              fontSize: '32px',
+              fontWeight: 700,
+              color: 'var(--theme)',
+              letterSpacing: '0.5px',
+              lineHeight: 1,
+              userSelect: 'none',
+            }}
           >
-            {isDarkMode ? 'Light theme' : 'Dark theme'}
-          </Button>
+            happlied
+          </span>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="stage">
-        <div className="dash">
-          {/* Glass Sidebar */}
-          <nav className="side glass" aria-label="Sections">
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'overview' ? 'page' : undefined}
-              onClick={() => setActiveSection('overview')}
-            >
-              Overview
-            </button>
+      {/* Main Options Body: Stuck Sidebar + Content */}
+      <div className="options-body">
+        {/* Stuck Sidebar at left hand side, non-scrollable, all information shown */}
+        <nav className="sidebar-docked" aria-label="Sections">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+            {renderNavButton('overview', 'Overview')}
 
             <h3>Profile</h3>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'personal' ? 'page' : undefined}
-              onClick={() => setActiveSection('personal')}
-            >
-              Personal details
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'address' ? 'page' : undefined}
-              onClick={() => setActiveSection('address')}
-            >
-              Address
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'links' ? 'page' : undefined}
-              onClick={() => setActiveSection('links')}
-            >
-              Links
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'prefs' ? 'page' : undefined}
-              onClick={() => setActiveSection('prefs')}
-            >
-              Preferences
-            </button>
+            {renderNavButton('personal', 'Personal details')}
+            {renderNavButton('address', 'Address')}
+            {renderNavButton('links', 'Links')}
+            {renderNavButton('prefs', 'Preferences')}
 
             <h3>Career</h3>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'edu' ? 'page' : undefined}
-              onClick={() => setActiveSection('edu')}
-            >
-              Education
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'exp' ? 'page' : undefined}
-              onClick={() => setActiveSection('exp')}
-            >
-              Experience
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'skills' ? 'page' : undefined}
-              onClick={() => setActiveSection('skills')}
-            >
-              Skills
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'proj' ? 'page' : undefined}
-              onClick={() => setActiveSection('proj')}
-            >
-              Projects
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'certs' ? 'page' : undefined}
-              onClick={() => setActiveSection('certs')}
-            >
-              Certificates
-            </button>
+            {renderNavButton('edu', 'Education')}
+            {renderNavButton('exp', 'Experience')}
+            {renderNavButton('skills', 'Skills')}
+            {renderNavButton('proj', 'Projects')}
+            {renderNavButton('certs', 'Certificates')}
 
             <h3>Documents</h3>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'vault' ? 'page' : undefined}
-              onClick={() => setActiveSection('vault')}
-            >
-              Resume vault
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'answers' ? 'page' : undefined}
-              onClick={() => setActiveSection('answers')}
-            >
-              Answer bank
-            </button>
+            {renderNavButton('vault', 'Resume vault')}
+            {renderNavButton('answers', 'Answer bank')}
 
             <h3>Track</h3>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'pipeline' ? 'page' : undefined}
-              onClick={() => setActiveSection('pipeline')}
-            >
-              Pipeline
-            </button>
-            <button
-              type="button"
-              className="nav"
-              aria-current={activeSection === 'saved-jobs' ? 'page' : undefined}
-              onClick={() => setActiveSection('saved-jobs')}
-            >
-              Saved Jobs
-            </button>
+            {renderNavButton('pipeline', 'Pipeline')}
+            {renderNavButton('saved-jobs', 'Saved Jobs')}
+          </div>
 
-            <button
-              type="button"
-              className="nav"
-              style={{ marginTop: 'auto' }}
-              aria-current={activeSection === 'settings' ? 'page' : undefined}
-              onClick={() => setActiveSection('settings')}
-            >
-              Settings and data
-            </button>
-          </nav>
+          <div style={{ paddingTop: '8px', borderTop: '1px solid var(--border)', marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {renderNavButton('settings', 'Settings and data')}
 
-          {/* Main Views Container */}
-          <div className="main">
-            <div className="head">
-              <div>
-                <p>{formattedDate}</p>
-                <h1 style={{ fontSize: '32px' }}>
-                  {greetingHeading}
-                </h1>
-              </div>
-              <div className="row">
-                <span
-                  className="icon"
-                  style={{ font: '700 15px var(--f-h)' }}
-                  aria-label={hasName ? `Signed in as ${firstName} ${lastName}` : 'Welcome to HapplyMate'}
-                >
-                  {initials}
-                </span>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', padding: '0 4px' }}>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                title={`Switch to ${isDarkMode ? 'light' : 'dark'} theme`}
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '6px 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  color: 'var(--text)',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                {isDarkMode ? <Sun size={14} color="#F2C46A" /> : <Moon size={14} color="#4C4541" />}
+                <span>{isDarkMode ? 'Light' : 'Dark'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsSupportOpen(true)}
+                title="Open Support & Help"
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '6px 8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  color: 'var(--text)',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <HelpCircle size={14} color="var(--theme)" />
+                <span>Support</span>
+              </button>
             </div>
+          </div>
+        </nav>
+
+        {/* Content Stage */}
+        <main className="content-stage">
+          <div className="head" style={{ marginBottom: '20px' }}>
+            <div>
+              <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                {formattedDate}
+              </p>
+              <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0, color: 'var(--text)' }}>
+                {greetingHeading}
+              </h1>
+            </div>
+          </div>
 
             {activeSection === 'overview' && (
               <OverviewView
@@ -500,7 +508,9 @@ export const Options: React.FC = () => {
                         educationList,
                         experienceList,
                         skillsList,
-                        resumeList.length
+                        resumeList.length,
+                        projectList.length,
+                        certificateList.length
                       )
                     : 70
                 }
@@ -712,6 +722,7 @@ export const Options: React.FC = () => {
             {activeSection === 'pipeline' && (
               <PipelineView
                 applications={applicationList}
+                savedJobs={savedJobList}
                 onUpdateStatus={async (id, newStatus) => {
                   await applicationService.updateStatus(id, newStatus);
                   setApplicationList(await applicationService.getApplications());
@@ -726,6 +737,11 @@ export const Options: React.FC = () => {
                   await applicationService.deleteApplication(id);
                   setApplicationList(await applicationService.getApplications());
                   showToast('Application removed');
+                }}
+                onDeleteSavedJob={async (id) => {
+                  await savedJobRepository.delete(id);
+                  setSavedJobList(await savedJobRepository.getAll());
+                  showToast('Saved job removed');
                 }}
               />
             )}
@@ -830,9 +846,86 @@ export const Options: React.FC = () => {
               onSave={handleSaveAll}
               onDiscard={handleDiscard}
             />
+        </main>
+      </div>
+
+      {/* Support Modal (Google Forms Styled) */}
+      {isSupportOpen && (
+        <Modal
+          isOpen={isSupportOpen}
+          onClose={() => setIsSupportOpen(false)}
+          title="HapplyMate Support & User Guide"
+          maxWidth="560px"
+          style={{
+            background: 'var(--surface)',
+            color: 'var(--text)',
+            borderRadius: '8px',
+            border: '1px solid var(--border)',
+            borderTop: '10px solid var(--theme)',
+            padding: '24px',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              HapplyMate is your AI co-pilot for job applications, resume parsing, and tracking with 100% zero-cloud local privacy.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ padding: '12px', background: 'var(--hover)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', color: 'var(--text)' }}>
+                  <Zap size={15} color="var(--theme)" />
+                  <span>Instant 1-Click Autofill</span>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                  Press <strong>Alt + A</strong> on any job portal (Workday, Greenhouse, Lever, Ashby, Zoho, Google Forms) to autofill matching fields.
+                </p>
+              </div>
+
+              <div style={{ padding: '12px', background: 'var(--hover)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', color: 'var(--text)' }}>
+                  <Sparkles size={15} color="var(--theme)" />
+                  <span>Smart Job Capture</span>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                  Paste any job posting or click "Save this Job" in the popup. Heuristics extract role, company, deadline, and links.
+                </p>
+              </div>
+
+              <div style={{ padding: '12px', background: 'var(--hover)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', color: 'var(--text)' }}>
+                  <ShieldCheck size={15} color="#10B981" />
+                  <span>100% Zero-Cloud Storage</span>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                  All resumes, profile info, and application tracking data remain strictly in your local browser's IndexedDB.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Need help? Email: <strong>support@happlymate.com</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsSupportOpen(false)}
+                style={{
+                  background: 'var(--theme)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '7px 20px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
-        </div>
-      </main>
+        </Modal>
+      )}
 
       <Toast
         show={Boolean(toastMessage)}

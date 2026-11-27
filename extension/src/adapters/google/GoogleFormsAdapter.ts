@@ -266,9 +266,9 @@ export class GoogleFormsAdapter implements FormAdapter {
       targetInput.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: ' ' }));
       targetInput.dispatchEvent(new Event('blur', { bubbles: true, cancelable: true }));
 
-      // Visual highlight with brand lilac #8B74F0
+      // Visual highlight with brand sage #AEAC78
       const origBorder = targetInput.style.border;
-      targetInput.style.border = '2px solid #8B74F0';
+      targetInput.style.border = '2px solid #AEAC78';
       setTimeout(() => {
         targetInput.style.border = origBorder;
       }, 1500);

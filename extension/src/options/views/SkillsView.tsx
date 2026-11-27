@@ -9,7 +9,7 @@ export interface SkillsViewProps {
   onRemoveSkill: (id: string) => Promise<void>;
 }
 
-const CATEGORY_COLORS = ['#DDF0FF', '#E9E2FF', '#D5F5E6', '#FFE9A8', '#FFE3DA'];
+const CATEGORY_COLORS = ['#DDF0FF', '#EAEBD9', '#D5F5E6', '#FFE9A8', '#FFE3DA'];
 
 // Comprehensive, alphabetically sorted Tech Skills (A-Z)
 const TECH_SKILLS = [

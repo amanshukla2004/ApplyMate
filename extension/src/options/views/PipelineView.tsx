@@ -1,25 +1,31 @@
 import React, { useState } from 'react';
-import { Card } from '../../components/ui/Card';
-import { Pill, PillVariant } from '../../components/ui/Pill';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { ApplicationRecord, ApplicationStatus } from '../../types/profile';
+import { SavedJobRecord } from '../../types/savedJob';
 import { applicationService } from '../../services/applicationService';
+import { safeOpenExternalUrl, safeCopyToClipboard } from '../../utils/security';
+import {
+  Search,
+  Plus,
+  Trash2,
+  FileText,
+  ExternalLink,
+  Download,
+  Copy,
+  Check,
+  Building2,
+  Briefcase,
+} from 'lucide-react';
 
 export interface PipelineViewProps {
   applications: ApplicationRecord[];
+  savedJobs?: SavedJobRecord[];
   onUpdateStatus: (id: string, newStatus: ApplicationStatus) => Promise<void>;
   onSaveApplication?: (record: ApplicationRecord) => Promise<void>;
   onDeleteApplication?: (id: string) => Promise<void>;
+  onDeleteSavedJob?: (id: string) => Promise<void>;
 }
-
-const COLUMNS: { key: ApplicationStatus; label: string; pillVariant: PillVariant }[] = [
-  { key: 'Saved', label: 'Saved', pillVariant: 'i' },
-  { key: 'Applied', label: 'Applied', pillVariant: 'a' },
-  { key: 'Interview', label: 'Interview', pillVariant: 'r' },
-  { key: 'Offer', label: 'Offer', pillVariant: 'm' },
-  { key: 'Rejected', label: 'Rejected', pillVariant: 'u' },
-];
 
 const PLATFORMS = [
   'All',
@@ -32,32 +38,35 @@ const PLATFORMS = [
   'Indeed',
   'SmartRecruiters',
   'Company Portal',
+  'Direct Email',
 ];
 
-const getPlatformBadgeColor = (platform: string): { bg: string; color: string; border: string } => {
-  const p = platform.toLowerCase();
-  if (p.includes('greenhouse')) return { bg: 'rgba(23, 104, 74, 0.12)', color: '#17684A', border: 'rgba(23, 104, 74, 0.3)' };
-  if (p.includes('lever')) return { bg: 'rgba(217, 119, 6, 0.12)', color: '#b45309', border: 'rgba(217, 119, 6, 0.3)' };
-  if (p.includes('workday')) return { bg: 'rgba(2, 132, 199, 0.12)', color: '#0369a1', border: 'rgba(2, 132, 199, 0.3)' };
-  if (p.includes('ashby')) return { bg: 'rgba(139, 116, 240, 0.15)', color: '#6d4aff', border: 'rgba(139, 116, 240, 0.4)' };
-  if (p.includes('linkedin')) return { bg: 'rgba(10, 102, 194, 0.12)', color: '#0a66c2', border: 'rgba(10, 102, 194, 0.3)' };
-  if (p.includes('google')) return { bg: 'rgba(124, 58, 237, 0.12)', color: '#7c3aed', border: 'rgba(124, 58, 237, 0.3)' };
-  return { bg: 'rgba(43, 35, 64, 0.08)', color: 'var(--ink)', border: 'rgba(43, 35, 64, 0.15)' };
-};
+interface UnifiedPipelineItem {
+  id: string;
+  source: 'application' | 'saved-job';
+  company: string;
+  role: string;
+  platform: string;
+  date: string;
+  status: ApplicationStatus;
+  jobUrl?: string;
+  description?: string;
+  originalRecord: ApplicationRecord | SavedJobRecord;
+}
 
 export const PipelineView: React.FC<PipelineViewProps> = ({
   applications,
+  savedJobs = [],
   onUpdateStatus,
   onSaveApplication,
   onDeleteApplication,
+  onDeleteSavedJob,
 }) => {
-  const [viewMode, setViewMode] = useState<'board' | 'table'>('board');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('All');
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [overCol, setOverCol] = useState<ApplicationStatus | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>('All');
 
-  // Add Job Modal State
+  // Add Job Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalCompany, setModalCompany] = useState('');
   const [modalTitle, setModalTitle] = useState('');
@@ -66,65 +75,90 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
   const [modalJobUrl, setModalJobUrl] = useState('');
   const [modalNotes, setModalNotes] = useState('');
 
-  const getPlatform = (app: ApplicationRecord): string => {
-    if (app.platform) return app.platform;
-    return applicationService.detectPlatformFromUrl(app.jobUrl);
-  };
+  // Job Description Viewer Modal
+  const [activeDescItem, setActiveDescItem] = useState<UnifiedPipelineItem | null>(null);
+  const [copiedDesc, setCopiedDesc] = useState(false);
 
-  const filteredApps = applications.filter((app) => {
-    const platform = getPlatform(app);
-    const matchesPlatform = selectedPlatform === 'All' || platform.toLowerCase() === selectedPlatform.toLowerCase();
-    if (!matchesPlatform) return false;
+  // 1. Applications from tracker
+  const trackerItems: UnifiedPipelineItem[] = applications.map((app) => ({
+    id: app.id,
+    source: 'application',
+    company: app.companyName || 'Unknown Company',
+    role: app.jobTitle || 'Role',
+    platform: app.platform || applicationService.detectPlatformFromUrl(app.jobUrl),
+    date: app.applicationDate || app.createdAt || new Date().toISOString(),
+    status: app.status || 'Applied',
+    jobUrl: app.jobUrl,
+    description: app.notes,
+    originalRecord: app,
+  }));
 
-    if (!searchQuery) return true;
+  // 2. Saved Jobs that were marked as 'applied'
+  const appliedSavedJobs: UnifiedPipelineItem[] = savedJobs
+    .filter((j) => j.status === 'applied')
+    // Avoid duplicates if matching company and title already in applications
+    .filter(
+      (sj) =>
+        !applications.some(
+          (a) =>
+            a.companyName?.toLowerCase() === (sj.company || '').toLowerCase() &&
+            a.jobTitle?.toLowerCase() === (sj.jobTitle || '').toLowerCase()
+        )
+    )
+    .map((sj) => ({
+      id: sj.id,
+      source: 'saved-job',
+      company: sj.company || 'Saved Opportunity',
+      role: sj.jobTitle || 'Job Role',
+      platform: sj.formLink
+        ? applicationService.detectPlatformFromUrl(sj.formLink)
+        : sj.applyEmail
+        ? 'Direct Email'
+        : 'Saved Job',
+      date: sj.createdAt,
+      status: 'Applied',
+      jobUrl: sj.formLink || undefined,
+      description: sj.jobDescription || sj.summary || sj.rawText || undefined,
+      originalRecord: sj,
+    }));
+
+  const allItems: UnifiedPipelineItem[] = [...trackerItems, ...appliedSavedJobs];
+
+  const filteredItems = allItems.filter((item) => {
+    // Platform filter
+    if (selectedPlatform !== 'All' && item.platform.toLowerCase() !== selectedPlatform.toLowerCase()) {
+      return false;
+    }
+    // Status filter
+    if (selectedStatus !== 'All' && item.status !== selectedStatus) {
+      return false;
+    }
+    // Search query
+    if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
-      (app.companyName || '').toLowerCase().includes(q) ||
-      (app.jobTitle || '').toLowerCase().includes(q) ||
-      platform.toLowerCase().includes(q)
+      item.company.toLowerCase().includes(q) ||
+      item.role.toLowerCase().includes(q) ||
+      item.platform.toLowerCase().includes(q)
     );
   });
 
-  const formatRelativeDate = (dateStr: string) => {
-    try {
-      const diffMs = Date.now() - new Date(dateStr).getTime();
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      if (diffDays <= 0) return 'Today';
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return `${diffDays} days ago`;
-      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-      return new Date(dateStr).toLocaleDateString('en', { month: 'short', day: 'numeric' });
-    } catch {
-      return 'Recently';
+  const handleDeleteItem = async (item: UnifiedPipelineItem) => {
+    if (!window.confirm(`Delete application entry for "${item.role} at ${item.company}"?`)) {
+      return;
     }
-  };
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
-    setDraggedId(id);
-    e.dataTransfer.setData('text/plain', id);
-  };
-
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, targetCol: ApplicationStatus) => {
-    e.preventDefault();
-    setOverCol(null);
-    const id = draggedId || e.dataTransfer.getData('text/plain');
-    if (id) {
-      await onUpdateStatus(id, targetCol);
+    if (item.source === 'application') {
+      if (onDeleteApplication) {
+        await onDeleteApplication(item.id);
+      } else {
+        await applicationService.deleteApplication(item.id);
+      }
+    } else {
+      if (onDeleteSavedJob) {
+        await onDeleteSavedJob(item.id);
+      }
     }
-    setDraggedId(null);
-  };
-
-  const handleExportCSV = () => {
-    const csvContent = applicationService.exportToCSV(applications);
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `happlymate_pipeline_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const handleSaveModal = async (e: React.FormEvent) => {
@@ -158,348 +192,684 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
     setIsAddModalOpen(false);
   };
 
+  const handleExportCSV = () => {
+    const csvContent = applicationService.exportToCSV(applications);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `happlymate_pipeline_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const formatDisplayDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const handleCopyDesc = async (text: string) => {
+    const ok = await safeCopyToClipboard(text);
+    if (ok) {
+      setCopiedDesc(true);
+      setTimeout(() => setCopiedDesc(false), 2000);
+    }
+  };
+
   return (
-    <div className="view" id="v-pipeline">
-      <div className="row sp" style={{ marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-        <div className="row" style={{ gap: '10px', flexWrap: 'wrap' }}>
-          <input
-            className="in"
-            style={{ width: '220px' }}
-            placeholder="Search company or role..."
-            aria-label="Search applications"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-
-          <select
-            className="in"
-            style={{ width: '160px', padding: '6px 10px', fontSize: '13px' }}
-            value={selectedPlatform}
-            onChange={(e) => setSelectedPlatform(e.target.value)}
-            aria-label="Filter by ATS Platform"
-          >
-            {PLATFORMS.map((p) => (
-              <option key={p} value={p}>
-                {p === 'All' ? 'All Platforms' : p}
-              </option>
-            ))}
-          </select>
-
-          <Pill variant="a">Matched: {filteredApps.length}</Pill>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Header bar */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0, color: 'var(--ink)' }}>
+              Application Pipeline
+            </h2>
+            <span
+              style={{
+                background: '#AEAC78',
+                color: '#FCF0DA',
+                padding: '2px 8px',
+                borderRadius: '999px',
+                fontSize: '12px',
+                fontWeight: 700,
+              }}
+            >
+              {allItems.length} active
+            </span>
+          </div>
+          <p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: '13.5px' }}>
+            Table view tracker of your sent applications and moved applied jobs.
+          </p>
         </div>
 
-        <div className="row" style={{ gap: '10px' }}>
-          <Button
-            variant="primary"
-            size="sm"
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
             onClick={() => setIsAddModalOpen(true)}
+            style={{
+              background: '#4C4541',
+              color: '#FCF0DA',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '8px 14px',
+              fontSize: '13px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(76, 69, 65, 0.15)',
+            }}
           >
-            + Add Application
-          </Button>
+            <Plus size={16} />
+            <span>Add Applied Job</span>
+          </button>
 
-          <Button
-            variant="soft"
-            size="sm"
-            onClick={handleExportCSV}
-            title="Export all tracked applications to CSV"
-          >
-            Export CSV
+          <Button variant="soft" size="sm" onClick={handleExportCSV}>
+            <Download size={14} style={{ marginRight: '5px' }} />
+            <span>Export CSV</span>
           </Button>
-
-          <div className="seg glass" role="group" aria-label="View toggle">
-            <button
-              type="button"
-              aria-pressed={viewMode === 'board'}
-              onClick={() => setViewMode('board')}
-            >
-              Board
-            </button>
-            <button
-              type="button"
-              aria-pressed={viewMode === 'table'}
-              onClick={() => setViewMode('table')}
-            >
-              Table
-            </button>
-          </div>
         </div>
       </div>
 
-      {viewMode === 'board' ? (
-        <div
-          className="board"
+      {/* Filter and Search Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+          <Search
+            size={16}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--muted)',
+            }}
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search company or role in pipeline..."
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '9px 12px 9px 36px',
+              borderRadius: '10px',
+              border: '1px solid rgba(76, 69, 65, 0.2)',
+              background: '#FFFFFF',
+              color: 'var(--ink)',
+              fontSize: '13px',
+              outline: 'none',
+            }}
+          />
+        </div>
+
+        <select
+          value={selectedPlatform}
+          onChange={(e) => setSelectedPlatform(e.target.value)}
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '14px',
-            alignItems: 'start',
+            background: '#FFFFFF',
+            color: '#4C4541',
+            border: '1px solid rgba(76, 69, 65, 0.2)',
+            borderRadius: '10px',
+            padding: '8px 12px',
+            fontSize: '12.5px',
+            fontWeight: 600,
+            outline: 'none',
+            cursor: 'pointer',
           }}
         >
-          {COLUMNS.map((col) => {
-            const colApps = filteredApps.filter((a) => a.status === col.key);
-            const isOver = overCol === col.key;
+          {PLATFORMS.map((p) => (
+            <option key={p} value={p}>
+              {p === 'All' ? 'All Platforms' : p}
+            </option>
+          ))}
+        </select>
 
-            return (
-              <div
-                key={col.key}
-                className={`col glass ${isOver ? 'over' : ''}`}
-                style={{ minHeight: '340px' }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setOverCol(col.key);
-                }}
-                onDragLeave={() => setOverCol(null)}
-                onDrop={(e) => handleDrop(e, col.key)}
-              >
-                <h3>
-                  {col.label}
-                  <Pill variant={col.pillVariant}>{colApps.length}</Pill>
-                </h3>
+        <select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          style={{
+            background: '#FFFFFF',
+            color: '#4C4541',
+            border: '1px solid rgba(76, 69, 65, 0.2)',
+            borderRadius: '10px',
+            padding: '8px 12px',
+            fontSize: '12.5px',
+            fontWeight: 600,
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="All">All Statuses</option>
+          <option value="Applied">Applied</option>
+          <option value="Interview">Interview</option>
+          <option value="Offer">Offer</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Saved">Saved</option>
+        </select>
+      </div>
 
-                {colApps.map((app) => {
-                  const isDragging = draggedId === app.id;
-                  const platformName = getPlatform(app);
-                  const pStyle = getPlatformBadgeColor(platformName);
-
-                  return (
-                    <div
-                      key={app.id}
-                      className={`job ${isDragging ? 'drag' : ''}`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, app.id)}
-                      onDragEnd={() => setDraggedId(null)}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <b>{app.companyName || 'Company'}</b>
-                        {onDeleteApplication && (
-                          <button
-                            type="button"
-                            onClick={() => onDeleteApplication(app.id)}
-                            title="Remove application"
-                            style={{ background: 'transparent', border: 0, color: 'var(--muted)', cursor: 'pointer', fontSize: '13px' }}
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-
-                      <span>{app.jobTitle || 'Role'}</span>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0', flexWrap: 'wrap' }}>
-                        <small>{formatRelativeDate(app.applicationDate)}</small>
-                        <span style={{ fontSize: '10px', color: 'var(--muted)' }}>•</span>
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 600,
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            background: pStyle.bg,
-                            color: pStyle.color,
-                            border: `1px solid ${pStyle.border}`,
-                          }}
-                          title={`Applied via ${platformName}`}
-                        >
-                          {platformName}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                        <Pill
-                          variant={col.pillVariant}
-                          style={{ alignSelf: 'flex-start' }}
-                        >
-                          {col.label}
-                        </Pill>
-
-                        <select
-                          aria-label={`Move ${app.companyName} status`}
-                          value={app.status}
-                          onChange={(e) =>
-                            onUpdateStatus(app.id, e.target.value as ApplicationStatus)
-                          }
-                          style={{ fontSize: '11px', padding: '2px 4px' }}
-                        >
-                          {COLUMNS.map((c) => (
-                            <option key={c.key} value={c.key}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+      {/* TABLE VIEW ONLY */}
+      {filteredItems.length === 0 ? (
+        <div
+          style={{
+            background: '#FFFFFF',
+            border: '1px dashed rgba(76, 69, 65, 0.25)',
+            borderRadius: '14px',
+            padding: '40px 20px',
+            textAlign: 'center',
+          }}
+        >
+          <Briefcase size={36} style={{ color: '#AEAC78', margin: '0 auto 12px' }} />
+          <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: '#4C4541' }}>
+            No applied jobs in pipeline yet
+          </h3>
+          <p style={{ margin: '0 0 16px', color: '#756C67', fontSize: '13px' }}>
+            Mark saved jobs as "Applied" or click "Add Applied Job" to track submissions here.
+          </p>
+          <Button variant="primary" size="sm" onClick={() => setIsAddModalOpen(true)}>
+            + Add First Applied Job
+          </Button>
         </div>
       ) : (
-        <Card>
-          <table className="table-view">
+        <div className="app-table-wrap">
+          <table className="app-table">
             <thead>
               <tr>
-                <th>Company</th>
-                <th>Role</th>
-                <th>Platform</th>
-                <th>Applied</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th style={{ minWidth: '160px' }}>Company</th>
+                <th style={{ minWidth: '180px' }}>Role</th>
+                <th style={{ minWidth: '120px' }}>Platform</th>
+                <th style={{ minWidth: '110px' }}>Date</th>
+                <th style={{ minWidth: '130px' }}>Status</th>
+                <th style={{ minWidth: '150px' }}>Job Description</th>
+                <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredApps.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--muted)' }}>
-                    No applications match your search.
-                  </td>
-                </tr>
-              ) : (
-                filteredApps.map((app) => {
-                  const col = COLUMNS.find((c) => c.key === app.status) || COLUMNS[0];
-                  const platformName = getPlatform(app);
-                  const pStyle = getPlatformBadgeColor(platformName);
+              {filteredItems.map((item) => {
+                let statusBg = '#EAEBD9';
+                let statusText = '#166534';
+                let statusBorder = '#AEAC78';
 
-                  return (
-                    <tr key={app.id}>
-                      <td><b>{app.companyName || 'Company'}</b></td>
-                      <td>{app.jobTitle || 'Role'}</td>
-                      <td>
+                if (item.status === 'Interview') {
+                  statusBg = '#FDF1D6';
+                  statusText = '#B45309';
+                  statusBorder = '#F2C46A';
+                } else if (item.status === 'Offer') {
+                  statusBg = '#DCFCE7';
+                  statusText = '#15803D';
+                  statusBorder = '#86EFAC';
+                } else if (item.status === 'Rejected') {
+                  statusBg = '#FEE2E2';
+                  statusText = '#991B1B';
+                  statusBorder = '#FCA5A5';
+                }
+
+                return (
+                  <tr key={`${item.source}-${item.id}`}>
+                    {/* Company */}
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Building2 size={15} style={{ color: '#AEAC78', flexShrink: 0 }} />
+                        <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--ink)' }}>
+                          {item.company}
+                        </span>
+                        {item.source === 'saved-job' && (
+                          <span
+                            title="Synced from Saved Jobs"
+                            style={{
+                              fontSize: '9.5px',
+                              fontWeight: 700,
+                              background: '#FCF0DA',
+                              border: '1px solid #AEAC78',
+                              color: '#4C4541',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            Saved Job
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Role */}
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--ink)' }}>
+                          {item.role}
+                        </span>
+                        {item.jobUrl && (
+                          <a
+                            href={item.jobUrl}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              safeOpenExternalUrl(item.jobUrl!);
+                            }}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              fontSize: '11px',
+                              color: '#2563EB',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              textDecoration: 'underline',
+                            }}
+                          >
+                            <span>Job Link</span>
+                            <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Platform */}
+                    <td>
+                      <span
+                        style={{
+                          fontSize: '11.5px',
+                          fontWeight: 600,
+                          background: 'rgba(76, 69, 65, 0.06)',
+                          color: '#4C4541',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                        }}
+                      >
+                        {item.platform}
+                      </span>
+                    </td>
+
+                    {/* Date */}
+                    <td>
+                      <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                        {formatDisplayDate(item.date)}
+                      </span>
+                    </td>
+
+                    {/* Status */}
+                    <td>
+                      {item.source === 'application' ? (
+                        <select
+                          value={item.status}
+                          onChange={(e) =>
+                            onUpdateStatus(item.id, e.target.value as ApplicationStatus)
+                          }
+                          style={{
+                            background: statusBg,
+                            color: statusText,
+                            border: `1px solid ${statusBorder}`,
+                            borderRadius: '999px',
+                            padding: '3px 8px',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            outline: 'none',
+                          }}
+                        >
+                          <option value="Applied">Applied</option>
+                          <option value="Interview">Interview</option>
+                          <option value="Offer">Offer</option>
+                          <option value="Rejected">Rejected</option>
+                          <option value="Saved">Saved</option>
+                        </select>
+                      ) : (
                         <span
                           style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            padding: '3px 8px',
-                            borderRadius: '4px',
-                            background: pStyle.bg,
-                            color: pStyle.color,
-                            border: `1px solid ${pStyle.border}`,
+                            background: statusBg,
+                            color: statusText,
+                            border: `1px solid ${statusBorder}`,
+                            borderRadius: '999px',
+                            padding: '3px 9px',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
                             display: 'inline-block',
                           }}
                         >
-                          {platformName}
+                          {item.status}
                         </span>
-                      </td>
-                      <td>{formatRelativeDate(app.applicationDate)}</td>
-                      <td>
-                        <Pill variant={col.pillVariant}>{col.label}</Pill>
-                      </td>
-                      <td>
-                        <select
-                          aria-label={`Change ${app.companyName} status`}
-                          value={app.status}
-                          onChange={(e) => onUpdateStatus(app.id, e.target.value as ApplicationStatus)}
-                          style={{ fontSize: '12px', padding: '2px 6px' }}
+                      )}
+                    </td>
+
+                    {/* Job Description Option */}
+                    <td>
+                      {item.description ? (
+                        <button
+                          type="button"
+                          onClick={() => setActiveDescItem(item)}
+                          style={{
+                            background: '#FFFFFF',
+                            border: '1px solid #AEAC78',
+                            color: '#4C4541',
+                            borderRadius: '6px',
+                            padding: '4px 9px',
+                            fontSize: '11.5px',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            cursor: 'pointer',
+                          }}
                         >
-                          {COLUMNS.map((c) => (
-                            <option key={c.key} value={c.key}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                          <FileText size={12} color="#AEAC78" />
+                          <span>View Description</span>
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>No description</span>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItem(item)}
+                        title="Delete application entry"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#EF4444',
+                          padding: '4px',
+                          display: 'inline-grid',
+                          placeItems: 'center',
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        </Card>
+        </div>
       )}
 
-      {/* Manual Application Entry Modal */}
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Add Job Application"
-      >
-        <form onSubmit={handleSaveModal} className="stack" style={{ gap: '12px' }}>
-          <div>
-            <label className="f">Company Name *</label>
-            <input
-              className="in"
-              required
-              placeholder="e.g. OpenAI, Stripe, Google"
-              value={modalCompany}
-              onChange={(e) => setModalCompany(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="f">Job Title *</label>
-            <input
-              className="in"
-              required
-              placeholder="e.g. Senior Software Engineer"
-              value={modalTitle}
-              onChange={(e) => setModalTitle(e.target.value)}
-            />
-          </div>
-
-          <div className="row sp" style={{ gap: '10px' }}>
-            <div style={{ flex: 1 }}>
-              <label className="f">ATS / Portal Platform</label>
-              <select
-                className="in"
-                value={modalPlatform}
-                onChange={(e) => setModalPlatform(e.target.value)}
+      {/* View Job Description Modal */}
+      {activeDescItem && (
+        <Modal
+          isOpen={Boolean(activeDescItem)}
+          onClose={() => setActiveDescItem(null)}
+          title={`Job Description - ${activeDescItem.role} at ${activeDescItem.company}`}
+          maxWidth="680px"
+          style={{
+            background: '#FCF0DA',
+            color: '#4C4541',
+            borderRadius: '16px',
+            padding: '20px 24px',
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#756C67' }}>
+                Platform: {activeDescItem.platform} • Applied: {formatDisplayDate(activeDescItem.date)}
+              </span>
+              <button
+                onClick={() => handleCopyDesc(activeDescItem.description || '')}
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #AEAC78',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
               >
-                {PLATFORMS.filter((p) => p !== 'All').map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
+                {copiedDesc ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
+                <span>{copiedDesc ? 'Copied' : 'Copy Description'}</span>
+              </button>
             </div>
 
-            <div style={{ flex: 1 }}>
-              <label className="f">Initial Stage</label>
-              <select
-                className="in"
-                value={modalStatus}
-                onChange={(e) => setModalStatus(e.target.value as ApplicationStatus)}
-              >
-                {COLUMNS.map((c) => (
-                  <option key={c.key} value={c.key}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="f">Job Posting URL (Optional)</label>
-            <input
-              className="in"
-              type="url"
-              placeholder="https://..."
-              value={modalJobUrl}
-              onChange={(e) => setModalJobUrl(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="f">Notes (Optional)</label>
-            <textarea
-              className="in"
-              rows={2}
-              placeholder="e.g. Referral from Jane, salary range $180k-$210k"
-              value={modalNotes}
-              onChange={(e) => setModalNotes(e.target.value)}
-            />
-          </div>
-
-          <div className="row" style={{ justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-            <Button
-              type="button"
-              variant="soft"
-              onClick={() => setIsAddModalOpen(false)}
+            <div
+              style={{
+                background: '#FFFFFF',
+                border: '1px solid rgba(76, 69, 65, 0.15)',
+                borderRadius: '10px',
+                padding: '14px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                fontSize: '12.5px',
+                lineHeight: 1.5,
+                whiteSpace: 'pre-wrap',
+                color: '#4C4541',
+              }}
             >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              Save Application
-            </Button>
+              {activeDescItem.description}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setActiveDescItem(null)}
+                style={{
+                  background: '#4C4541',
+                  color: '#FCF0DA',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '6px 16px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
-        </form>
-      </Modal>
+        </Modal>
+      )}
+
+      {/* Add Job Modal */}
+      {isAddModalOpen && (
+        <Modal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          title="Add Applied Job to Pipeline"
+          maxWidth="540px"
+          style={{
+            background: '#FCF0DA',
+            color: '#4C4541',
+            borderRadius: '16px',
+            padding: '20px 24px',
+          }}
+        >
+          <form onSubmit={handleSaveModal} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#756C67' }}>
+                Company Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={modalCompany}
+                onChange={(e) => setModalCompany(e.target.value)}
+                placeholder="e.g. Stripe, Linear, Google"
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #AEAC78',
+                  background: '#FFFFFF',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#756C67' }}>
+                Job Title *
+              </label>
+              <input
+                type="text"
+                required
+                value={modalTitle}
+                onChange={(e) => setModalTitle(e.target.value)}
+                placeholder="e.g. Senior Frontend Engineer"
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #AEAC78',
+                  background: '#FFFFFF',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#756C67' }}>
+                  Platform / ATS
+                </label>
+                <select
+                  value={modalPlatform}
+                  onChange={(e) => setModalPlatform(e.target.value)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #AEAC78',
+                    background: '#FFFFFF',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                >
+                  {PLATFORMS.filter((p) => p !== 'All').map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#756C67' }}>
+                  Status
+                </label>
+                <select
+                  value={modalStatus}
+                  onChange={(e) => setModalStatus(e.target.value as ApplicationStatus)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #AEAC78',
+                    background: '#FFFFFF',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="Applied">Applied</option>
+                  <option value="Interview">Interview</option>
+                  <option value="Offer">Offer</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="Saved">Saved</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#756C67' }}>
+                Job Posting URL
+              </label>
+              <input
+                type="url"
+                value={modalJobUrl}
+                onChange={(e) => setModalJobUrl(e.target.value)}
+                placeholder="https://jobs.lever.co/company/..."
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #AEAC78',
+                  background: '#FFFFFF',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#756C67' }}>
+                Job Description / Notes
+              </label>
+              <textarea
+                rows={3}
+                value={modalNotes}
+                onChange={(e) => setModalNotes(e.target.value)}
+                placeholder="Key requirements, recruiter contacts, or application notes..."
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #AEAC78',
+                  background: '#FFFFFF',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(76, 69, 65, 0.2)',
+                  borderRadius: '8px',
+                  padding: '7px 14px',
+                  fontSize: '12.5px',
+                  cursor: 'pointer',
+                  color: '#4C4541',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{
+                  background: '#4C4541',
+                  color: '#FCF0DA',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '7px 16px',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Add Application
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };

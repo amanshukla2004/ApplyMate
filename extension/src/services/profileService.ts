@@ -162,34 +162,43 @@ export class ProfileService {
     education: EducationRecord[],
     experience: ExperienceRecord[],
     skills: SkillItem[],
-    resumesCount: number
+    resumesCount: number,
+    projectsCount: number = 0,
+    certificatesCount: number = 0
   ): number {
     let score = 0;
-    // Personal (30%)
+    // Personal (25%)
     if (profile?.personal?.firstName) score += 5;
     if (profile?.personal?.lastName) score += 5;
     if (profile?.personal?.email) score += 10;
-    if (profile?.personal?.phone) score += 10;
+    if (profile?.personal?.phone) score += 5;
 
     // Address (10%)
     if (profile?.address?.city && profile?.address?.country) score += 10;
+    else if (profile?.address?.city || profile?.address?.country) score += 5;
 
     // Links (15%)
     if (profile?.links?.linkedInUrl) score += 10;
     if (profile?.links?.githubUrl) score += 5;
 
-    // Education (15%)
-    if (education?.length > 0) score += 15;
+    // Education (10%)
+    if (education?.length > 0) score += 10;
 
-    // Experience (10%)
-    if (experience?.length > 0) score += 10;
+    // Experience (15%)
+    if (experience?.length > 0) score += 15;
 
     // Skills (10%)
     if (skills?.length >= 3) score += 10;
     else if (skills?.length > 0) score += 5;
 
-    // Resumes (10%)
-    if (resumesCount > 0) score += 10;
+    // Projects (5%)
+    if (projectsCount > 0) score += 5;
+
+    // Certificates (5%)
+    if (certificatesCount > 0) score += 5;
+
+    // Active Resume (5%)
+    if (resumesCount > 0) score += 5;
 
     return Math.min(100, score);
   }

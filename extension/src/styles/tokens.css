@@ -1,57 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Dancing+Script:wght@600;700&display=swap');
 @import './fonts/fonts.css';
 
 :root {
-  --ink: #2B2340;
-  --muted: #5E5675;
-  --base: #FFF3E8;
-  --glass: rgba(255, 255, 255, 0.6);
-  --edge: rgba(255, 255, 255, 0.85);
-  --shadow: 0 18px 40px rgba(120, 90, 180, 0.16);
-  --accent: #8B74F0;
-  --btn: #2B2340;
+  /* Clean Warm Minimalist Tokens (Light Theme) */
+  --theme: #4C4541;
+  --theme-bg: #FCF0DA;
+  --surface: #ffffff;
+  --border: #dadce0;
+  --text: #202124;
+  --text-secondary: #5f6368;
+  --accent-active: #AEAC78;
+  --error: #d93025;
+  --hover: rgba(76, 69, 65, 0.08);
+  --shadow: 0 1px 2px 0 rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
+
+  --ink: #202124;
+  --muted: #5f6368;
+  --base: #FCF0DA;
+  --glass: rgba(255, 255, 255, 0.92);
+  --edge: #dadce0;
+  --accent: #4C4541;
+  --accent-sage: #AEAC78;
+  --btn: #4C4541;
   --btn-t: #ffffff;
-  --soft: rgba(255, 255, 255, 0.75);
-  --blob: 1;
-  --line: rgba(43, 35, 64, 0.14);
+  --soft: rgba(76, 69, 65, 0.08);
+  --blob: 0.8;
+  --line: #dadce0;
 
-  --m-bg: #D5F5E6;
-  --m-t: #17684A;
-  --r-bg: #FFE9A8;
-  --r-t: #6B4A00;
-  --a-bg: #E9E2FF;
-  --a-t: #4B3A9A;
-  --u-bg: #FFE3DA;
-  --u-t: #9A3E27;
-  --i-bg: #DDF0FF;
-  --i-t: #1D5E8F;
+  --m-bg: #EAEBD9;
+  --m-t: #46482D;
+  --r-bg: #FDF1D6;
+  --r-t: #785208;
+  --a-bg: #EFE8DC;
+  --a-t: #4C4541;
+  --u-bg: #FADBD5;
+  --u-t: #872815;
+  --i-bg: #EFEBDD;
+  --i-t: #524B47;
 
-  --blur: blur(26px) saturate(1.7);
+  --blur: blur(26px) saturate(1.4);
   --f-h: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
   --f-b: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 :root[data-theme='dark'] {
-  --ink: #F4F1FA;
-  --muted: #B7B0C9;
-  --base: #1A1626;
-  --glass: rgba(255, 255, 255, 0.08);
-  --edge: rgba(255, 255, 255, 0.16);
-  --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-  --btn: #F4F1FA;
-  --btn-t: #1A1626;
-  --soft: rgba(255, 255, 255, 0.1);
-  --blob: 0.35;
-  --line: rgba(255, 255, 255, 0.18);
+  /* Dark Theme (Zero-Purple Obsidian & Warm Slate) */
+  --theme: #F2C46A;
+  --theme-bg: #0F0F11;
+  --surface: #18181B;
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #F4F4F5;
+  --text-secondary: #A1A1AA;
+  --accent-active: #F2C46A;
+  --error: #f87171;
+  --hover: rgba(255, 255, 255, 0.08);
 
-  --m-bg: #16382C;
+  --ink: #F4F4F5;
+  --muted: #A1A1AA;
+  --base: #0F0F11;
+  --glass: rgba(24, 24, 27, 0.88);
+  --edge: rgba(255, 255, 255, 0.14);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  --btn: #27272A;
+  --btn-t: #F4F4F5;
+  --soft: rgba(255, 255, 255, 0.08);
+  --blob: 0.25;
+  --line: rgba(255, 255, 255, 0.14);
+
+  --m-bg: #1A2E24;
   --m-t: #8FE3BD;
-  --r-bg: #4A3A10;
-  --r-t: #FFD76A;
-  --a-bg: #322A5C;
-  --a-t: #CDBFFF;
-  --u-bg: #4A2419;
+  --r-bg: #382E14;
+  --r-t: #F2C46A;
+  --a-bg: #2B2825;
+  --a-t: #F2C46A;
+  --u-bg: #3E1E19;
   --u-t: #FFB3A0;
-  --i-bg: #16384F;
+  --i-bg: #1B2B38;
   --i-t: #9ED4FF;
 }
 
@@ -62,33 +86,33 @@
 }
 
 :root[data-theme='dark'][data-calm='on'] {
-  --glass: #241F36;
-  --soft: #2D2745;
+  --glass: #18181B;
+  --soft: #27272A;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --ink: #F4F1FA;
-    --muted: #B7B0C9;
-    --base: #1A1626;
-    --glass: rgba(255, 255, 255, 0.08);
+    --ink: #F4F4F5;
+    --muted: #A1A1AA;
+    --base: #0F0F11;
+    --glass: rgba(24, 24, 27, 0.88);
     --edge: rgba(255, 255, 255, 0.16);
-    --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-    --btn: #F4F1FA;
-    --btn-t: #1A1626;
+    --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    --btn: #F4F4F5;
+    --btn-t: #121214;
     --soft: rgba(255, 255, 255, 0.1);
-    --blob: 0.35;
+    --blob: 0.25;
     --line: rgba(255, 255, 255, 0.18);
 
-    --m-bg: #16382C;
+    --m-bg: #1A2E24;
     --m-t: #8FE3BD;
-    --r-bg: #4A3A10;
-    --r-t: #FFD76A;
-    --a-bg: #322A5C;
-    --a-t: #CDBFFF;
-    --u-bg: #4A2419;
+    --r-bg: #382E14;
+    --r-t: #F2C46A;
+    --a-bg: #2B2825;
+    --a-t: #F2C46A;
+    --u-bg: #3E1E19;
     --u-t: #FFB3A0;
-    --i-bg: #16384F;
+    --i-bg: #1B2B38;
     --i-t: #9ED4FF;
   }
 }
@@ -99,6 +123,6 @@
     --glass: #FFFBF6;
   }
   :root[data-theme='dark'] {
-    --glass: #241F36;
+    --glass: #18181B;
   }
 }

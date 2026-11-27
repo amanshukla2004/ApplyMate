@@ -50,7 +50,7 @@ function handleHighlightField(fieldId: string, highlight: boolean) {
   if (!el) return;
 
   if (highlight) {
-    el.style.outline = '2px solid #8B74F0';
+    el.style.outline = '2px solid #AEAC78';
     el.style.outlineOffset = '2px';
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } else {
@@ -86,11 +86,11 @@ async function handleFillFields(values: Record<string, string>) {
     const adapter = adapterRegistry.getActiveAdapter();
     const results = await adapter.fillFields(values);
 
-    // Apply 2-second lilac visual highlight to filled inputs
+    // Apply 2-second sage visual highlight to filled inputs
     for (const [id] of Object.entries(values)) {
       const el = domScanner.getElement(id);
       if (el) {
-        el.style.outline = '2px solid #8B74F0';
+        el.style.outline = '2px solid #AEAC78';
         el.style.outlineOffset = '2px';
         setTimeout(() => {
           el.style.outline = '';
@@ -241,7 +241,7 @@ function initFloatingWidget(): boolean {
 
   const p2 = document.createElementNS(svgNS, 'path');
   p2.setAttribute('d', 'M12 8.5L13.8 13.5H10.2L12 8.5Z');
-  p2.setAttribute('fill', '#8B74F0');
+  p2.setAttribute('fill', '#AEAC78');
 
   const p3 = document.createElementNS(svgNS, 'path');
   p3.setAttribute('d', 'M9.5 14.5L14.5 14.5L12 9.5Z');
@@ -446,11 +446,11 @@ async function executeAutofillFromProfile(passedProfileData?: {
     const results = await adapter.fillFields(values);
     const successful = results.filter((r) => r.success).length;
 
-    // Apply brand lilac outline for 2s
+    // Apply brand sage outline for 2s
     for (const [id] of Object.entries(values)) {
       const el = domScanner.getElement(id);
       if (el) {
-        el.style.outline = '2px solid #8B74F0';
+        el.style.outline = '2px solid #AEAC78';
         el.style.outlineOffset = '2px';
         setTimeout(() => {
           el.style.outline = '';

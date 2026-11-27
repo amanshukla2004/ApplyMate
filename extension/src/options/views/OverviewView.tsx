@@ -30,6 +30,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   // Application status counts
   const savedCount = applications.filter((a) => a.status === 'Saved').length;
   const appliedCount = applications.filter((a) => a.status === 'Applied').length;
+  const interviewCount = applications.filter((a) => a.status === 'Interview').length;
 
   const hasPersonal = Boolean(profile?.personal?.firstName && profile?.personal?.email);
 
@@ -40,6 +41,14 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   if (!profile?.address?.city) missingFields.push({ label: 'City', section: 'address' });
   if (!profile?.links?.linkedInUrl) missingFields.push({ label: 'LinkedIn profile', section: 'links' });
   if (!profile?.links?.githubUrl) missingFields.push({ label: 'GitHub profile', section: 'links' });
+
+  const handleOpenTestPortal = () => {
+    if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+      chrome.tabs.create({ url: chrome.runtime.getURL('test-portal.html') });
+    } else {
+      window.open('./test-portal.html', '_blank');
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -68,8 +77,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         <div
           className="card glass"
           style={{
-            background: 'linear-gradient(135deg, rgba(139, 116, 240, 0.16) 0%, rgba(99, 102, 241, 0.08) 100%)',
-            borderColor: 'rgba(139, 116, 240, 0.35)',
+            background: 'linear-gradient(135deg, rgba(174, 172, 120, 0.22) 0%, rgba(242, 196, 106, 0.12) 100%)',
+            borderColor: 'rgba(174, 172, 120, 0.4)',
             padding: '20px 24px',
             marginBottom: '16px',
             borderRadius: '20px',
@@ -88,19 +97,19 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 <Pill variant="m">100% Private (Zero-Cloud)</Pill>
               </div>
               <p style={{ margin: 0, color: 'var(--muted)', fontSize: '13.5px', lineHeight: 1.5 }}>
-                Drop your existing PDF resume below. HapplyMate automatically extracts your contact details, education, projects, and technical skills directly in your browser without uploading to any remote server.
+                Drop your existing PDF resume below. happlied automatically extracts your contact details, education, projects, and technical skills directly in your browser without uploading to any remote server.
               </p>
             </div>
             <Button
               size="sm"
               style={{
-                background: 'linear-gradient(135deg, #8B74F0 0%, #6366F1 100%)',
+                background: '#4C4541',
                 color: '#ffffff',
                 fontWeight: 700,
                 padding: '10px 20px',
                 borderRadius: '12px',
                 border: 'none',
-                boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+                boxShadow: '0 4px 14px rgba(76, 69, 65, 0.25)',
                 cursor: 'pointer',
               }}
               onClick={() => fileInputRef.current?.click()}
@@ -117,11 +126,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         <Ring percentage={readiness} size={124} />
         <div style={{ flex: 1, minWidth: '220px' }}>
           <h2 style={{ fontSize: '26px', marginBottom: '6px' }}>
-            Your profile is {readiness}% ready
+            Profile {readiness}% Ready
           </h2>
           <p style={{ color: 'var(--muted)' }}>
             {readiness === 100
-              ? 'All set! HapplyMate is fully equipped to autofill technical applications across Workday, Greenhouse, Ashby, and Lever.'
+              ? 'All set! happlied is fully equipped to autofill technical applications across Workday, Greenhouse, Ashby, and Lever.'
               : 'Complete the remaining fields below so your autofill answers every question seamlessly.'}
           </p>
         </div>
@@ -207,20 +216,73 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
       )}
 
-      {/* Bottom Quick Stats */}
+      {/* Bottom Quick Stats - Simplified Clean Cards */}
       <div className="stats">
-        <div className="stat" style={{ background: '#DDF0FF' }}>
-          Saved<b>{savedCount}</b>
+        <div className="stat">
+          <span className="stat-title">Saved</span>
+          <b>{savedCount}</b>
+          <span className="stat-desc">Ready to apply</span>
         </div>
-        <div className="stat" style={{ background: '#E9E2FF' }}>
-          Applied<b>{appliedCount}</b>
+        <div className="stat">
+          <span className="stat-title">Applied</span>
+          <b>{appliedCount}</b>
+          <span className="stat-desc">Submitted</span>
         </div>
-        <div className="stat" style={{ background: '#FFE9A8' }}>
-          Total Tracked<b>{applications.length}</b>
+        <div className="stat">
+          <span className="stat-title">Total Tracked</span>
+          <b>{applications.length}</b>
+          <span className="stat-desc">Pipeline total</span>
         </div>
-        <div className="stat" style={{ background: '#D5F5E6' }}>
-          Profile Ready<b>{readiness}%</b>
+        <div className="stat">
+          <span className="stat-title">Interviews</span>
+          <b>{interviewCount}</b>
+          <span className="stat-desc">In progress</span>
         </div>
+      </div>
+
+      {/* Test UI & Autofill Playground Card */}
+      <div
+        className="card glass"
+        style={{
+          marginTop: '16px',
+          padding: '16px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          borderRadius: '8px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '22px' }}>🧪</span>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text)' }}>
+                Test UI & Form Autofill Playground
+              </h3>
+              <Pill variant="m">Interactive Test Form</Pill>
+            </div>
+            <p style={{ margin: '3px 0 0', color: 'var(--muted)', fontSize: '13px' }}>
+              Test autofill with your saved profile data against a complete 15-field mock job application.
+            </p>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          style={{
+            background: 'var(--theme)',
+            color: 'var(--btn-t)',
+            fontWeight: 600,
+            padding: '8px 18px',
+            borderRadius: '6px',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+          onClick={handleOpenTestPortal}
+        >
+          🚀 Open Test Form
+        </Button>
       </div>
     </div>
   );

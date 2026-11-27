@@ -256,8 +256,8 @@ export class AutofillEngine {
     const originalTransition = el.style.transition;
 
     el.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    el.style.border = '2px solid #8B74F0';
-    el.style.backgroundColor = 'rgba(139, 116, 240, 0.12)';
+    el.style.border = '2px solid #AEAC78';
+    el.style.backgroundColor = 'rgba(174, 172, 120, 0.15)';
 
     setTimeout(() => {
       el.style.border = originalBorder;

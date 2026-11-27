@@ -14,12 +14,12 @@ export class JobExtractorService {
     const urlRegex = /(https?:\/\/[^\s]+)/gi;
     const urls = trimmed.match(urlRegex) || [];
 
-    // Is it primarily a form link? (Google Forms, Typeform, Airtable, Notion, Tally, Ashby, Greenhouse)
+    // Is it primarily a form link or career application portal?
     const formUrl = urls.find((u) =>
-      /(forms\.gle|docs\.google\.com\/forms|typeform\.com|airtable\.com|tally\.so|notion\.site|ashbyhq\.com|greenhouse\.io|lever\.co|myworkdayjobs\.com)/i.test(
+      /(forms\.gle|docs\.google\.com\/forms|typeform\.com|airtable\.com|tally\.so|notion\.site|ashbyhq\.com|greenhouse\.io|lever\.co|myworkdayjobs\.com|hiredoor\.in|linkedin\.com\/jobs|indeed\.com|wellfound\.com|internshala\.com|unstop\.com|naukri\.com|\/jobs?\/|\/careers?\/|\/apply)/i.test(
         u
       )
-    ) || (urls.length === 1 && trimmed.length < 300 ? urls[0] : null);
+    ) || (urls.length > 0 ? urls[0] : null);
 
     // 2. Check for apply email
     const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
@@ -36,12 +36,15 @@ export class JobExtractorService {
       requiredSubject = subjectMatch[1].trim();
     }
 
-    // 4. Determine type
+    // 4. Determine type:
+    // If applyEmail exists -> email
+    // If formUrl or any URL exists without email -> form
+    // Otherwise -> other
     let type: 'email' | 'form' | 'other' = 'other';
-    if (formUrl || (trimmed.startsWith('http') && urls.length > 0 && trimmed.length < 500)) {
-      type = 'form';
-    } else if (applyEmail) {
+    if (applyEmail) {
       type = 'email';
+    } else if (formUrl || urls.length > 0) {
+      type = 'form';
     }
 
     // 5. Look for form questions if bullet points or numbered lists end with '?'
@@ -59,19 +62,105 @@ export class JobExtractorService {
     }
 
     // 6. Summary fallback (first 2 meaningful lines)
-    const meaningfulLines = lines.map((l) => l.trim()).filter((l) => l.length > 15).slice(0, 2);
+    const meaningfulLines = lines
+      .map((l) => l.trim())
+      .filter((l) => l.length > 15 && !/^https?:\/\//i.test(l) && !/^url:\s*https?:\/\//i.test(l))
+      .slice(0, 2);
     const summary = meaningfulLines.length > 0 ? meaningfulLines.join(' ') : trimmed.slice(0, 160);
+
+    // 7. Intelligent Heuristic Title & Company Extraction
+    let jobTitle: string | null = null;
+    let company: string | null = null;
+
+    // Clean text lines (ignoring bare URL lines)
+    const cleanLines = lines
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !/^https?:\/\//i.test(l) && !/^url:\s*https?:\/\//i.test(l));
+
+    const firstMeaningfulLine = cleanLines[0] || '';
+
+    // Pattern A: Explicit labels like "Role: QA Intern", "Job Title: FullStack Dev", "Company: Grae AI"
+    const explicitRoleMatch = trimmed.match(/(?:job\s+title|role|position)\s*[:=\-]\s*([^\r\n,;]+)/i);
+    if (explicitRoleMatch && explicitRoleMatch[1]) {
+      jobTitle = explicitRoleMatch[1].trim();
+    }
+
+    const explicitCompanyMatch = trimmed.match(/company(?:\s*name)?\s*[:=\-]\s*([^\r\n,;]+)/i);
+    if (explicitCompanyMatch && explicitCompanyMatch[1]) {
+      company = explicitCompanyMatch[1].trim();
+    }
+
+    // Pattern B: Parse "Role at Company" or "Company at Role" (e.g. "QA Intern at Zybisys Consulting Services at Hiredoor")
+    if ((!jobTitle || !company) && firstMeaningfulLine) {
+      const sanitized = firstMeaningfulLine
+        .replace(/\s*URL:\s*https?:\/\/[^\s]+/i, '')
+        .trim();
+
+      const atParts = sanitized.split(/\s+at\s+/i);
+      if (atParts.length >= 2) {
+        const part0 = atParts[0].trim();
+        const part1 = atParts[1].trim();
+
+        // Check if part0 or part1 contains role keywords
+        const roleKeywords = /(intern|developer|engineer|sde|qa|tester|analyst|designer|manager|lead|architect|consultant|specialist|officer|associate|scientist|full\s*stack|frontend|backend|devops)/i;
+
+        if (roleKeywords.test(part0) && !roleKeywords.test(part1)) {
+          // Standard: "QA Intern at Zybisys Consulting Services"
+          if (!jobTitle) jobTitle = part0;
+          if (!company) company = part1;
+        } else if (roleKeywords.test(part1) && !roleKeywords.test(part0)) {
+          // Inverted: "Bounce Daily at Software Developer Intern/SDE"
+          if (!jobTitle) jobTitle = part1;
+          if (!company) company = part0;
+        } else {
+          // Fallback: part0 = role, part1 = company
+          if (!jobTitle) jobTitle = part0;
+          if (!company) company = part1;
+        }
+      } else {
+        // Dash or pipe separator: e.g. "Software Engineer - Google"
+        const dashParts = sanitized.split(/\s+[-–|]\s+/);
+        if (dashParts.length >= 2) {
+          const part0 = dashParts[0].trim();
+          const part1 = dashParts[1].trim();
+          const roleKeywords = /(intern|developer|engineer|sde|qa|tester|analyst|designer|manager|lead|architect|consultant|specialist|officer|associate|scientist)/i;
+
+          if (roleKeywords.test(part0) && !roleKeywords.test(part1)) {
+            if (!jobTitle) jobTitle = part0;
+            if (!company) company = part1;
+          } else if (roleKeywords.test(part1) && !roleKeywords.test(part0)) {
+            if (!jobTitle) jobTitle = part1;
+            if (!company) company = part0;
+          } else {
+            if (!jobTitle) jobTitle = part0;
+            if (!company) company = part1;
+          }
+        } else if (!jobTitle && sanitized.length < 70 && !sanitized.startsWith('http')) {
+          jobTitle = sanitized;
+        }
+      }
+    }
+
+    // Clean platform tails from company (e.g. "Mandelbulb Technologies at Hiredoor" -> "Mandelbulb Technologies")
+    if (company) {
+      company = company.replace(/\s+at\s+(?:hiredoor|linkedin|indeed|internshala|wellfound|unstop|naukri|glassdoor).*$/i, '').trim();
+    }
+    if (jobTitle) {
+      jobTitle = jobTitle.replace(/\s+at\s+(?:hiredoor|linkedin|indeed|internshala|wellfound|unstop|naukri|glassdoor).*$/i, '').trim();
+    }
 
     return {
       type,
-      jobTitle: null,
-      company: null,
+      jobTitle: jobTitle || null,
+      company: company || null,
       applyEmail,
       requiredSubject,
       requiredInstructions: null,
       formLink: formUrl || (urls.length > 0 ? (urls[0] || null) : null),
       formQuestions,
       deadline: null,
+      applyPhone: null,
+      jobDescription: summary || null,
       summary: summary.slice(0, 200),
     };
   }

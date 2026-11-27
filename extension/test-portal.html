@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>happlied – Mock Application Form (Test Portal)</title>
+    <style>
+      :root {
+        --theme: #4C4541;
+        --theme-bg: #FCF0DA;
+        --surface: #ffffff;
+        --border: #dadce0;
+        --text: #202124;
+        --text-secondary: #5f6368;
+        --accent: #AEAC78;
+        --amber: #F2C46A;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Google Sans', sans-serif;
+        background-color: var(--theme-bg);
+        color: var(--text);
+        margin: 0;
+        padding: 40px 20px;
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+      .container {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      .title-card {
+        background: var(--surface);
+        padding: 28px 24px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        border-top: 10px solid var(--theme);
+        box-shadow: 0 1px 2px rgba(60,64,67,0.15);
+        margin-bottom: 16px;
+      }
+      .card {
+        background: var(--surface);
+        padding: 24px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 2px rgba(60,64,67,0.15);
+        margin-bottom: 16px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      p.subtitle {
+        color: var(--text-secondary);
+        margin: 0 0 16px;
+        font-size: 14px;
+      }
+      .test-banner {
+        background: #FDF6E9;
+        border: 1px solid var(--amber);
+        border-radius: 8px;
+        padding: 14px 18px;
+        font-size: 13.5px;
+        color: #785208;
+        line-height: 1.5;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .form-group {
+        margin-bottom: 18px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        font-size: 13.5px;
+        margin-bottom: 6px;
+        color: var(--text);
+      }
+      label .req {
+        color: #d93025;
+      }
+      input[type="text"],
+      input[type="email"],
+      input[type="tel"],
+      input[type="url"],
+      select,
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 14px;
+        color: var(--text);
+        box-sizing: border-box;
+        background: #ffffff;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--theme);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(76, 69, 65, 0.15);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .btn-submit {
+        background: var(--theme);
+        color: #ffffff;
+        border: none;
+        padding: 12px 24px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+      .btn-submit:hover {
+        background: #35302E;
+      }
+      .quick-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .btn-secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        padding: 10px 18px;
+        font-size: 13.5px;
+        font-weight: 600;
+        border-radius: 6px;
+        color: var(--text);
+        cursor: pointer;
+      }
+      .btn-secondary:hover {
+        background: rgba(76, 69, 65, 0.06);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="test-banner">
+        <span style="font-size: 20px;">⚡</span>
+        <div>
+          <strong>happlied Autofill Playground & Test Portal</strong><br />
+          Open your happlied extension or press <kbd style="background: #fff; padding: 2px 6px; border: 1px solid #dcdcdc; border-radius: 4px; font-weight: 700;">Alt + A</kbd> to test 1-click autofill across all fields below!
+        </div>
+      </div>
+
+      <div class="title-card">
+        <h1>Senior Software Engineer Application</h1>
+        <p class="subtitle">Tech Innovations Inc. • Remote / Hybrid • Full-time</p>
+        <span style="color: #d93025; font-size: 13px;">* Indicates required question</span>
+      </div>
+
+      <form id="application-form">
+        <div class="card">
+          <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 700;">1. Personal Information</h3>
+          <div class="grid">
+            <div class="form-group">
+              <label for="first_name">First Name <span class="req">*</span></label>
+              <input type="text" id="first_name" name="first_name" autocomplete="given-name" placeholder="First Name" required />
+            </div>
+            <div class="form-group">
+              <label for="last_name">Last Name <span class="req">*</span></label>
+              <input type="text" id="last_name" name="last_name" autocomplete="family-name" placeholder="Last Name" required />
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="form-group">
+              <label for="email">Email Address <span class="req">*</span></label>
+              <input type="email" id="email" name="email" autocomplete="email" placeholder="name@example.com" required />
+            </div>
+            <div class="form-group">
+              <label for="phone">Phone Number <span class="req">*</span></label>
+              <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+1 555-0123" required />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 700;">2. Location Details</h3>
+          <div class="form-group">
+            <label for="address">Street Address</label>
+            <input type="text" id="address" name="address" autocomplete="address-line1" placeholder="123 Main Street" />
+          </div>
+
+          <div class="grid">
+            <div class="form-group">
+              <label for="city">City</label>
+              <input type="text" id="city" name="city" placeholder="San Francisco" />
+            </div>
+            <div class="form-group">
+              <label for="zip_code">Postal / Zip Code</label>
+              <input type="text" id="zip_code" name="zip_code" placeholder="94105" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 700;">3. Professional Links</h3>
+          <div class="grid">
+            <div class="form-group">
+              <label for="linkedin_url">LinkedIn Profile</label>
+              <input type="url" id="linkedin_url" name="urls[LinkedIn]" placeholder="https://linkedin.com/in/username" />
+            </div>
+            <div class="form-group">
+              <label for="github_url">GitHub Profile</label>
+              <input type="url" id="github_url" name="urls[GitHub]" placeholder="https://github.com/username" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 700;">4. Qualifications & Experience</h3>
+          <div class="form-group">
+            <label for="work_auth">Are you authorized to work in this country? <span class="req">*</span></label>
+            <select id="work_auth" name="work_authorization" required>
+              <option value="">-- Please Select --</option>
+              <option value="Authorized to work">Yes, I am authorized to work</option>
+              <option value="Requires sponsorship">No, I require visa sponsorship</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="cover_letter">Additional Information / Note to Hiring Manager</label>
+            <textarea id="cover_letter" name="cover_letter" rows="4" placeholder="Brief note or summary..."></textarea>
+          </div>
+
+          <div class="quick-actions">
+            <button type="submit" class="btn-submit">Submit Application</button>
+            <button type="reset" class="btn-secondary">Clear Form</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>

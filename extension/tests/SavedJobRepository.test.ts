@@ -20,6 +20,8 @@ describe('SavedJobRepository', () => {
     formLink: null,
     formQuestions: [],
     deadline: null,
+    applyPhone: null,
+    jobDescription: 'Senior software engineering role.',
     summary: 'Senior software engineering role.',
     status: 'to-apply',
     extractionStatus: 'success',
