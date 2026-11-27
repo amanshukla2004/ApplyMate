@@ -1,8 +1,9 @@
 import { adapterRegistry } from '../adapters/adapterRegistry';
 import { ExtensionMessage } from '../types/messaging';
 import { domScanner } from './domScanner';
+import { DANCING_SCRIPT_BASE64 } from './dancingScriptBase64';
 
-console.log('[HapplyMate] Content script loaded on:', window.location.href);
+console.log('[happlied] Content script loaded on:', window.location.href);
 
 // Listen for messages from background worker or side panel
 chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
@@ -125,18 +126,16 @@ let globalToastFn: ((msg: string, isError?: boolean) => void) | null = null;
 
 function initFloatingWidget(): boolean {
   if (typeof document === 'undefined' || !document.body) return false;
-  if (document.getElementById('happlymate-shadow-host') || document.getElementById('applymate-shadow-host')) {
+  if (
+    document.getElementById('happlied-shadow-host') ||
+    document.getElementById('happlymate-shadow-host') ||
+    document.getElementById('applymate-shadow-host')
+  ) {
     return true;
   }
 
-  // Check if interactive forms, inputs, or career sections exist on the page
-  const hasInputs = document.querySelector(
-    'input:not([type="hidden"]):not([type="search"]), textarea, select, [role="textbox"], form, [class*="form"], [class*="career"], [class*="apply"], [class*="job"], [class*="question"], [id*="career"], [id*="job"], [id*="apply"]'
-  );
-  if (!hasInputs) return false;
-
   const host = document.createElement('div');
-  host.id = 'happlymate-shadow-host';
+  host.id = 'happlied-shadow-host';
   host.style.all = 'initial';
   host.style.position = 'fixed';
   host.style.right = '0';
@@ -148,52 +147,50 @@ function initFloatingWidget(): boolean {
 
   const style = document.createElement('style');
   style.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Dancing+Script:wght@600;700&display=swap');
-    * { box-sizing: border-box; margin: 0; font-family: 'Dancing Script', 'Caveat', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    @font-face {
+      font-family: 'Dancing Script';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('data:font/woff2;base64,${DANCING_SCRIPT_BASE64}') format('woff2');
+    }
+    * { box-sizing: border-box; margin: 0; }
     .fab-pill {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      padding: 12px 7px 14px;
-      min-width: 30px;
-      border-radius: 12px 0 0 12px;
+      padding: 14px 4px 16px;
+      width: 28px;
+      border-radius: 10px 0 0 10px;
       border: 1px solid rgba(174, 172, 120, 0.45);
       border-right: none;
       background: #4C4541;
       color: #FCF0DA;
-      box-shadow: -2px 6px 18px rgba(0, 0, 0, 0.32);
+      box-shadow: -2px 6px 18px rgba(0, 0, 0, 0.35);
       cursor: grab;
       user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
       transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
     }
     .fab-pill:active {
       cursor: grabbing;
     }
     .fab-pill:hover {
-      background: #3B3532;
-      box-shadow: -3px 8px 22px rgba(0, 0, 0, 0.4);
-      transform: translateX(-2px);
-    }
-    .fab-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
+      background: #383330;
+      box-shadow: -3px 8px 22px rgba(0, 0, 0, 0.45);
+      transform: translateX(-3px);
     }
     .fab-text {
       writing-mode: vertical-rl;
-      transform: rotate(180deg);
-      font-family: 'Dancing Script', 'Caveat', cursive, sans-serif;
-      font-size: 16px;
+      font-family: 'Dancing Script', 'Caveat', 'Segoe Script', 'Brush Script MT', cursive, sans-serif;
+      font-size: 19px;
       font-weight: 700;
-      letter-spacing: 1.2px;
+      letter-spacing: 0.8px;
       line-height: 1;
       color: #FCF0DA;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
     }
     .toast {
       position: absolute;
@@ -253,69 +250,67 @@ function initFloatingWidget(): boolean {
   fab.setAttribute('role', 'button');
   fab.setAttribute('tabindex', '0');
 
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const fabSvg = document.createElementNS(svgNS, 'svg');
-  fabSvg.setAttribute('width', '14');
-  fabSvg.setAttribute('height', '14');
-  fabSvg.setAttribute('viewBox', '0 0 24 24');
-  fabSvg.setAttribute('fill', 'none');
-  fabSvg.setAttribute('aria-hidden', 'true');
-  fabSvg.className.baseVal = 'fab-icon';
-
-  const p1 = document.createElementNS(svgNS, 'path');
-  p1.setAttribute('d', 'M13 2L3 14H12L11 22L21 10H12L13 2Z');
-  p1.setAttribute('fill', '#AEAC78');
-
-  fabSvg.appendChild(p1);
-
   const fabText = document.createElement('span');
   fabText.className = 'fab-text';
   fabText.textContent = 'happlied';
 
-  fab.appendChild(fabSvg);
   fab.appendChild(fabText);
 
-  // Dragging support (vertical draggable along right screen edge)
+  // Restore saved vertical position if available
+  try {
+    const savedTop = localStorage.getItem('happlied_pill_top');
+    if (savedTop) {
+      const parsed = parseInt(savedTop, 10);
+      if (!isNaN(parsed) && parsed >= 10 && parsed <= window.innerHeight - 80) {
+        host.style.top = `${parsed}px`;
+      }
+    }
+  } catch {}
+
+  // Vertical dragging along right screen edge with pointer capture
   let isDragging = false;
   let startY = 0;
   let startTop = 0;
   let hasMoved = false;
 
-  const onPointerDown = (e: MouseEvent | TouchEvent) => {
+  fab.addEventListener('pointerdown', (e: PointerEvent) => {
+    if (e.button !== 0) return;
     isDragging = true;
     hasMoved = false;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-    startY = clientY;
+    startY = e.clientY;
     startTop = host.getBoundingClientRect().top;
+    try {
+      fab.setPointerCapture(e.pointerId);
+    } catch {}
+  });
 
-    const onPointerMove = (moveEvt: MouseEvent | TouchEvent) => {
-      if (!isDragging) return;
-      const curY = 'touches' in moveEvt ? moveEvt.touches[0].clientY : (moveEvt as MouseEvent).clientY;
-      const deltaY = curY - startY;
-      if (Math.abs(deltaY) > 5) {
-        hasMoved = true;
-      }
-      const newTop = Math.max(10, Math.min(window.innerHeight - 120, startTop + deltaY));
-      host.style.top = `${newTop}px`;
-      host.style.bottom = 'auto';
-    };
+  fab.addEventListener('pointermove', (e: PointerEvent) => {
+    if (!isDragging) return;
+    const deltaY = e.clientY - startY;
+    if (Math.abs(deltaY) > 4) {
+      hasMoved = true;
+    }
+    const newTop = Math.max(10, Math.min(window.innerHeight - 110, startTop + deltaY));
+    host.style.top = `${newTop}px`;
+  });
 
-    const onPointerUp = () => {
-      isDragging = false;
-      window.removeEventListener('mousemove', onPointerMove);
-      window.removeEventListener('mouseup', onPointerUp);
-      window.removeEventListener('touchmove', onPointerMove);
-      window.removeEventListener('touchend', onPointerUp);
-    };
+  const onPointerFinish = (e: PointerEvent) => {
+    if (!isDragging) return;
+    isDragging = false;
+    try {
+      fab.releasePointerCapture(e.pointerId);
+    } catch {}
 
-    window.addEventListener('mousemove', onPointerMove, { passive: false });
-    window.addEventListener('mouseup', onPointerUp);
-    window.addEventListener('touchmove', onPointerMove, { passive: false });
-    window.addEventListener('touchend', onPointerUp);
+    if (hasMoved) {
+      try {
+        const finalTop = Math.round(host.getBoundingClientRect().top);
+        localStorage.setItem('happlied_pill_top', String(finalTop));
+      } catch {}
+    }
   };
 
-  fab.addEventListener('mousedown', onPointerDown);
-  fab.addEventListener('touchstart', onPointerDown, { passive: true });
+  fab.addEventListener('pointerup', onPointerFinish);
+  fab.addEventListener('pointercancel', onPointerFinish);
 
   fab.addEventListener('click', async (e) => {
     if (hasMoved) {
@@ -377,7 +372,7 @@ function initKeyboardShortcut() {
         e.stopPropagation();
         initFloatingWidget();
         executeAutofillFromProfile().catch((err) => {
-          console.warn('[HapplyMate] Autofill shortcut error:', err);
+          console.warn('[happlied] Autofill shortcut error:', err);
         });
       }
     },
@@ -428,12 +423,12 @@ async function executeAutofillFromProfile(passedProfileData?: {
           profileData = profileRes.data;
         } else {
           const errMsg = profileRes?.error || 'Profile not found';
-          console.warn('[HapplyMate] GET_USER_PROFILE failed:', errMsg);
+          console.warn('[happlied] GET_USER_PROFILE failed:', errMsg);
           if (globalToastFn) globalToastFn('Open Options to set up profile first', true);
           return { filledCount: 0, error: errMsg };
         }
       } catch (err: any) {
-        console.warn('[HapplyMate] GET_USER_PROFILE message error:', err);
+        console.warn('[happlied] GET_USER_PROFILE message error:', err);
         if (globalToastFn) globalToastFn('Open Options to set up profile first', true);
         return { filledCount: 0, error: err?.message };
       }
@@ -905,7 +900,7 @@ function checkWizardStepChange() {
           }
         }
       } catch (err) {
-        console.warn('[HapplyMate] Workday wizard step scan error:', err);
+        console.warn('[happlied] Workday wizard step scan error:', err);
       }
     }
   }, 400);

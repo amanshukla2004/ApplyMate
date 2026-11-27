@@ -1,13 +1,13 @@
 {
-  "name": "happlymate-extension",
-  "version": "1.0.0",
-  "description": "HapplyMate - Personal Job Application Assistant & Career Copilot Chrome Extension",
+  "name": "happlied-extension",
+  "version": "1.0.4",
+  "description": "happlied - Personal Job Application Assistant & Career Copilot Chrome Extension",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && vite build --config vite.content.config.ts",
-    "package": "npm run build && powershell -Command \"$ProgressPreference = 'SilentlyContinue'; Compress-Archive -Path dist/* -DestinationPath happlymate.zip -Force; Copy-Item happlymate.zip applymate.zip -Force\"",
+    "package": "npm run build && powershell -Command \"$ProgressPreference = 'SilentlyContinue'; Compress-Archive -Path dist/* -DestinationPath happlied.zip -Force; Copy-Item happlied.zip happlymate.zip -Force; Copy-Item happlied.zip applymate.zip -Force\"",
     "release:check": "npm test && npm run build && node ./scripts/verifyRelease.js",
     "preview": "vite preview",
     "test": "vitest run"

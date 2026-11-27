@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   PanelRight,
-  Settings,
+  LayoutDashboard,
   Zap,
   Sparkles,
   BookmarkPlus,
@@ -9,7 +9,6 @@ import {
   Moon,
   Sun,
 } from 'lucide-react';
-import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { useTheme } from '../hooks/useTheme';
 import { profileService } from '../services/profileService';
 import { resumeService } from '../services/resumeService';
@@ -361,7 +360,7 @@ export const Popup: React.FC = () => {
         fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       }}
     >
-      {/* Top Header: [logo] happlied (Left) | Theme Toggle + Readiness Pill + Settings (Right) */}
+      {/* Top Header: happlied (Left) | Theme Toggle + Profile Pill + Dashboard Button (Right) */}
       <div
         style={{
           display: 'flex',
@@ -369,23 +368,24 @@ export const Popup: React.FC = () => {
           justifyContent: 'space-between',
         }}
       >
-        {/* Left: Logo + Cursive happlied Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <HapplyMateLogo size={24} />
+        {/* Left: Cursive happlied Brand matching Dashboard (No logo) */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <span
             style={{
-              fontFamily: "'Caveat', cursive, sans-serif",
-              fontSize: '26px',
+              fontFamily: "'Dancing Script', 'Caveat', 'Segoe Script', 'Brush Script MT', cursive, sans-serif",
+              fontSize: '28px',
               fontWeight: 700,
               color: 'var(--text)',
+              letterSpacing: '0.5px',
               lineHeight: 1,
+              userSelect: 'none',
             }}
           >
             happlied
           </span>
         </div>
 
-        {/* Right: Theme Toggle + Readiness Pill + Settings */}
+        {/* Right: Theme Toggle + Profile Readiness Pill + Dashboard Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {/* Theme Toggle Button */}
           <button
@@ -408,17 +408,17 @@ export const Popup: React.FC = () => {
             {isDarkMode ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
-          {/* Profile Readiness Pill */}
+          {/* Profile Readiness Pill: Profile + Percentage */}
           <div
-            onClick={() => openOptions()}
-            title="Profile readiness - click to open dashboard"
+            onClick={() => openOptions('overview')}
+            title="Profile completeness: click to open dashboard"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              padding: '4px 10px',
+              padding: '4px 9px',
               borderRadius: '999px',
               cursor: 'pointer',
               transition: 'background 0.15s ease',
@@ -440,29 +440,33 @@ export const Popup: React.FC = () => {
                 color: 'var(--text)',
               }}
             >
-              {readiness}%
+              Profile {readiness}%
             </span>
           </div>
 
-          {/* Settings Button */}
+          {/* Dashboard Button (replaces settings) */}
           <button
-            onClick={() => openOptions()}
-            title="Settings & Preferences"
-            aria-label="Settings"
+            onClick={() => openOptions('overview')}
+            title="Open happlied Dashboard"
+            aria-label="Dashboard"
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
               background: 'var(--surface)',
               border: '1px solid var(--border)',
               borderRadius: '8px',
-              width: '30px',
               height: '30px',
-              display: 'grid',
-              placeItems: 'center',
+              padding: '0 9px',
               cursor: 'pointer',
-              color: 'var(--text-secondary)',
+              color: 'var(--text)',
+              fontSize: '12px',
+              fontWeight: 600,
               transition: 'all 0.15s ease',
             }}
           >
-            <Settings size={14} />
+            <LayoutDashboard size={13} style={{ color: 'var(--theme)' }} />
+            <span>Dashboard</span>
           </button>
         </div>
       </div>

@@ -1,9 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Settings } from 'lucide-react';
-import { Backdrop } from '../components/ui/Backdrop';
+import {
+  Moon,
+  Sun,
+  LayoutDashboard,
+  Check,
+  Copy,
+  ExternalLink,
+  GraduationCap,
+  Briefcase,
+  FolderGit2,
+  Wrench,
+  Globe,
+  User,
+  ShieldCheck,
+} from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Pill } from '../components/ui/Pill';
-import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { OnboardingWizard } from '../components/onboarding/OnboardingWizard';
 import { useTheme } from '../hooks/useTheme';
 import { DetectedField, WebsiteMetadata } from '../types/messaging';
@@ -35,6 +47,7 @@ export const SidePanel: React.FC = () => {
   const [experienceList, setExperienceList] = useState<ExperienceRecord[]>([]);
   const [skillsList, setSkillsList] = useState<SkillItem[]>([]);
   const [projectList, setProjectList] = useState<ProjectRecord[]>([]);
+  const [certCount, setCertCount] = useState<number>(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Form detection state
@@ -141,6 +154,8 @@ export const SidePanel: React.FC = () => {
   };
 
   // Copy tab state
+  type CopyCategory = 'all' | 'personal' | 'academics' | 'experience' | 'projects' | 'skills' | 'links' | 'preferences';
+  const [copyCategory, setCopyCategory] = useState<CopyCategory>('all');
   const [copySearchQuery, setCopySearchQuery] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [savedToBankId, setSavedToBankId] = useState<string | null>(null);
@@ -207,6 +222,26 @@ export const SidePanel: React.FC = () => {
       setSkillsList(sk);
       setProjectList(prj);
 
+      let certificatesCount = 0;
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        try {
+          const stored = await chrome.storage.local.get(['applymate_certificates']);
+          if (Array.isArray(stored?.applymate_certificates)) {
+            certificatesCount = stored.applymate_certificates.length;
+          }
+        } catch {
+          // ignore
+        }
+      } else {
+        try {
+          const stored = JSON.parse(localStorage.getItem('applymate_certificates') || '[]');
+          if (Array.isArray(stored)) certificatesCount = stored.length;
+        } catch {
+          // ignore
+        }
+      }
+      setCertCount(certificatesCount);
+
       // Prompt 3-step rapid onboarding if profile has no name and no resume yet
       if (!p?.personal?.firstName && r.length === 0) {
         setShowOnboarding(true);
@@ -215,7 +250,7 @@ export const SidePanel: React.FC = () => {
       // Auto-scan on load so detected fields appear immediately
       handleScanForm(p, edu);
     } catch (err) {
-      console.error('Failed to load side panel data:', err);
+      console.warn('Failed to load side panel data:', err);
     }
   };
 
@@ -636,7 +671,8 @@ export const SidePanel: React.FC = () => {
     }
   };
 
-  const copyToClipboard = (key: string, text: string) => {
+  const copyToClipboard = (key: string, text: string | undefined | null) => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 1800);
@@ -648,18 +684,21 @@ export const SidePanel: React.FC = () => {
   const unknownCount = fields.filter((f) => f.status === 'UNMATCHED').length;
 
   const calculateReadiness = (): number => {
-    let score = 25; // Endowed progress base
-    if (profile?.personal?.firstName && profile?.personal?.email) score += 25;
-    if (profile?.personal?.phone) score += 15;
-    if (resumes.length > 0) score += 20;
-    if (skillsList.length > 0 || profile?.links?.linkedInUrl) score += 15;
-    return Math.min(100, score);
+    if (!profile) return 0;
+    return profileService.calculateCompleteness(
+      profile,
+      educationList,
+      experienceList,
+      skillsList,
+      resumes.length,
+      projectList.length,
+      certCount
+    );
   };
   const readinessScore = calculateReadiness();
 
   return (
-    <div className="panel glass" style={{ position: 'relative' }}>
-      <Backdrop />
+    <div className="panel" style={{ position: 'relative', background: 'var(--theme-bg)' }}>
 
       {showOnboarding && (
         <OnboardingWizard
@@ -672,15 +711,16 @@ export const SidePanel: React.FC = () => {
 
       {/* Header */}
       <div className="ph" style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-        <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <HapplyMateLogo size={24} />
+        <div className="brand" style={{ display: 'flex', alignItems: 'center' }}>
           <span
             style={{
-              fontFamily: "'Caveat', cursive, sans-serif",
-              fontSize: '26px',
+              fontFamily: "'Dancing Script', 'Caveat', 'Segoe Script', 'Brush Script MT', cursive, sans-serif",
+              fontSize: '28px',
               fontWeight: 700,
               color: 'var(--text)',
+              letterSpacing: '0.5px',
               lineHeight: 1,
+              userSelect: 'none',
             }}
           >
             happlied
@@ -701,10 +741,22 @@ export const SidePanel: React.FC = () => {
           <button
             type="button"
             className="btn-tour-pill"
-            onClick={() => setShowOnboarding(true)}
-            title="Launch 3-step rapid onboarding setup"
+            onClick={() => {
+              if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
+                chrome.runtime.openOptionsPage();
+              }
+            }}
+            title="Profile readiness - click to open dashboard"
+            style={{
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              fontSize: '11px',
+              padding: '4px 9px',
+              cursor: 'pointer',
+              lineHeight: 1.2,
+            }}
           >
-            ✨ Setup ({readinessScore}%)
+            Profile {readinessScore}%
           </button>
           <Pill variant={readinessScore === 100 ? 'm' : 'i'}>
             {websiteInfo?.adapterName || 'Google Forms'}
@@ -712,7 +764,8 @@ export const SidePanel: React.FC = () => {
           <button
             type="button"
             className="icon"
-            aria-label="Settings"
+            aria-label="Open Dashboard"
+            title="Open happlied Dashboard"
             onClick={() => {
               if (typeof chrome !== 'undefined' && chrome.runtime?.openOptionsPage) {
                 chrome.runtime.openOptionsPage();
@@ -720,7 +773,7 @@ export const SidePanel: React.FC = () => {
             }}
             style={{ width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
           >
-            <Settings size={14} />
+            <LayoutDashboard size={14} />
           </button>
         </div>
       </div>
@@ -809,20 +862,93 @@ export const SidePanel: React.FC = () => {
                   <span style={{ fontSize: '11px', opacity: 0.8 }}>Auto-tracked</span>
                 </div>
               )}
+
+              {/* Quick Profile Snapshot Glance */}
+              {profile && (
+                <div
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    padding: '10px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {profile.personal.fullName || `${profile.personal.firstName || ''} ${profile.personal.lastName || ''}`.trim() || 'Candidate Profile'}
+                      </span>
+                      {profile.personal.email && (
+                        <span style={{ fontSize: '11px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          • {profile.personal.email}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('copy')}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--primary)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      View All Info →
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', fontSize: '11px' }}>
+                    {experienceList[0] && (
+                      <span style={{ background: 'var(--hover)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text)' }}>
+                        💼 {experienceList[0].designation}
+                      </span>
+                    )}
+                    {educationList[0] && (
+                      <span style={{ background: 'var(--hover)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text)' }}>
+                        🎓 {educationList[0].degree} {educationList[0].cgpa ? `(${educationList[0].cgpa} CGPA)` : ''}
+                      </span>
+                    )}
+                    {profile.preferences?.workAuthorizationStatus && (
+                      <span style={{ background: 'var(--hover)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text)' }}>
+                        🛡️ {profile.preferences.workAuthorizationStatus}
+                      </span>
+                    )}
+                    {profile.preferences?.noticePeriodDays && (
+                      <span style={{ background: 'var(--hover)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text)' }}>
+                        ⏱️ {profile.preferences.noticePeriodDays}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {errorMessage && (
               <div
-                className="glass card"
+                className="card"
                 style={{
-                  background: 'var(--u-bg)',
-                  borderColor: 'var(--u-t)',
-                  color: 'var(--u-t)',
-                  padding: '12px 14px',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                 }}
               >
-                <p style={{ fontSize: '13px', fontWeight: 500 }}>{errorMessage}</p>
-                <div className="row" style={{ marginTop: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '15px' }}>ℹ️</span>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)', margin: 0, lineHeight: 1.4 }}>
+                    {errorMessage}
+                  </p>
+                </div>
+                <div className="row" style={{ marginTop: '4px', gap: '8px' }}>
                   <Button size="sm" variant="soft" onClick={() => handleScanForm()}>
                     Retry Scan
                   </Button>
@@ -834,7 +960,7 @@ export const SidePanel: React.FC = () => {
             )}
 
             {fields.length === 0 && !isScanning && !errorMessage && (
-              <div className="glass card empty" style={{ textAlign: 'center', padding: '32px 14px' }}>
+              <div className="card empty" style={{ textAlign: 'center', padding: '32px 14px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
                 <b style={{ fontSize: '16px' }}>No form scanned yet</b>
                 <p className="hint" style={{ margin: '6px 0 16px' }}>
                   Click Scan Form to detect inputs on the current application tab.
@@ -1107,64 +1233,843 @@ export const SidePanel: React.FC = () => {
         </>
       )}
 
-      {/* Body: Copy Tab (Manual 1-click copying) */}
+      {/* Body: Copy Tab (Manual 1-click copying with rich profile info) */}
       {activeTab === 'copy' && (
-        <div className="pbody">
-          <input
-            className="in"
-            type="search"
-            placeholder="Search fields to copy..."
-            value={copySearchQuery}
-            onChange={(e) => setCopySearchQuery(e.target.value)}
-          />
+        <div className="pbody" style={{ gap: '12px' }}>
+          {/* Top Controls: Search & Category Chips */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, width: '100%' }}>
+            {/* Search bar */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+              <input
+                className="in"
+                type="search"
+                placeholder="Search fields, skills, links..."
+                value={copySearchQuery}
+                onChange={(e) => setCopySearchQuery(e.target.value)}
+                style={{ width: '100%', paddingLeft: '32px' }}
+              />
+              <span style={{ position: 'absolute', left: '10px', fontSize: '13px', opacity: 0.6, pointerEvents: 'none' }}>
+                🔍
+              </span>
+              {copySearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setCopySearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--muted)',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-          <div className="stack" style={{ gap: '10px' }}>
-            {[
-              { label: 'Full Name', val: `${profile?.personal.firstName || ''} ${profile?.personal.lastName || ''}`.trim() },
-              { label: 'First Name', val: profile?.personal.firstName || '' },
-              { label: 'Last Name', val: profile?.personal.lastName || '' },
-              { label: 'Email Address', val: profile?.personal.email || '' },
-              { label: 'Phone Number', val: profile?.personal.phone || '' },
-              { label: 'LinkedIn URL', val: profile?.links.linkedInUrl || '' },
-              { label: 'GitHub URL', val: profile?.links.githubUrl || '' },
-              { label: 'Portfolio URL', val: profile?.links.portfolioUrl || '' },
-              { label: 'LeetCode URL', val: profile?.links.leetcodeUrl || '' },
-              { label: 'Codeforces URL', val: profile?.links.codeforcesUrl || '' },
-              { label: 'CodeChef URL', val: profile?.links.codechefUrl || '' },
-              { label: 'X (Twitter) URL', val: profile?.links.xUrl || '' },
-              { label: 'Behance URL', val: profile?.links.behanceUrl || '' },
-              { label: 'Dribbble URL', val: profile?.links.dribbbleUrl || '' },
-              { label: 'Street Address', val: profile?.address.addressLine1 || '' },
-              { label: 'City, State, Zip', val: `${profile?.address.city || ''}, ${profile?.address.state || ''} ${profile?.address.postalCode || ''}`.trim() },
-              { label: 'Current Company / Role', val: experienceList[0] ? `${experienceList[0].designation} at ${experienceList[0].companyName}` : '' },
-              { label: 'College / Degree', val: educationList[0] ? `${educationList[0].degree} in ${educationList[0].branch || ''} (${educationList[0].institution})` : '' },
-              { label: 'Notice Period', val: profile?.preferences.noticePeriodDays || 'Immediate' },
-              { label: 'Key Skills', val: skillsList.map((s) => s.name).join(', ') },
-            ]
-              .filter(
-                (item) =>
-                  !copySearchQuery ||
-                  item.label.toLowerCase().includes(copySearchQuery.toLowerCase()) ||
-                  item.val.toLowerCase().includes(copySearchQuery.toLowerCase())
-              )
-              .map((item) => (
-                <div key={item.label} className="fc">
-                  <div className="fh">
-                    <label>{item.label}</label>
-                  </div>
-                  <div className="vrow">
-                    <input className="in" readOnly value={item.val} />
-                    <Button
-                      variant="soft"
-                      size="sm"
-                      onClick={() => copyToClipboard(item.label, item.val)}
-                    >
-                      {copiedKey === item.label ? 'Copied' : 'Copy'}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            {/* Category filter chips */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '6px',
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                padding: '2px 0 6px',
+                scrollbarWidth: 'none',
+                flexShrink: 0,
+                minHeight: '36px',
+                alignItems: 'center',
+              }}
+            >
+              {[
+                { id: 'all' as const, label: 'All', icon: '📋' },
+                { id: 'personal' as const, label: 'Personal', icon: '👤' },
+                { id: 'academics' as const, label: 'Academics', icon: '🎓', count: educationList.length },
+                { id: 'experience' as const, label: 'Experience', icon: '💼', count: experienceList.length },
+                { id: 'projects' as const, label: 'Projects', icon: '🚀', count: projectList.length },
+                { id: 'skills' as const, label: 'Skills', icon: '🛠️', count: skillsList.length },
+                { id: 'links' as const, label: 'Links', icon: '🌐' },
+                { id: 'preferences' as const, label: 'Preferences', icon: '📋' },
+              ].map((cat) => {
+                const isSelected = copyCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCopyCategory(cat.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 11px',
+                      borderRadius: '999px',
+                      border: isSelected ? '1px solid var(--btn)' : '1px solid var(--border)',
+                      background: isSelected ? 'var(--btn)' : 'var(--surface)',
+                      color: isSelected ? 'var(--btn-t)' : 'var(--text)',
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      height: '30px',
+                      boxSizing: 'border-box',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                    {typeof cat.count === 'number' && (
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          padding: '1px 5px',
+                          borderRadius: '99px',
+                          background: isSelected ? 'rgba(255,255,255,0.2)' : 'var(--hover)',
+                          color: 'inherit',
+                        }}
+                      >
+                        {cat.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Quick Copy Helper Function */}
+          {(() => {
+            const q = copySearchQuery.trim().toLowerCase();
+            const matches = (...texts: (string | undefined)[]) => {
+              if (!q) return true;
+              return texts.some((t) => t && t.toLowerCase().includes(q));
+            };
+
+            const renderRow = (label: string, val: string | undefined, keyId: string, isMultiline = false) => {
+              if (!val || !val.trim()) return null;
+              if (q && !matches(label, val)) return null;
+
+              const isCopied = copiedKey === keyId;
+
+              return (
+                <div
+                  key={keyId}
+                  className="fc"
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '8px 10px',
+                    gap: '4px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                      {label}
+                    </span>
+                    {isCopied && (
+                      <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Check size={11} /> Copied!
+                      </span>
+                    )}
+                  </div>
+                  {isMultiline ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--text)',
+                          whiteSpace: 'pre-wrap',
+                          lineHeight: 1.45,
+                          background: 'var(--theme-bg)',
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border)',
+                          maxHeight: '90px',
+                          overflowY: 'auto',
+                        }}
+                      >
+                        {val}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                          variant="soft"
+                          size="sm"
+                          onClick={() => copyToClipboard(keyId, val)}
+                          style={{ minWidth: '70px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          {isCopied ? <Check size={12} style={{ color: '#10B981' }} /> : <Copy size={12} />}
+                          <span>{isCopied ? 'Copied' : 'Copy'}</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="vrow" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <input
+                        className="in"
+                        readOnly
+                        value={val}
+                        style={{
+                          flex: 1,
+                          fontSize: '12.5px',
+                          background: 'var(--theme-bg)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '6px',
+                          padding: '5px 8px',
+                          color: 'var(--text)',
+                        }}
+                      />
+                      <Button
+                        variant="soft"
+                        size="sm"
+                        onClick={() => copyToClipboard(keyId, val)}
+                        style={{ minWidth: '70px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        {isCopied ? <Check size={12} style={{ color: '#10B981' }} /> : <Copy size={12} />}
+                        <span>{isCopied ? 'Copied' : 'Copy'}</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            const showPersonal = copyCategory === 'all' || copyCategory === 'personal';
+            const showAcademics = copyCategory === 'all' || copyCategory === 'academics';
+            const showExperience = copyCategory === 'all' || copyCategory === 'experience';
+            const showProjects = copyCategory === 'all' || copyCategory === 'projects';
+            const showSkills = copyCategory === 'all' || copyCategory === 'skills';
+            const showLinks = copyCategory === 'all' || copyCategory === 'links';
+            const showPreferences = copyCategory === 'all' || copyCategory === 'preferences';
+
+            return (
+              <div className="stack" style={{ gap: '14px' }}>
+                {/* 👤 PERSONAL & CONTACT */}
+                {showPersonal && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 2px' }}>
+                      <User size={14} style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                        Personal & Contact
+                      </span>
+                    </div>
+                    {renderRow('Full Name', profile?.personal.fullName || `${profile?.personal.firstName || ''} ${profile?.personal.lastName || ''}`.trim(), 'p-fullname')}
+                    {renderRow('First Name', profile?.personal.firstName, 'p-firstname')}
+                    {profile?.personal.middleName && renderRow('Middle Name', profile?.personal.middleName, 'p-middlename')}
+                    {renderRow('Last Name', profile?.personal.lastName, 'p-lastname')}
+                    {renderRow('Email Address', profile?.personal.email, 'p-email')}
+                    {renderRow('Phone Number', profile?.personal.phone, 'p-phone')}
+                    {profile?.personal.alternatePhone && renderRow('Alternate Phone', profile?.personal.alternatePhone, 'p-altphone')}
+                    {profile?.personal.dateOfBirth && renderRow('Date of Birth', profile?.personal.dateOfBirth, 'p-dob')}
+                    {profile?.personal.gender && renderRow('Gender', profile?.personal.gender, 'p-gender')}
+                    {renderRow(
+                      'Complete Address',
+                      `${profile?.address.addressLine1 || ''}${profile?.address.addressLine2 ? ', ' + profile.address.addressLine2 : ''}, ${profile?.address.city || ''}, ${profile?.address.state || ''} ${profile?.address.postalCode || ''}, ${profile?.address.country || ''}`.replace(/^,\s*|,\s*$/g, '').trim(),
+                      'p-address-full'
+                    )}
+                    {renderRow('Street Address 1', profile?.address.addressLine1, 'p-addr1')}
+                    {profile?.address.addressLine2 && renderRow('Street Address 2', profile?.address.addressLine2, 'p-addr2')}
+                    {renderRow('City', profile?.address.city, 'p-city')}
+                    {renderRow('State / Province', profile?.address.state, 'p-state')}
+                    {renderRow('Postal Code / ZIP', profile?.address.postalCode, 'p-zip')}
+                    {renderRow('Country', profile?.address.country, 'p-country')}
+                  </div>
+                )}
+
+                {/* 🎓 ACADEMICS & EDUCATION */}
+                {showAcademics && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <GraduationCap size={14} style={{ color: 'var(--primary)' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                          Academics & Education ({educationList.length})
+                        </span>
+                      </div>
+                    </div>
+
+                    {educationList.length === 0 ? (
+                      <div className="card" style={{ padding: '14px', textAlign: 'center', fontSize: '12px', color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                        No academic records saved. Add degrees in Options.
+                      </div>
+                    ) : (
+                      educationList.map((edu, idx) => {
+                        const levelBadge =
+                          edu.level === '10th'
+                            ? 'Class 10th'
+                            : edu.level === '12th'
+                            ? 'Class 12th'
+                            : edu.level === 'ug'
+                            ? 'Undergraduate (UG)'
+                            : edu.level === 'pg'
+                            ? 'Postgraduate (PG)'
+                            : edu.level || 'Education';
+
+                        const fullSummary = `${edu.degree || 'Degree'}${edu.branch ? ` in ${edu.branch}` : ''} from ${edu.institution || 'University'}${edu.startYear || edu.graduationYear ? ` (${edu.startYear ? edu.startYear + '-' : ''}${edu.graduationYear || 'Present'})` : ''}${edu.cgpa ? ` • CGPA: ${edu.cgpa}` : ''}${edu.percentage ? ` • ${edu.percentage}%` : ''}`;
+
+                        if (q && !matches(edu.institution, edu.degree, edu.branch, edu.board, edu.cgpa, edu.percentage, edu.rollNo, edu.graduationYear, levelBadge)) {
+                          return null;
+                        }
+
+                        return (
+                          <div
+                            key={edu.id || idx}
+                            className="card"
+                            style={{
+                              background: 'var(--surface)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '10px',
+                              padding: '12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '8px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <span style={{ fontSize: '11px', fontWeight: 700, background: 'var(--hover)', padding: '2px 8px', borderRadius: '4px', color: 'var(--primary)' }}>
+                                  {levelBadge}
+                                </span>
+                                <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '4px 0 0', color: 'var(--text)' }}>
+                                  {edu.institution || 'Institution'}
+                                </h4>
+                                <p style={{ fontSize: '12px', color: 'var(--muted)', margin: 0 }}>
+                                  {edu.degree} {edu.branch ? `• ${edu.branch}` : ''}
+                                </p>
+                              </div>
+                              <Button
+                                variant="soft"
+                                size="sm"
+                                onClick={() => copyToClipboard(`edu-full-${idx}`, fullSummary)}
+                                title="Copy complete education line"
+                                style={{ fontSize: '11px', padding: '4px 8px' }}
+                              >
+                                {copiedKey === `edu-full-${idx}` ? '✓ Copied Line' : 'Copy Summary'}
+                              </Button>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                              {edu.cgpa && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--theme-bg)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--muted)' }}>CGPA: <strong>{edu.cgpa}</strong></span>
+                                  <button type="button" onClick={() => copyToClipboard(`edu-cgpa-${idx}`, edu.cgpa)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '11px', fontWeight: 600 }}>
+                                    {copiedKey === `edu-cgpa-${idx}` ? '✓' : 'Copy'}
+                                  </button>
+                                </div>
+                              )}
+                              {edu.percentage && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--theme-bg)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--muted)' }}>%: <strong>{edu.percentage}%</strong></span>
+                                  <button type="button" onClick={() => copyToClipboard(`edu-pct-${idx}`, edu.percentage)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '11px', fontWeight: 600 }}>
+                                    {copiedKey === `edu-pct-${idx}` ? '✓' : 'Copy'}
+                                  </button>
+                                </div>
+                              )}
+                              {edu.graduationYear && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--theme-bg)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Year: <strong>{edu.graduationYear}</strong></span>
+                                  <button type="button" onClick={() => copyToClipboard(`edu-yr-${idx}`, edu.graduationYear)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '11px', fontWeight: 600 }}>
+                                    {copiedKey === `edu-yr-${idx}` ? '✓' : 'Copy'}
+                                  </button>
+                                </div>
+                              )}
+                              {edu.rollNo && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--theme-bg)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Roll: <strong>{edu.rollNo}</strong></span>
+                                  <button type="button" onClick={() => copyToClipboard(`edu-roll-${idx}`, edu.rollNo)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '11px', fontWeight: 600 }}>
+                                    {copiedKey === `edu-roll-${idx}` ? '✓' : 'Copy'}
+                                  </button>
+                                </div>
+                              )}
+                              {edu.board && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--theme-bg)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', gridColumn: 'span 2' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Board: <strong>{edu.board}</strong></span>
+                                  <button type="button" onClick={() => copyToClipboard(`edu-board-${idx}`, edu.board)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '11px', fontWeight: 600 }}>
+                                    {copiedKey === `edu-board-${idx}` ? '✓' : 'Copy'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Individual Quick Copy Buttons */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px' }}>
+                              <button type="button" onClick={() => copyToClipboard(`edu-inst-${idx}`, edu.institution)} style={{ background: 'var(--hover)', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', color: 'var(--text)' }}>
+                                Copy College Name
+                              </button>
+                              <button type="button" onClick={() => copyToClipboard(`edu-deg-${idx}`, edu.degree)} style={{ background: 'var(--hover)', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', color: 'var(--text)' }}>
+                                Copy Degree
+                              </button>
+                              {edu.branch && (
+                                <button type="button" onClick={() => copyToClipboard(`edu-br-${idx}`, edu.branch)} style={{ background: 'var(--hover)', border: 'none', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', color: 'var(--text)' }}>
+                                  Copy Branch
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {/* 💼 WORK EXPERIENCE */}
+                {showExperience && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Briefcase size={14} style={{ color: 'var(--primary)' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                          Work Experience ({experienceList.length})
+                        </span>
+                      </div>
+                    </div>
+
+                    {experienceList.length === 0 ? (
+                      <div className="card" style={{ padding: '14px', textAlign: 'center', fontSize: '12px', color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                        No experience records saved yet.
+                      </div>
+                    ) : (
+                      experienceList.map((exp, idx) => {
+                        const dur = exp.startDate
+                          ? `${exp.startDate} - ${exp.currentlyWorking ? 'Present' : exp.endDate || 'Present'}`
+                          : '';
+                        const roleSummary = `${exp.designation} at ${exp.companyName}${dur ? ` (${dur})` : ''}`;
+
+                        if (q && !matches(exp.companyName, exp.designation, exp.description, exp.employmentType, ...(exp.technologies || []))) {
+                          return null;
+                        }
+
+                        return (
+                          <div
+                            key={exp.id || idx}
+                            className="card"
+                            style={{
+                              background: 'var(--surface)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '10px',
+                              padding: '12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '8px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <span style={{ fontSize: '10.5px', fontWeight: 700, background: 'var(--hover)', padding: '2px 7px', borderRadius: '4px', color: 'var(--primary)' }}>
+                                  {exp.employmentType || 'Full-time'}
+                                </span>
+                                <h4 style={{ fontSize: '13px', fontWeight: 700, margin: '4px 0 0', color: 'var(--text)' }}>
+                                  {exp.designation}
+                                </h4>
+                                <p style={{ fontSize: '12px', color: 'var(--muted)', margin: 0 }}>
+                                  {exp.companyName} {dur ? `• ${dur}` : ''}
+                                </p>
+                              </div>
+                              <Button
+                                variant="soft"
+                                size="sm"
+                                onClick={() => copyToClipboard(`exp-sum-${idx}`, roleSummary)}
+                                style={{ fontSize: '11px', padding: '4px 8px' }}
+                              >
+                                {copiedKey === `exp-sum-${idx}` ? '✓ Copied' : 'Copy Summary'}
+                              </Button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              <button type="button" onClick={() => copyToClipboard(`exp-co-${idx}`, exp.companyName)} style={{ background: 'var(--theme-bg)', border: '1px solid var(--border)', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', color: 'var(--text)' }}>
+                                Copy Company
+                              </button>
+                              <button type="button" onClick={() => copyToClipboard(`exp-des-${idx}`, exp.designation)} style={{ background: 'var(--theme-bg)', border: '1px solid var(--border)', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', color: 'var(--text)' }}>
+                                Copy Title
+                              </button>
+                              {dur && (
+                                <button type="button" onClick={() => copyToClipboard(`exp-dur-${idx}`, dur)} style={{ background: 'var(--theme-bg)', border: '1px solid var(--border)', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', color: 'var(--text)' }}>
+                                  Copy Dates
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Technologies */}
+                            {exp.technologies && exp.technologies.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '10.5px', color: 'var(--muted)' }}>Tech:</span>
+                                {exp.technologies.map((t, tIdx) => (
+                                  <span
+                                    key={tIdx}
+                                    onClick={() => copyToClipboard(`exp-t-${idx}-${tIdx}`, t)}
+                                    title="Click to copy technology"
+                                    style={{
+                                      fontSize: '10.5px',
+                                      background: copiedKey === `exp-t-${idx}-${tIdx}` ? '#10B981' : 'var(--hover)',
+                                      color: copiedKey === `exp-t-${idx}-${tIdx}` ? '#fff' : 'var(--text)',
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Description / Bullet Points */}
+                            {exp.description && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--muted)' }}>
+                                    Responsibilities & Bullet Points
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(`exp-desc-${idx}`, exp.description)}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                  >
+                                    {copiedKey === `exp-desc-${idx}` ? '✓ Copied' : 'Copy Bullets'}
+                                  </button>
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: '11.5px',
+                                    color: 'var(--text)',
+                                    whiteSpace: 'pre-wrap',
+                                    lineHeight: 1.4,
+                                    background: 'var(--theme-bg)',
+                                    padding: '6px 8px',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border)',
+                                    maxHeight: '80px',
+                                    overflowY: 'auto',
+                                  }}
+                                >
+                                  {exp.description}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {/* 🚀 PROJECTS */}
+                {showProjects && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FolderGit2 size={14} style={{ color: 'var(--primary)' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                          Projects & Portfolios ({projectList.length})
+                        </span>
+                      </div>
+                    </div>
+
+                    {projectList.length === 0 ? (
+                      <div className="card" style={{ padding: '14px', textAlign: 'center', fontSize: '12px', color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                        No projects saved yet. Add projects in Options dashboard.
+                      </div>
+                    ) : (
+                      projectList.map((prj, idx) => {
+                        if (q && !matches(prj.name, prj.shortDescription, prj.detailedDescription, prj.githubUrl, prj.liveUrl, ...(prj.technologies || []))) {
+                          return null;
+                        }
+
+                        return (
+                          <div
+                            key={prj.id || idx}
+                            className="card"
+                            style={{
+                              background: 'var(--surface)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '10px',
+                              padding: '12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '8px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                                  {prj.name}
+                                </h4>
+                                {prj.shortDescription && (
+                                  <p style={{ fontSize: '11.5px', color: 'var(--muted)', margin: '2px 0 0' }}>
+                                    {prj.shortDescription}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                variant="soft"
+                                size="sm"
+                                onClick={() => copyToClipboard(`prj-name-${idx}`, prj.name)}
+                                style={{ fontSize: '11px', padding: '4px 8px' }}
+                              >
+                                {copiedKey === `prj-name-${idx}` ? '✓ Copied' : 'Copy Title'}
+                              </Button>
+                            </div>
+
+                            {/* Tech Stack */}
+                            {prj.technologies && prj.technologies.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '10.5px', color: 'var(--muted)' }}>Stack:</span>
+                                {prj.technologies.map((t, tIdx) => (
+                                  <span
+                                    key={tIdx}
+                                    onClick={() => copyToClipboard(`prj-t-${idx}-${tIdx}`, t)}
+                                    title="Click to copy"
+                                    style={{
+                                      fontSize: '10.5px',
+                                      background: copiedKey === `prj-t-${idx}-${tIdx}` ? '#10B981' : 'var(--hover)',
+                                      color: copiedKey === `prj-t-${idx}-${tIdx}` ? '#fff' : 'var(--text)',
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* URLs */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {prj.githubUrl && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--theme-bg)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: '6px' }}>
+                                  <span style={{ fontSize: '11px' }}>🐙 GitHub:</span>
+                                  <button type="button" onClick={() => copyToClipboard(`prj-gh-${idx}`, prj.githubUrl)} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                                    {copiedKey === `prj-gh-${idx}` ? '✓ Copied' : 'Copy'}
+                                  </button>
+                                  <a href={prj.githubUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--muted)' }} title="Open repo">
+                                    <ExternalLink size={11} />
+                                  </a>
+                                </div>
+                              )}
+                              {prj.liveUrl && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--theme-bg)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: '6px' }}>
+                                  <span style={{ fontSize: '11px' }}>🔗 Live:</span>
+                                  <button type="button" onClick={() => copyToClipboard(`prj-live-${idx}`, prj.liveUrl)} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                                    {copiedKey === `prj-live-${idx}` ? '✓ Copied' : 'Copy'}
+                                  </button>
+                                  <a href={prj.liveUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--muted)' }} title="Open demo">
+                                    <ExternalLink size={11} />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Detailed Description */}
+                            {prj.detailedDescription && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--muted)' }}>
+                                    Full Project Details & Features
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(`prj-desc-${idx}`, prj.detailedDescription)}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                  >
+                                    {copiedKey === `prj-desc-${idx}` ? '✓ Copied' : 'Copy Full Details'}
+                                  </button>
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: '11.5px',
+                                    color: 'var(--text)',
+                                    whiteSpace: 'pre-wrap',
+                                    lineHeight: 1.4,
+                                    background: 'var(--theme-bg)',
+                                    padding: '6px 8px',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border)',
+                                    maxHeight: '80px',
+                                    overflowY: 'auto',
+                                  }}
+                                >
+                                  {prj.detailedDescription}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {/* 🛠️ SKILLS */}
+                {showSkills && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Wrench size={14} style={{ color: 'var(--primary)' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                          Skills ({skillsList.length})
+                        </span>
+                      </div>
+                      {skillsList.length > 0 && (
+                        <Button
+                          variant="soft"
+                          size="sm"
+                          onClick={() => copyToClipboard('skills-all', skillsList.map((s) => s.name).join(', '))}
+                          style={{ fontSize: '11px', padding: '4px 8px' }}
+                        >
+                          {copiedKey === 'skills-all' ? '✓ Copied All' : 'Copy All Skills'}
+                        </Button>
+                      )}
+                    </div>
+
+                    {skillsList.length === 0 ? (
+                      <div className="card" style={{ padding: '14px', textAlign: 'center', fontSize: '12px', color: 'var(--muted)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                        No skills added yet.
+                      </div>
+                    ) : (
+                      <>
+                        {[
+                          { key: 'languages', title: 'Languages' },
+                          { key: 'frameworks', title: 'Frameworks & Libraries' },
+                          { key: 'databases', title: 'Databases & Storage' },
+                          { key: 'cloud', title: 'Cloud & DevOps' },
+                          { key: 'developerTools', title: 'Developer Tools' },
+                          { key: 'ai', title: 'AI & Machine Learning' },
+                          { key: 'other', title: 'Other Skills' },
+                        ].map((group) => {
+                          const groupSkills = skillsList.filter((s) =>
+                            group.key === 'other' ? !s.category || s.category === 'other' : s.category === group.key
+                          );
+                          if (groupSkills.length === 0) return null;
+                          const filtered = groupSkills.filter((s) => matches(s.name, group.title));
+                          if (filtered.length === 0) return null;
+
+                          return (
+                            <div
+                              key={group.key}
+                              className="card"
+                              style={{
+                                background: 'var(--surface)',
+                                border: '1px solid var(--border)',
+                                borderRadius: '10px',
+                                padding: '10px 12px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '6px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--text)' }}>
+                                  {group.title} ({filtered.length})
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(`grp-${group.key}`, filtered.map((s) => s.name).join(', '))}
+                                  style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                  {copiedKey === `grp-${group.key}` ? '✓ Copied' : 'Copy Category'}
+                                </button>
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                {filtered.map((s) => {
+                                  const isCopied = copiedKey === `sk-${s.id}`;
+                                  return (
+                                    <button
+                                      key={s.id}
+                                      type="button"
+                                      onClick={() => copyToClipboard(`sk-${s.id}`, s.name)}
+                                      title="Click to copy skill"
+                                      style={{
+                                        fontSize: '11px',
+                                        background: isCopied ? '#10B981' : 'var(--theme-bg)',
+                                        color: isCopied ? '#fff' : 'var(--text)',
+                                        border: '1px solid var(--border)',
+                                        padding: '3px 8px',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease',
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      {isCopied ? `✓ ${s.name}` : s.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* 🌐 LINKS & ONLINE PROFILES */}
+                {showLinks && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 2px' }}>
+                      <Globe size={14} style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                        Online Profiles & Links
+                      </span>
+                    </div>
+
+                    {renderRow('LinkedIn Profile', profile?.links.linkedInUrl, 'lnk-linkedin')}
+                    {renderRow('GitHub Profile', profile?.links.githubUrl, 'lnk-github')}
+                    {renderRow('Portfolio / Website', profile?.links.portfolioUrl || profile?.links.personalWebsite, 'lnk-portfolio')}
+                    {renderRow('Resume Drive Link', profile?.links.resumeDriveUrl, 'lnk-drive')}
+                    {renderRow('LeetCode Profile', profile?.links.leetcodeUrl, 'lnk-leetcode')}
+                    {renderRow('Codeforces Profile', profile?.links.codeforcesUrl, 'lnk-codeforces')}
+                    {renderRow('CodeChef Profile', profile?.links.codechefUrl, 'lnk-codechef')}
+                    {renderRow('HackerRank Profile', profile?.links.hackerrankUrl, 'lnk-hackerrank')}
+                    {renderRow('Kaggle Profile', profile?.links.kaggleUrl, 'lnk-kaggle')}
+                    {renderRow('Medium Profile', profile?.links.mediumUrl, 'lnk-medium')}
+                    {renderRow('GeeksforGeeks Profile', profile?.links.gfgUrl, 'lnk-gfg')}
+                    {renderRow('X / Twitter Profile', profile?.links.xUrl, 'lnk-x')}
+                    {renderRow('Behance Profile', profile?.links.behanceUrl, 'lnk-behance')}
+                    {renderRow('Dribbble Profile', profile?.links.dribbbleUrl, 'lnk-dribbble')}
+
+                    {/* Custom user links */}
+                    {profile?.links.otherLinks && profile.links.otherLinks.map((customLnk) => (
+                      renderRow(customLnk.label || 'Custom Link', customLnk.url, `lnk-custom-${customLnk.id}`)
+                    ))}
+                  </div>
+                )}
+
+                {/* 📋 WORK AUTHORIZATION & PREFERENCES */}
+                {showPreferences && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 2px' }}>
+                      <ShieldCheck size={14} style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                        Work Authorization & Preferences
+                      </span>
+                    </div>
+
+                    {renderRow('Work Authorization Status', profile?.preferences.workAuthorizationStatus, 'prf-auth')}
+                    {renderRow('Requires Visa Sponsorship?', profile?.preferences.requiresVisaSponsorship ? 'Yes' : 'No', 'prf-visa')}
+                    {renderRow('Notice Period', profile?.preferences.noticePeriodDays || 'Immediate Joiner', 'prf-notice')}
+                    {renderRow('Preferred Work Model', profile?.preferences.workModel || 'Flexible', 'prf-model')}
+                    {profile?.preferences.preferredTitles && profile.preferences.preferredTitles.length > 0 && (
+                      renderRow('Target Job Titles', profile.preferences.preferredTitles.join(', '), 'prf-titles')
+                    )}
+                    {profile?.preferences.preferredLocations && profile.preferences.preferredLocations.length > 0 && (
+                      renderRow('Preferred Locations', profile.preferences.preferredLocations.join(', '), 'prf-locs')
+                    )}
+                    {renderRow('Expected Compensation', profile?.preferences.expectedCompensation, 'prf-expctc')}
+                    {renderRow('Current Compensation', profile?.preferences.currentCompensation, 'prf-curctc')}
+                    {renderRow('Earliest Availability Date', profile?.preferences.availabilityDate || 'Immediate', 'prf-avail')}
+                    {renderRow('Willing to Relocate?', profile?.preferences.willingToRelocate ? 'Yes' : 'No', 'prf-reloc')}
+                    {profile?.preferences.veteranStatus && renderRow('Veteran Status', profile?.preferences.veteranStatus, 'prf-vet')}
+                    {profile?.preferences.disabilityStatus && renderRow('Disability Disclosure', profile?.preferences.disabilityStatus, 'prf-disab')}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1172,7 +2077,7 @@ export const SidePanel: React.FC = () => {
       {activeTab === 'resume' && (
         <div className="pbody">
           {resumes.length === 0 ? (
-            <div className="glass card empty" style={{ textAlign: 'center', padding: '32px 14px' }}>
+            <div className="card empty" style={{ textAlign: 'center', padding: '32px 14px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
               <b>No resumes in vault</b>
               <p className="hint">Upload a resume in the Options dashboard.</p>
             </div>
@@ -1233,7 +2138,7 @@ export const SidePanel: React.FC = () => {
 
           {aiMode === 'qa' ? (
             <>
-              <div className="glass card">
+              <div className="card">
                 <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>AI Answer Generator</h3>
                 <label className="f" htmlFor="ai-prompt">Question prompt</label>
                 <textarea
@@ -1286,7 +2191,7 @@ export const SidePanel: React.FC = () => {
             </>
           ) : aiMode === 'coverLetter' ? (
             <>
-              <div className="glass card">
+              <div className="card">
                 <h3 style={{ fontSize: '16px', marginBottom: '6px' }}>1-Page Cover Letter</h3>
                 <p className="hint" style={{ marginBottom: '12px', fontSize: '12px' }}>
                   Grounded in your real projects and experience. Formatted in 3 concise paragraphs.
@@ -1410,7 +2315,7 @@ export const SidePanel: React.FC = () => {
             </>
           ) : (
             <>
-              <div className="glass card">
+              <div className="card">
                 <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>ATS Match & Skill Gap</h3>
                 <p className="hint" style={{ marginBottom: '10px', fontSize: '12px' }}>
                   Analyze job description against your profile skills to maximize interview callback rates.
@@ -1543,7 +2448,7 @@ export const SidePanel: React.FC = () => {
       {activeTab === 'answers' && (
         <div className="pbody">
           {answers.length === 0 ? (
-            <div className="glass card empty" style={{ textAlign: 'center', padding: '32px 14px' }}>
+            <div className="card empty" style={{ textAlign: 'center', padding: '32px 14px', background: 'var(--surface)', border: '1px solid var(--border)' }}>
               <b>No saved answers</b>
               <p className="hint">Save common behavioral and technical responses in Options.</p>
             </div>

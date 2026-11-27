@@ -140,7 +140,7 @@ export class MessageRouter {
             data: { profile, edu, exp, skills },
           };
         } catch (err) {
-          console.error('[HapplyMate Background] GET_USER_PROFILE failed:', err);
+          console.warn('[happlied Background] GET_USER_PROFILE failed:', err);
           return { success: false, error: (err as Error).message };
         }
       }
@@ -172,7 +172,7 @@ export class MessageRouter {
             platform: detectedPlatform,
             applicationDate: now.toISOString().split('T')[0],
             status: 'Applied',
-            notes: 'Auto-recorded by HapplyMate on form submission',
+            notes: 'Auto-recorded by happlied on form submission',
             createdAt: now.toISOString(),
             updatedAt: now.toISOString(),
           };
@@ -216,7 +216,7 @@ export class MessageRouter {
                 status: extracted.extractionStatus === 'failed' ? 'needs-review' : 'to-apply',
               });
             } catch (bgErr) {
-              console.error('[MessageRouter] Background job extraction error:', bgErr);
+              console.warn('[MessageRouter] Background job extraction error:', bgErr);
               await savedJobRepository.update(newId, {
                 extractionStatus: 'failed',
                 extractionError: bgErr instanceof Error ? bgErr.message : String(bgErr),

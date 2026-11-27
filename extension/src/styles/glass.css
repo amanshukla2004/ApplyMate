@@ -1,42 +1,5 @@
 .backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: var(--blob);
-}
-
-.backdrop i {
-  position: absolute;
-  width: 420px;
-  height: 420px;
-  border-radius: 50%;
-  filter: blur(60px);
-}
-
-.backdrop i:nth-child(1) {
-  background: #FFC9B5;
-  left: -80px;
-  top: -60px;
-}
-
-.backdrop i:nth-child(2) {
-  background: #EAE6DF;
-  right: -60px;
-  top: 80px;
-}
-
-.backdrop i:nth-child(3) {
-  background: #BDEBD6;
-  left: 25%;
-  bottom: -160px;
-}
-
-.backdrop i:nth-child(4) {
-  background: #FFE08A;
-  right: 8%;
-  bottom: -120px;
+  display: none !important;
 }
 
 .glass {

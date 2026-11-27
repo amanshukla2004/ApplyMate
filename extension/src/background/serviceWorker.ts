@@ -20,18 +20,37 @@ MessageRouter.init();
       });
     }
   } catch (reconcileErr) {
-    console.warn('[HapplyMate] Startup job reconciliation skipped/failed:', reconcileErr);
+    console.warn('[happlied] Startup job reconciliation skipped/failed:', reconcileErr);
   }
 })();
 
-chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[HapplyMate] Extension installed/updated:', details.reason);
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log('[happlied] Extension installed/updated:', details.reason);
 
   // Set side panel to open on action click if supported
   if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
     chrome.sidePanel
       .setPanelBehavior({ openPanelOnActionClick: false })
-      .catch((err) => console.warn('[HapplyMate] SidePanel behavior error:', err));
+      .catch((err) => console.warn('[happlied] SidePanel behavior error:', err));
+  }
+
+  // Inject content script into currently open tabs so users don't need to manually reload them
+  try {
+    if (chrome.tabs && chrome.scripting) {
+      const openTabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+      for (const tab of openTabs) {
+        if (tab.id) {
+          chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content.js'],
+          }).catch(() => {
+            // ignore restricted pages (e.g. chrome web store)
+          });
+        }
+      }
+    }
+  } catch (injectErr) {
+    console.warn('[happlied] Content script auto-injection warning:', injectErr);
   }
 });
 
@@ -53,20 +72,20 @@ if (chrome.commands && chrome.commands.onCommand) {
             ]);
             profilePayload = { profile, edu, exp, skills };
           } catch (profileErr) {
-            console.warn('[HapplyMate] Failed to pre-fetch profile for shortcut:', profileErr);
+            console.warn('[happlied] Failed to pre-fetch profile for shortcut:', profileErr);
           }
           chrome.tabs.sendMessage(tab.id, {
             type: 'EXECUTE_AUTOFILL_SHORTCUT',
             data: profilePayload,
           }).catch((err) => {
-            console.warn('[HapplyMate] Shortcut message dispatch failed:', err);
+            console.warn('[happlied] Shortcut message dispatch failed:', err);
           });
         }
       } catch (err) {
-        console.warn('[HapplyMate] Command error:', err);
+        console.warn('[happlied] Command error:', err);
       }
     }
   });
 }
 
-console.log('[HapplyMate] Service worker started.');
+console.log('[happlied] Service worker started.');

@@ -1,8 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Pill } from '../ui/Pill';
-import { Ring } from '../ui/Ring';
-import { HapplyMateLogo } from '../ui/ApplyMateLogo';
 import { UserProfile, ResumeRecord } from '../../types/profile';
 import { resumeService } from '../../services/resumeService';
 import { profileService } from '../../services/profileService';
@@ -37,9 +35,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [linkedIn, setLinkedIn] = useState(profile?.links?.linkedInUrl || '');
   const [github, setGithub] = useState(profile?.links?.githubUrl || '');
   const [resumeDriveUrl, setResumeDriveUrl] = useState(profile?.links?.resumeDriveUrl || '');
-
-  // Endowed Progress calculation: 33% at step 1, 67% at step 2, 100% at step 3
-  const readinessPct = step === 1 ? 33 : step === 2 ? 67 : 100;
 
   const handleFileUpload = async (file: File) => {
     if (file.size > 15 * 1024 * 1024) {
@@ -94,7 +89,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         setStep(2);
       }, 700);
     } catch (err) {
-      console.error('Onboarding resume parse error:', err);
+      console.warn('Onboarding resume parse error:', err);
       setParseMessage('Failed to parse PDF. You can still fill in your details manually.');
       setIsParsing(false);
       setTimeout(() => setStep(2), 1200);
@@ -145,25 +140,48 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       />
 
       <div className="onboarding-card glass">
-        {/* Top Header & Endowed Progress Ring */}
+        {/* Top Header */}
         <div className="onboarding-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <HapplyMateLogo size={28} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontWeight: 800, fontSize: '16px', letterSpacing: '-0.02em' }}>
-                  HapplyMate
+                <span
+                  style={{
+                    fontFamily: "'Dancing Script', 'Caveat', 'Segoe Script', 'Brush Script MT', cursive, sans-serif",
+                    fontWeight: 700,
+                    fontSize: '24px',
+                    lineHeight: 1,
+                    color: 'var(--text)',
+                  }}
+                >
+                  happlied
                 </span>
                 <span className="onboarding-pill-badge">Rapid Setup</span>
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
                 {step === 1 ? 'Step 1 of 3: Sync Resume' : step === 2 ? 'Step 2 of 3: Verify Profile' : 'Step 3 of 3: Superpower Ready'}
               </div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Ring percentage={readinessPct} size={42} />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 9px',
+                borderRadius: '99px',
+                background: 'var(--hover)',
+                border: '1px solid var(--border)',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: 'var(--text)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span>{step}/3</span>
+            </div>
             <button
               type="button"
               className="onboarding-close-btn"
@@ -233,7 +251,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 Verify Your Key Information
               </h3>
               <p style={{ fontSize: '12px', color: 'var(--muted)', margin: 0 }}>
-                HapplyMate uses these canonical fields to autofill jobs on Workday, Greenhouse, Ashby, and Lever.
+                happlied uses these canonical fields to autofill jobs on Workday, Greenhouse, Ashby, and Lever.
               </p>
             </div>
 
@@ -394,7 +412,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 }}
                 onClick={onComplete}
               >
-                🚀 Start Applying with HapplyMate
+                🚀 Start Applying with happlied
               </Button>
             </div>
           </div>

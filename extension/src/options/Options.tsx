@@ -241,7 +241,7 @@ export const Options: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error('Failed to load options data:', err);
+      console.warn('Failed to load options data:', err);
     }
   };
 
@@ -283,7 +283,7 @@ export const Options: React.FC = () => {
       await loadData();
       showToast('✨ Resume imported & profile auto-populated!');
     } catch (err) {
-      console.error('Failed to parse resume:', err);
+      console.warn('Failed to parse resume:', err);
       showToast('Failed to parse resume. Please check the file.');
     }
   };
@@ -752,7 +752,7 @@ export const Options: React.FC = () => {
                     await loadData();
                     showToast('✨ Profile auto-populated from resume (100% Client-Side)!');
                   } catch (err) {
-                    console.error('Failed to apply parsed resume data:', err);
+                    console.warn('Failed to apply parsed resume data:', err);
                     showToast('Failed to apply resume details');
                   }
                 }}
@@ -877,7 +877,7 @@ export const Options: React.FC = () => {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = `happlymate-backup-${new Date().toISOString().split('T')[0]}.json`;
+                  a.download = `happlied-backup-${new Date().toISOString().split('T')[0]}.json`;
                   a.click();
                   URL.revokeObjectURL(url);
                   showToast('Backup exported');
@@ -910,7 +910,7 @@ export const Options: React.FC = () => {
         <Modal
           isOpen={isSupportOpen}
           onClose={() => setIsSupportOpen(false)}
-          title="HapplyMate Support & User Guide"
+          title="happlied Support & User Guide"
           maxWidth="560px"
           style={{
             background: 'var(--surface)',
@@ -923,7 +923,7 @@ export const Options: React.FC = () => {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              HapplyMate is your AI co-pilot for job applications, resume parsing, and tracking with 100% zero-cloud local privacy.
+              happlied is your AI co-pilot for job applications, resume parsing, and tracking with 100% zero-cloud local privacy.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -960,7 +960,7 @@ export const Options: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
               <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Need help? Email: <strong>support@happlymate.com</strong>
+                Need help? Email: <strong>support@happlied.com</strong>
               </span>
               <button
                 type="button"

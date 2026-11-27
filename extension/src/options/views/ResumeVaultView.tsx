@@ -53,7 +53,7 @@ export const ResumeVaultView: React.FC<ResumeVaultViewProps> = ({
       setParsedData(parsed);
       setShowPreviewModal(true);
     } catch (err) {
-      console.error('Failed to parse resume:', err);
+      console.warn('Failed to parse resume:', err);
       alert('Could not parse resume text. You can still fill your profile manually.');
     } finally {
       setIsParsing(false);
@@ -127,7 +127,7 @@ export const ResumeVaultView: React.FC<ResumeVaultViewProps> = ({
                 <Pill variant="m">100% Private</Pill>
               </div>
               <p className="hint" style={{ marginTop: '4px', fontSize: '13px' }}>
-                Drop your existing PDF resume here. HapplyMate will automatically extract your contact info, education, experience, and skills directly in your browser without uploading your resume to any cloud server.
+                Drop your existing PDF resume here. happlied will automatically extract your contact info, education, experience, and skills directly in your browser without uploading your resume to any cloud server.
               </p>
             </div>
             <Button

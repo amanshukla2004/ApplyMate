@@ -48,35 +48,29 @@ export const HapplyMateLogo: React.FC<HapplyMateLogoProps> = ({ size = 32, class
         }}
       />
       <svg
-        width={Math.round(size * 0.65)}
-        height={Math.round(size * 0.65)}
-        viewBox="0 0 24 24"
+        width={Math.round(size * 0.72)}
+        height={Math.round(size * 0.72)}
+        viewBox="0 0 128 128"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Modern HapplyMate glyph: Dynamic Upward Arrow + Cheerful Smile Arc */}
+        {/* Cursive 'h' Ascender Loop, Vertical Stem and Arch */}
         <path
-          d="M12 2.5L3.5 15.5H8.5V20.5H15.5V15.5H20.5L12 2.5Z"
-          fill="#ffffff"
-        />
-        {/* Inner joyful chevron highlight */}
-        <path
-          d="M12 7.2L8 13.5H16L12 7.2Z"
-          fill="#AEAC78"
-        />
-        {/* Subtle optimistic smile arc accent at the base */}
-        <path
-          d="M7 21.5C9.5 23 14.5 23 17 21.5"
-          stroke="#ffffff"
-          strokeWidth="1.8"
+          d="M 33 89 C 40 76, 50 48, 58 28 C 63 17, 70 16, 74 21 C 77 27, 73 40, 65 58 L 52 98 C 50 102, 53 103, 56 96 L 62 76 C 68 58, 80 50, 90 52 C 100 54, 103 66, 99 80 L 95 94 C 94 99, 100 102, 106 96"
+          fill="none"
+          stroke="#FCF0DA"
+          strokeWidth="11"
           strokeLinecap="round"
-          opacity="0.9"
+          strokeLinejoin="round"
         />
+        {/* Cheerful Warm Gold Spark Accent */}
+        <circle cx="98" cy="28" r="6.5" fill="#F2C46A" />
       </svg>
     </span>
   );
 };
 
-// Backward-compatible alias for existing imports
+// Backward-compatible aliases for existing imports
+export const HappliedLogo = HapplyMateLogo;
 export const ApplyMateLogo = HapplyMateLogo;
 export default HapplyMateLogo;
