@@ -141,8 +141,9 @@ export const SavedJobDetailModal: React.FC<SavedJobDetailModalProps> = ({
       title="Opening saved job"
       maxWidth="940px"
       style={{
-        background: '#FCF0DA',
-        color: '#4C4541',
+        background: 'var(--surface)',
+        color: 'var(--text)',
+        border: '1px solid var(--border)',
         borderRadius: '16px',
         padding: '20px 24px',
         fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",

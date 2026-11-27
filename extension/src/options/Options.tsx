@@ -107,7 +107,7 @@ export const Options: React.FC = () => {
       case 'prefs':
         return !profile.preferences?.preferredTitles || profile.preferences.preferredTitles.length === 0;
       case 'edu':
-        return educationList.length === 0;
+        return educationList.length === 0 || !educationList.some(e => e.institution && e.institution !== 'N/A');
       case 'exp':
         return experienceList.length === 0;
       case 'skills':
@@ -123,7 +123,13 @@ export const Options: React.FC = () => {
     }
   };
 
-  const renderNavButton = (id: SectionId, label: string, extraStyle?: React.CSSProperties) => {
+  const renderNavButton = (
+    id: SectionId,
+    label: string,
+    extraStyle?: React.CSSProperties,
+    icon?: React.ReactNode,
+    badge?: React.ReactNode
+  ) => {
     const incomplete = isTabIncomplete(id);
     return (
       <button
@@ -139,25 +145,31 @@ export const Options: React.FC = () => {
         onClick={() => setActiveSection(id)}
         title={incomplete ? `${label} (Needs attention)` : label}
       >
-        <span>{label}</span>
-        {incomplete && (
-          <span
-            title="Some information is not filled in"
-            style={{
-              fontSize: '11px',
-              lineHeight: 1,
-              marginLeft: '6px',
-              color: '#B45309',
-              background: '#FDF1D6',
-              border: '1px solid #F2C46A',
-              padding: '1px 4px',
-              borderRadius: '4px',
-              fontWeight: 700,
-            }}
-          >
-            ⚠️
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+          {icon && <span style={{ fontSize: '14px', lineHeight: 1 }}>{icon}</span>}
+          <span>{label}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {badge}
+          {incomplete && (
+            <span
+              title="Some information is not filled in"
+              style={{
+                fontSize: '11px',
+                lineHeight: 1,
+                marginLeft: '4px',
+                color: '#B45309',
+                background: '#FDF1D6',
+                border: '1px solid #F2C46A',
+                padding: '1px 4px',
+                borderRadius: '4px',
+                fontWeight: 700,
+              }}
+            >
+              ⚠️
+            </span>
+          )}
+        </div>
       </button>
     );
   };
@@ -322,7 +334,7 @@ export const Options: React.FC = () => {
     setIsDirty(true);
   };
 
-  const handleLinksChange = (field: keyof ProfessionalLinks, value: string) => {
+  const handleLinksChange = (field: keyof ProfessionalLinks, value: any) => {
     if (!profile) return;
     setProfile({ ...profile, links: { ...profile.links, [field]: value } });
     setIsDirty(true);
@@ -372,6 +384,25 @@ export const Options: React.FC = () => {
     setIsDirty(false);
   };
 
+  // Calculate new unapplied saved jobs count for badge (Request #6)
+  const unappliedSavedJobsCount = savedJobList.filter((j) => j.status !== 'applied').length;
+  const savedJobBadge = unappliedSavedJobsCount > 0 ? (
+    <span
+      style={{
+        background: '#AEAC78',
+        color: '#FFFFFF',
+        borderRadius: '10px',
+        padding: '1px 7px',
+        fontSize: '11px',
+        fontWeight: 700,
+        lineHeight: '14px',
+      }}
+      title={`${unappliedSavedJobsCount} new job${unappliedSavedJobsCount > 1 ? 's' : ''} to apply`}
+    >
+      {unappliedSavedJobsCount}
+    </span>
+  ) : undefined;
+
   return (
     <div className="options-shell">
       {/* Top Header - 64px Google Forms Spec */}
@@ -399,28 +430,50 @@ export const Options: React.FC = () => {
         {/* Stuck Sidebar at left hand side, non-scrollable, all information shown */}
         <nav className="sidebar-docked" aria-label="Sections">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-            {renderNavButton('overview', 'Overview')}
+            {/* Overview - Prominent (Request #8) */}
+            {renderNavButton('overview', 'Overview', {
+              minHeight: '32px',
+              fontSize: '13.5px',
+              fontWeight: 700,
+              marginBottom: '2px',
+            })}
 
-            <h3>Profile</h3>
+            {/* Track - Brought below Overview (Request #5 & #7 & #9) */}
+            <h3 style={{ color: 'var(--cat-track)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--cat-track)', display: 'inline-block' }}></span>
+              Track
+            </h3>
+            {renderNavButton('pipeline', 'Application Tracker')}
+            {renderNavButton('saved-jobs', 'Saved Jobs', undefined, undefined, savedJobBadge)}
+
+            {/* Profile - Distinct color (Request #9) */}
+            <h3 style={{ color: 'var(--cat-profile)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--cat-profile)', display: 'inline-block' }}></span>
+              Profile
+            </h3>
             {renderNavButton('personal', 'Personal details')}
             {renderNavButton('address', 'Address')}
             {renderNavButton('links', 'Links')}
             {renderNavButton('prefs', 'Preferences')}
 
-            <h3>Career</h3>
+            {/* Career - Distinct color (Request #9) */}
+            <h3 style={{ color: 'var(--cat-career)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--cat-career)', display: 'inline-block' }}></span>
+              Career
+            </h3>
             {renderNavButton('edu', 'Education')}
             {renderNavButton('exp', 'Experience')}
             {renderNavButton('skills', 'Skills')}
             {renderNavButton('proj', 'Projects')}
             {renderNavButton('certs', 'Certificates')}
 
-            <h3>Documents</h3>
+            {/* Documents - Distinct color (Request #9) */}
+            <h3 style={{ color: 'var(--cat-docs)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--cat-docs)', display: 'inline-block' }}></span>
+              Documents
+            </h3>
             {renderNavButton('vault', 'Resume vault')}
             {renderNavButton('answers', 'Answer bank')}
-
-            <h3>Track</h3>
-            {renderNavButton('pipeline', 'Pipeline')}
-            {renderNavButton('saved-jobs', 'Saved Jobs')}
           </div>
 
           <div style={{ paddingTop: '8px', borderTop: '1px solid var(--border)', marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -486,17 +539,6 @@ export const Options: React.FC = () => {
 
         {/* Content Stage */}
         <main className="content-stage">
-          <div className="head" style={{ marginBottom: '20px' }}>
-            <div>
-              <p style={{ margin: '0 0 4px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                {formattedDate}
-              </p>
-              <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0, color: 'var(--text)' }}>
-                {greetingHeading}
-              </h1>
-            </div>
-          </div>
-
             {activeSection === 'overview' && (
               <OverviewView
                 profile={profile}
@@ -516,6 +558,13 @@ export const Options: React.FC = () => {
                 }
                 hasResume={resumeList.length > 0}
                 hasSkills={skillsList.length >= 5}
+                isAiEnabled={settings?.aiEnabled ?? true}
+                educationCount={educationList.filter(e => e.institution && e.institution !== 'N/A').length}
+                experienceCount={experienceList.length}
+                projectsCount={projectList.length}
+                certificatesCount={certificateList.length}
+                formattedDate={formattedDate}
+                greetingHeading={greetingHeading}
                 onNavigate={(sec) => setActiveSection(sec as SectionId)}
                 onUploadResume={handleDirectResumeUpload}
               />
@@ -561,6 +610,13 @@ export const Options: React.FC = () => {
                   await profileService.saveEducation(record);
                   setEducationList(await profileService.getEducation());
                   showToast('Education saved');
+                }}
+                onSaveAll={async (records) => {
+                  for (const rec of records) {
+                    await profileService.saveEducation(rec);
+                  }
+                  setEducationList(await profileService.getEducation());
+                  showToast('All education details saved');
                 }}
                 onDelete={async (id) => {
                   await profileService.deleteEducation(id);

@@ -17,6 +17,16 @@ export type ApplicationField =
   | 'PORTFOLIO_URL'
   | 'FACEBOOK_URL'
   | 'TWITTER_URL'
+  | 'X_URL'
+  | 'BEHANCE_URL'
+  | 'DRIBBBLE_URL'
+  | 'LEETCODE_URL'
+  | 'CODEFORCES_URL'
+  | 'CODECHEF_URL'
+  | 'HACKERRANK_URL'
+  | 'KAGGLE_URL'
+  | 'MEDIUM_URL'
+  | 'GFG_URL'
   | 'RESUME_URL'
   | 'COLLEGE'
   | 'DEGREE'
@@ -53,7 +63,19 @@ export type ApplicationField =
   | 'VETERAN_STATUS'
   | 'DISABILITY_STATUS'
   | 'HEARD_ABOUT_US'
-  | 'UNIVERSITY_NOC';
+  | 'UNIVERSITY_NOC'
+  | 'CLASS_10_PERCENTAGE'
+  | 'CLASS_10_BOARD'
+  | 'CLASS_10_YEAR'
+  | 'CLASS_10_SCHOOL'
+  | 'CLASS_12_PERCENTAGE'
+  | 'CLASS_12_BOARD'
+  | 'CLASS_12_YEAR'
+  | 'CLASS_12_SCHOOL'
+  | 'UG_ROLL_NO'
+  | 'PG_COLLEGE'
+  | 'PG_PERCENTAGE'
+  | 'PG_ROLL_NO';
 
 export interface CanonicalFieldDefinition {
   id: ApplicationField;
@@ -216,6 +238,86 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
     category: 'links',
     dataType: 'url',
     aliases: ['twitter', 'twitter profile', 'twitter url', 'x profile', 'twitter link', 'twitter s'],
+    sensitive: false,
+  },
+  X_URL: {
+    id: 'X_URL',
+    displayLabel: 'X (Twitter) Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['x.com', 'x url', 'x link', 'x profile', 'twitter/x', 'x/twitter', 'x account'],
+    sensitive: false,
+  },
+  BEHANCE_URL: {
+    id: 'BEHANCE_URL',
+    displayLabel: 'Behance Portfolio URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['behance', 'behance profile', 'behance url', 'behance link', 'behance portfolio', 'adobe behance'],
+    sensitive: false,
+  },
+  DRIBBBLE_URL: {
+    id: 'DRIBBBLE_URL',
+    displayLabel: 'Dribbble Portfolio URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['dribbble', 'dribble', 'dribbble profile', 'dribble profile', 'dribbble url', 'dribble url', 'dribbble portfolio', 'dribble portfolio'],
+    sensitive: false,
+  },
+  LEETCODE_URL: {
+    id: 'LEETCODE_URL',
+    displayLabel: 'LeetCode Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['leetcode', 'leetcode profile', 'leetcode url', 'leetcode link', 'leet code', 'leet code profile'],
+    sensitive: false,
+  },
+  CODEFORCES_URL: {
+    id: 'CODEFORCES_URL',
+    displayLabel: 'Codeforces Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['codeforces', 'codeforces profile', 'codeforces url', 'codeforces handle', 'code forces', 'cf profile', 'codeforces link'],
+    sensitive: false,
+  },
+  CODECHEF_URL: {
+    id: 'CODECHEF_URL',
+    displayLabel: 'CodeChef Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['codechef', 'codechef profile', 'codechef url', 'code chef', 'code chef profile', 'codechef handle', 'codechef link'],
+    sensitive: false,
+  },
+  HACKERRANK_URL: {
+    id: 'HACKERRANK_URL',
+    displayLabel: 'HackerRank Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['hackerrank', 'hackerrank profile', 'hackerrank url', 'hacker rank', 'hacker rank profile', 'hackerrank link'],
+    sensitive: false,
+  },
+  KAGGLE_URL: {
+    id: 'KAGGLE_URL',
+    displayLabel: 'Kaggle Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['kaggle', 'kaggle profile', 'kaggle url', 'kaggle link', 'kaggle account'],
+    sensitive: false,
+  },
+  MEDIUM_URL: {
+    id: 'MEDIUM_URL',
+    displayLabel: 'Medium / Blog URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['medium', 'medium profile', 'medium url', 'medium blog', 'substack', 'blog link', 'blog url', 'technical blog', 'hashnode'],
+    sensitive: false,
+  },
+  GFG_URL: {
+    id: 'GFG_URL',
+    displayLabel: 'GeeksforGeeks Profile URL',
+    category: 'links',
+    dataType: 'url',
+    aliases: ['geeksforgeeks', 'geeks for geeks', 'gfg profile', 'gfg url', 'gfg link', 'geeksforgeeks profile', 'geeksforgeeks url'],
     sensitive: false,
   },
   RESUME_URL: {
@@ -639,6 +741,102 @@ export const CANONICAL_FIELDS: Record<ApplicationField, CanonicalFieldDefinition
       'approval letter or no objection certificate',
       'university approval letter',
     ],
+    sensitive: false,
+  },
+  CLASS_10_PERCENTAGE: {
+    id: 'CLASS_10_PERCENTAGE',
+    displayLabel: 'Class 10th Percentage / CGPA',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['10th percentage', 'class 10 percentage', '10th marks', 'class 10th percentage', 'ssc percentage', '10th grade', 'tenth percentage', '10th cgpa'],
+    sensitive: false,
+  },
+  CLASS_10_BOARD: {
+    id: 'CLASS_10_BOARD',
+    displayLabel: 'Class 10th Board',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['10th board', 'class 10 board', 'class 10th board', 'ssc board', '10th passing board', 'tenth board'],
+    sensitive: false,
+  },
+  CLASS_10_YEAR: {
+    id: 'CLASS_10_YEAR',
+    displayLabel: 'Class 10th Passing Year',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['10th passing year', '10th end year', 'class 10 year', '10th year of passing', 'class 10th year', '10th year'],
+    sensitive: false,
+  },
+  CLASS_10_SCHOOL: {
+    id: 'CLASS_10_SCHOOL',
+    displayLabel: 'Class 10th School / Institution',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['10th school', 'class 10 school', '10th institution', 'class 10th school', 'high school name', 'secondary school'],
+    sensitive: false,
+  },
+  CLASS_12_PERCENTAGE: {
+    id: 'CLASS_12_PERCENTAGE',
+    displayLabel: 'Class 12th Percentage / CGPA',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['12th percentage', 'class 12 percentage', '12th marks', 'class 12th percentage', 'hsc percentage', 'inter percentage', 'intermediate percentage', '12th grade', '12th cgpa'],
+    sensitive: false,
+  },
+  CLASS_12_BOARD: {
+    id: 'CLASS_12_BOARD',
+    displayLabel: 'Class 12th Board',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['12th board', 'class 12 board', 'class 12th board', 'hsc board', 'intermediate board', 'inter board'],
+    sensitive: false,
+  },
+  CLASS_12_YEAR: {
+    id: 'CLASS_12_YEAR',
+    displayLabel: 'Class 12th Passing Year',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['12th passing year', '12th end year', 'class 12 year', '12th year of passing', 'class 12th year', '12th year'],
+    sensitive: false,
+  },
+  CLASS_12_SCHOOL: {
+    id: 'CLASS_12_SCHOOL',
+    displayLabel: 'Class 12th School / College',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['12th school', 'class 12 school', '12th college', 'junior college', 'class 12th school', 'senior secondary school', 'intermediate college'],
+    sensitive: false,
+  },
+  UG_ROLL_NO: {
+    id: 'UG_ROLL_NO',
+    displayLabel: 'UG Roll No. / Registration No.',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['roll no', 'roll number', 'university roll no', 'college roll no', 'registration number', 'reg no', 'student id', 'enrollment number', 'enrollment no', 'ug roll no'],
+    sensitive: false,
+  },
+  PG_COLLEGE: {
+    id: 'PG_COLLEGE',
+    displayLabel: 'PG College / University',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['pg college', 'post graduation college', 'postgraduate college', 'master college', 'master university', 'pg university'],
+    sensitive: false,
+  },
+  PG_PERCENTAGE: {
+    id: 'PG_PERCENTAGE',
+    displayLabel: 'PG Percentage / CGPA',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['pg percentage', 'post graduation percentage', 'pg cgpa', 'master cgpa', 'master percentage'],
+    sensitive: false,
+  },
+  PG_ROLL_NO: {
+    id: 'PG_ROLL_NO',
+    displayLabel: 'PG Roll No. / Registration No.',
+    category: 'education',
+    dataType: 'text',
+    aliases: ['pg roll no', 'post graduation roll number', 'pg enrollment number', 'master roll no'],
     sensitive: false,
   },
 };

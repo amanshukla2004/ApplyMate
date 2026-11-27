@@ -65,6 +65,8 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Add Job Modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -143,6 +145,62 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
     );
   });
 
+  const allFilteredSelected =
+    filteredItems.length > 0 && filteredItems.every((item) => selectedIds.has(item.id));
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredItems.map((item) => item.id)));
+    }
+  };
+
+  const toggleSelectItem = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete ${count} selected application${count > 1 ? 's' : ''}?`
+      )
+    ) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    try {
+      for (const id of Array.from(selectedIds)) {
+        const item = allItems.find((u) => u.id === id);
+        if (item?.source === 'application') {
+          if (onDeleteApplication) {
+            await onDeleteApplication(id);
+          } else {
+            await applicationService.deleteApplication(id);
+          }
+        } else if (item?.source === 'saved-job') {
+          if (onDeleteSavedJob) {
+            await onDeleteSavedJob(id);
+          }
+        }
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleDeleteItem = async (item: UnifiedPipelineItem) => {
     if (!window.confirm(`Delete application entry for "${item.role} at ${item.company}"?`)) {
       return;
@@ -198,7 +256,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `happlymate_pipeline_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `happlied_applications_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -240,7 +298,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0, color: 'var(--ink)' }}>
-              Application Pipeline
+              Application Tracker
             </h2>
             <span
               style={{
@@ -313,15 +371,15 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search company or role in pipeline..."
+            placeholder="Search company or role in tracker..."
             style={{
               width: '100%',
               boxSizing: 'border-box',
               padding: '9px 12px 9px 36px',
               borderRadius: '10px',
-              border: '1px solid rgba(76, 69, 65, 0.2)',
-              background: '#FFFFFF',
-              color: 'var(--ink)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              color: 'var(--text)',
               fontSize: '13px',
               outline: 'none',
             }}
@@ -332,9 +390,9 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
           value={selectedPlatform}
           onChange={(e) => setSelectedPlatform(e.target.value)}
           style={{
-            background: '#FFFFFF',
-            color: '#4C4541',
-            border: '1px solid rgba(76, 69, 65, 0.2)',
+            background: 'var(--surface)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
             borderRadius: '10px',
             padding: '8px 12px',
             fontSize: '12.5px',
@@ -354,9 +412,9 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
           style={{
-            background: '#FFFFFF',
-            color: '#4C4541',
-            border: '1px solid rgba(76, 69, 65, 0.2)',
+            background: 'var(--surface)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
             borderRadius: '10px',
             padding: '8px 12px',
             fontSize: '12.5px',
@@ -374,22 +432,86 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
         </select>
       </div>
 
+      {/* Bulk Selection Action Banner */}
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 16px',
+            borderRadius: '12px',
+            background: 'var(--hover)',
+            border: '1.5px solid var(--accent-active)',
+            flexWrap: 'wrap',
+            gap: '10px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+              {selectedIds.size} of {filteredItems.length} application{selectedIds.size > 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                color: 'var(--text)',
+              }}
+            >
+              Deselect All
+            </button>
+            <button
+              type="button"
+              disabled={isBulkDeleting}
+              onClick={handleBulkDelete}
+              style={{
+                background: '#DC2626',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 14px',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                cursor: isBulkDeleting ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: isBulkDeleting ? 0.7 : 1,
+                boxShadow: '0 1px 3px rgba(220, 38, 38, 0.3)',
+              }}
+            >
+              <Trash2 size={14} />
+              <span>{isBulkDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.size})`}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* TABLE VIEW ONLY */}
       {filteredItems.length === 0 ? (
         <div
           style={{
-            background: '#FFFFFF',
-            border: '1px dashed rgba(76, 69, 65, 0.25)',
+            background: 'var(--surface)',
+            border: '1px dashed var(--border)',
             borderRadius: '14px',
             padding: '40px 20px',
             textAlign: 'center',
           }}
         >
           <Briefcase size={36} style={{ color: '#AEAC78', margin: '0 auto 12px' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: '#4C4541' }}>
-            No applied jobs in pipeline yet
+          <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: 'var(--text)' }}>
+            No applied jobs in tracker yet
           </h3>
-          <p style={{ margin: '0 0 16px', color: '#756C67', fontSize: '13px' }}>
+          <p style={{ margin: '0 0 16px', color: 'var(--text-secondary)', fontSize: '13px' }}>
             Mark saved jobs as "Applied" or click "Add Applied Job" to track submissions here.
           </p>
           <Button variant="primary" size="sm" onClick={() => setIsAddModalOpen(true)}>
@@ -401,6 +523,20 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
           <table className="app-table">
             <thead>
               <tr>
+                <th style={{ width: '42px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all applications"
+                    style={{
+                      cursor: 'pointer',
+                      width: '16px',
+                      height: '16px',
+                      accentColor: '#AEAC78',
+                    }}
+                  />
+                </th>
                 <th style={{ minWidth: '160px' }}>Company</th>
                 <th style={{ minWidth: '180px' }}>Role</th>
                 <th style={{ minWidth: '120px' }}>Platform</th>
@@ -430,13 +566,36 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                   statusBorder = '#FCA5A5';
                 }
 
+                const isSelected = selectedIds.has(item.id);
+
                 return (
-                  <tr key={`${item.source}-${item.id}`}>
+                  <tr
+                    key={`${item.source}-${item.id}`}
+                    style={{
+                      background: isSelected ? 'var(--hover)' : undefined,
+                    }}
+                  >
+                    {/* Checkbox */}
+                    <td style={{ width: '42px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectItem(item.id)}
+                        aria-label={`Select ${item.role} at ${item.company}`}
+                        style={{
+                          cursor: 'pointer',
+                          width: '16px',
+                          height: '16px',
+                          accentColor: '#AEAC78',
+                        }}
+                      />
+                    </td>
+
                     {/* Company */}
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Building2 size={15} style={{ color: '#AEAC78', flexShrink: 0 }} />
-                        <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--ink)' }}>
+                        <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text)' }}>
                           {item.company}
                         </span>
                         {item.source === 'saved-job' && (
@@ -445,9 +604,9 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                             style={{
                               fontSize: '9.5px',
                               fontWeight: 700,
-                              background: '#FCF0DA',
-                              border: '1px solid #AEAC78',
-                              color: '#4C4541',
+                              background: 'var(--hover)',
+                              border: '1px solid var(--accent-active)',
+                              color: 'var(--text)',
                               padding: '1px 5px',
                               borderRadius: '4px',
                             }}
@@ -461,7 +620,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                     {/* Role */}
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--ink)' }}>
+                        <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text)' }}>
                           {item.role}
                         </span>
                         {item.jobUrl && (
@@ -475,7 +634,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                             rel="noreferrer"
                             style={{
                               fontSize: '11px',
-                              color: '#2563EB',
+                              color: '#3B82F6',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '3px',
@@ -495,8 +654,9 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                         style={{
                           fontSize: '11.5px',
                           fontWeight: 600,
-                          background: 'rgba(76, 69, 65, 0.06)',
-                          color: '#4C4541',
+                          background: 'var(--hover)',
+                          color: 'var(--text)',
+                          border: '1px solid var(--border)',
                           padding: '3px 8px',
                           borderRadius: '6px',
                         }}
@@ -507,7 +667,7 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
 
                     {/* Date */}
                     <td>
-                      <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                         {formatDisplayDate(item.date)}
                       </span>
                     </td>
@@ -563,9 +723,9 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                           type="button"
                           onClick={() => setActiveDescItem(item)}
                           style={{
-                            background: '#FFFFFF',
-                            border: '1px solid #AEAC78',
-                            color: '#4C4541',
+                            background: 'var(--hover)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text)',
                             borderRadius: '6px',
                             padding: '4px 9px',
                             fontSize: '11.5px',
@@ -576,11 +736,11 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
                             cursor: 'pointer',
                           }}
                         >
-                          <FileText size={12} color="#AEAC78" />
+                          <FileText size={12} style={{ color: 'var(--accent-active)' }} />
                           <span>View Description</span>
                         </button>
                       ) : (
-                        <span style={{ fontSize: '11.5px', color: 'var(--muted)' }}>No description</span>
+                        <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>No description</span>
                       )}
                     </td>
 
@@ -619,10 +779,11 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
           title={`Job Description - ${activeDescItem.role} at ${activeDescItem.company}`}
           maxWidth="680px"
           style={{
-            background: '#FCF0DA',
-            color: '#4C4541',
+            background: 'var(--surface)',
+            color: 'var(--text)',
             borderRadius: '16px',
             padding: '20px 24px',
+            border: '1px solid var(--border)',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -696,10 +857,11 @@ export const PipelineView: React.FC<PipelineViewProps> = ({
           title="Add Applied Job to Pipeline"
           maxWidth="540px"
           style={{
-            background: '#FCF0DA',
-            color: '#4C4541',
+            background: 'var(--surface)',
+            color: 'var(--text)',
             borderRadius: '16px',
             padding: '20px 24px',
+            border: '1px solid var(--border)',
           }}
         >
           <form onSubmit={handleSaveModal} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

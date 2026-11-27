@@ -22,6 +22,26 @@ export function useTheme() {
           applyCalm(res.calm as CalmMode);
         }
       });
+
+      const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, area: string) => {
+        if (area === 'local') {
+          if (changes.theme) {
+            const next = (changes.theme.newValue as ThemeMode) || 'system';
+            setThemeState(next);
+            applyTheme(next);
+          }
+          if (changes.calm) {
+            const next = (changes.calm.newValue as CalmMode) || 'off';
+            setCalmState(next);
+            applyCalm(next);
+          }
+        }
+      };
+
+      chrome.storage.onChanged.addListener(handleStorageChange);
+      return () => {
+        chrome.storage.onChanged.removeListener(handleStorageChange);
+      };
     } else {
       const savedTheme =
         (localStorage.getItem('applymate_theme') as ThemeMode) ||

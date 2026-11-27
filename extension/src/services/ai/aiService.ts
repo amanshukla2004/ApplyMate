@@ -96,16 +96,16 @@ export class AIService {
 
     // 3. Remote LLM Grounded Prompt (if API key is configured)
     const settings = await chromeStorageClient.getSettings();
-    if (settings.aiEnabled && settings.aiApiKey) {
+    if (settings.aiEnabled && settings.aiApiKey && settings.aiApiKey.trim() !== '') {
       try {
         const prompt = this.buildRAGPrompt(question, profile, projects, experience, education, options);
         if (settings.aiProvider === 'groq') {
-          return await this.callGroq(prompt, settings.aiApiKey);
+          return await this.callGroq(prompt, settings.aiApiKey.trim());
         } else if (settings.aiProvider === 'gemini') {
-          return await this.callGemini(prompt, settings.aiApiKey);
+          return await this.callGemini(prompt, settings.aiApiKey.trim());
         }
-      } catch (err) {
-        console.warn('[HapplyMate AI] Remote API failed, falling back to local contextual RAG:', err);
+      } catch (err: any) {
+        console.info('[HapplyMate AI] Remote LLM unavailable, using client-side Contextual RAG:', err?.message || err);
       }
     }
 
@@ -770,11 +770,14 @@ Provide your answer:`;
   }
 
   private async callGroq(prompt: string, apiKey: string): Promise<GeneratedAnswerResult> {
+    const key = apiKey.trim();
+    if (!key) throw new Error('Groq API key is empty');
+
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
@@ -783,7 +786,17 @@ Provide your answer:`;
       }),
     });
 
-    if (!res.ok) throw new Error(`Groq API error: ${res.statusText}`);
+    if (!res.ok) {
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        errMsg = errJson?.error?.message || errJson?.message || res.statusText || errMsg;
+      } catch {
+        errMsg = res.statusText || errMsg;
+      }
+      throw new Error(`Groq API error (${res.status}): ${errMsg}`);
+    }
+
     const data = await res.json();
     const rawAnswer = data.choices[0]?.message?.content?.trim() || '';
     const answer = this.sanitizeModelOutput(rawAnswer);
@@ -791,26 +804,39 @@ Provide your answer:`;
     return {
       answer,
       confidence: 0.92,
-      groundedIn: ['Groq AI', 'Contextual RAG Profile'],
+      groundedIn: ['Groq AI (Llama 3.3)', 'Contextual RAG Profile'],
     };
   }
 
   private async callGemini(prompt: string, apiKey: string): Promise<GeneratedAnswerResult> {
+    const key = apiKey.trim();
+    if (!key) throw new Error('Gemini API key is empty');
+
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
+        'x-goog-api-key': key,
       },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
       }),
     });
 
-    if (!res.ok) throw new Error(`Gemini API error: ${res.statusText}`);
+    if (!res.ok) {
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        errMsg = errJson?.error?.message || errJson?.message || res.statusText || errMsg;
+      } catch {
+        errMsg = res.statusText || errMsg;
+      }
+      throw new Error(`Gemini API error (${res.status}): ${errMsg}`);
+    }
+
     const data = await res.json();
-    const rawAnswer = data.candidates[0]?.content?.parts[0]?.text?.trim() || '';
+    const rawAnswer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     const answer = this.sanitizeModelOutput(rawAnswer);
 
     return {
@@ -887,26 +913,26 @@ Provide your answer:`;
   async generateCoverLetter(req: CoverLetterRequest): Promise<GeneratedCoverLetterResult> {
     const settings = await chromeStorageClient.getSettings();
 
-    if (settings.aiEnabled && settings.aiApiKey) {
+    if (settings.aiEnabled && settings.aiApiKey && settings.aiApiKey.trim() !== '') {
       try {
         const prompt = this.buildCoverLetterPrompt(req);
         if (settings.aiProvider === 'groq') {
-          const res = await this.callGroq(prompt, settings.aiApiKey);
+          const res = await this.callGroq(prompt, settings.aiApiKey.trim());
           return {
             coverLetter: res.answer,
             tone: req.tone,
-            groundedIn: ['Groq AI', 'User Profile', 'Projects'],
+            groundedIn: ['Groq AI (Llama 3.3)', 'User Profile', 'Projects'],
           };
         } else if (settings.aiProvider === 'gemini') {
-          const res = await this.callGemini(prompt, settings.aiApiKey);
+          const res = await this.callGemini(prompt, settings.aiApiKey.trim());
           return {
             coverLetter: res.answer,
             tone: req.tone,
             groundedIn: ['Gemini AI', 'User Profile', 'Projects'],
           };
         }
-      } catch (err) {
-        console.warn('[HapplyMate AI] Remote cover letter generation failed, falling back to local synthesis:', err);
+      } catch (err: any) {
+        console.info('[HapplyMate AI] Remote cover letter API unavailable, falling back to local synthesis:', err?.message || err);
       }
     }
 

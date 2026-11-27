@@ -20,14 +20,32 @@ export interface AddressInfo {
   postalCode: string;
 }
 
+export interface CustomLinkItem {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export interface ProfessionalLinks {
   linkedInUrl: string;
   githubUrl: string;
   portfolioUrl?: string;
   personalWebsite?: string;
   resumeDriveUrl?: string;
-  otherLinks?: { label: string; url: string }[];
+  xUrl?: string;
+  behanceUrl?: string;
+  dribbbleUrl?: string;
+  leetcodeUrl?: string;
+  codeforcesUrl?: string;
+  codechefUrl?: string;
+  hackerrankUrl?: string;
+  kaggleUrl?: string;
+  mediumUrl?: string;
+  gfgUrl?: string;
+  otherLinks?: CustomLinkItem[];
 }
+
+export type EducationLevel = '10th' | '12th' | 'ug' | 'pg' | 'other';
 
 export interface EducationRecord {
   id: string;
@@ -41,6 +59,10 @@ export interface EducationRecord {
   cgpa: string;
   coursework?: string;
   additionalDetails?: string;
+  level?: EducationLevel | string;
+  board?: string;
+  percentage?: string;
+  rollNo?: string;
 }
 
 export interface ExperienceRecord {

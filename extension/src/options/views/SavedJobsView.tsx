@@ -43,6 +43,10 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
   const [selectedJob, setSelectedJob] = useState<SavedJobRecord | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  // Bulk Selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
   const handleCopy = async (e: React.MouseEvent, text: string, key: string) => {
     e.stopPropagation();
     const success = await safeCopyToClipboard(text);
@@ -123,6 +127,54 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
     );
   });
 
+  const allFilteredSelected =
+    filteredJobs.length > 0 && filteredJobs.every((job) => selectedIds.has(job.id));
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredJobs.map((job) => job.id)));
+    }
+  };
+
+  const toggleSelectItem = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete ${count} selected saved job${count > 1 ? 's' : ''}?`
+      )
+    ) {
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    try {
+      for (const id of Array.from(selectedIds)) {
+        await onDeleteJob(id);
+      }
+      setSelectedIds(new Set());
+      if (selectedJob && selectedIds.has(selectedJob.id)) {
+        setSelectedJob(null);
+      }
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const totalCount = savedJobs.length;
   const toApplyCount = savedJobs.filter((j) => j.status === 'to-apply').length;
   const appliedCount = savedJobs.filter((j) => j.status === 'applied').length;
@@ -189,19 +241,19 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
       {showQuickSave && (
         <div
           style={{
-            background: '#FFFFFF',
+            background: 'var(--surface)',
             border: '1.5px solid #AEAC78',
             borderRadius: '14px',
             padding: '16px',
-            boxShadow: '0 4px 12px rgba(76, 69, 65, 0.08)',
+            boxShadow: 'var(--shadow)',
           }}
         >
           <form onSubmit={handleQuickSave} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#4C4541' }}>
+              <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text)' }}>
                 Paste Raw Job Details, Email Application, or Form Link
               </span>
-              <span style={{ fontSize: '11px', color: '#756C67', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Sparkles size={12} color="#F2C46A" />
                 <span>Zero-loss local storage + Structured extraction</span>
               </span>
@@ -217,10 +269,10 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                 boxSizing: 'border-box',
                 padding: '10px 12px',
                 borderRadius: '8px',
-                border: '1px solid #AEAC78',
-                background: '#FCF0DA',
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
                 fontSize: '13px',
-                color: '#4C4541',
+                color: 'var(--text)',
                 outline: 'none',
               }}
             />
@@ -231,12 +283,12 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                 onClick={() => setShowQuickSave(false)}
                 style={{
                   background: 'transparent',
-                  border: '1px solid rgba(76, 69, 65, 0.2)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px',
                   padding: '6px 14px',
                   fontSize: '12.5px',
                   cursor: 'pointer',
-                  color: '#4C4541',
+                  color: 'var(--text)',
                 }}
               >
                 Cancel
@@ -245,8 +297,8 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                 type="submit"
                 disabled={!quickSaveText.trim() || isSaving}
                 style={{
-                  background: '#4C4541',
-                  color: '#FCF0DA',
+                  background: 'var(--theme)',
+                  color: 'var(--btn-t)',
                   border: 'none',
                   borderRadius: '8px',
                   padding: '6px 16px',
@@ -286,9 +338,9 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
               boxSizing: 'border-box',
               padding: '9px 12px 9px 36px',
               borderRadius: '10px',
-              border: '1px solid rgba(76, 69, 65, 0.2)',
-              background: '#FFFFFF',
-              color: 'var(--ink)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              color: 'var(--text)',
               fontSize: '13px',
               outline: 'none',
             }}
@@ -305,9 +357,9 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                 key={type}
                 onClick={() => setSelectedType(type)}
                 style={{
-                  border: selectedType === type ? '1.5px solid #AEAC78' : '1px solid rgba(76, 69, 65, 0.15)',
-                  background: selectedType === type ? '#EAEBD9' : '#FFFFFF',
-                  color: selectedType === type ? '#4C4541' : '#756C67',
+                  border: selectedType === type ? '1.5px solid #AEAC78' : '1px solid var(--border)',
+                  background: selectedType === type ? 'var(--hover)' : 'var(--surface)',
+                  color: selectedType === type ? 'var(--theme)' : 'var(--text-secondary)',
                   borderRadius: '999px',
                   padding: '3px 10px',
                   fontSize: '11.5px',
@@ -333,9 +385,9 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                 key={label}
                 onClick={() => setSelectedStatus(label)}
                 style={{
-                  border: selectedStatus === label ? '1.5px solid #F2C46A' : '1px solid rgba(76, 69, 65, 0.15)',
-                  background: selectedStatus === label ? '#FDF1D6' : '#FFFFFF',
-                  color: selectedStatus === label ? '#4C4541' : '#756C67',
+                  border: selectedStatus === label ? '1.5px solid #F2C46A' : '1px solid var(--border)',
+                  background: selectedStatus === label ? 'var(--hover)' : 'var(--surface)',
+                  color: selectedStatus === label ? 'var(--theme)' : 'var(--text-secondary)',
                   borderRadius: '999px',
                   padding: '3px 10px',
                   fontSize: '11.5px',
@@ -350,22 +402,87 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
         </div>
       </div>
 
-      {/* TABLE VIEW: [job title][company][deadline][quick action][time][status][open] */}
+      {/* Bulk Selection Action Banner */}
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 16px',
+            borderRadius: '12px',
+            background: 'var(--hover)',
+            border: '1.5px solid var(--accent-active)',
+            flexWrap: 'wrap',
+            gap: '10px',
+            marginBottom: '14px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+              {selectedIds.size} of {filteredJobs.length} saved job{selectedIds.size > 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                color: 'var(--text)',
+              }}
+            >
+              Deselect All
+            </button>
+            <button
+              type="button"
+              disabled={isBulkDeleting}
+              onClick={handleBulkDelete}
+              style={{
+                background: '#DC2626',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 14px',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                cursor: isBulkDeleting ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: isBulkDeleting ? 0.7 : 1,
+                boxShadow: '0 1px 3px rgba(220, 38, 38, 0.3)',
+              }}
+            >
+              <Trash2 size={14} />
+              <span>{isBulkDeleting ? 'Deleting...' : `Delete Selected (${selectedIds.size})`}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TABLE VIEW: [checkbox][job title][company][deadline][quick action][time][status][open] */}
       {filteredJobs.length === 0 ? (
         <div
           style={{
-            background: '#FFFFFF',
-            border: '1px dashed rgba(76, 69, 65, 0.25)',
+            background: 'var(--surface)',
+            border: '1px dashed var(--border)',
             borderRadius: '14px',
             padding: '40px 20px',
             textAlign: 'center',
           }}
         >
           <BookmarkPlus size={36} style={{ color: '#AEAC78', margin: '0 auto 12px' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: '#4C4541' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: 'var(--text)' }}>
             No saved jobs match your filter
           </h3>
-          <p style={{ margin: '0 0 16px', color: '#756C67', fontSize: '13px' }}>
+          <p style={{ margin: '0 0 16px', color: 'var(--text-secondary)', fontSize: '13px' }}>
             Use the "Save this Job" button on any webpage or paste a job posting above.
           </p>
           <Button variant="primary" size="sm" onClick={() => setShowQuickSave(true)}>
@@ -377,6 +494,20 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
           <table className="app-table">
             <thead>
               <tr>
+                <th style={{ width: '42px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={allFilteredSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all saved jobs"
+                    style={{
+                      cursor: 'pointer',
+                      width: '16px',
+                      height: '16px',
+                      accentColor: '#AEAC78',
+                    }}
+                  />
+                </th>
                 <th style={{ minWidth: '180px' }}>Job Title</th>
                 <th style={{ minWidth: '140px' }}>Company</th>
                 <th style={{ minWidth: '110px' }}>Deadline</th>
@@ -389,8 +520,8 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
             <tbody>
               {filteredJobs.map((job) => {
                 const categoryLabel = job.type ? job.type.toUpperCase() : 'OTHER';
-                let categoryBg = '#F3F4F6';
-                let categoryColor = '#4B5563';
+                let categoryBg = 'rgba(76, 69, 65, 0.08)';
+                let categoryColor = 'var(--text-secondary)';
                 if (job.type === 'email') {
                   categoryBg = '#FDF1D6';
                   categoryColor = '#B45309';
@@ -404,13 +535,33 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
 
                 const isApplied = job.status === 'applied';
                 const isReview = job.status === 'review' || job.status === 'needs-review';
+                const isSelected = selectedIds.has(job.id);
 
                 return (
                   <tr
                     key={job.id}
                     onClick={() => setSelectedJob(job)}
-                    style={{ cursor: 'pointer' }}
+                    style={{
+                      cursor: 'pointer',
+                      background: isSelected ? 'var(--hover)' : undefined,
+                    }}
                   >
+                    {/* Checkbox */}
+                    <td style={{ width: '42px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectItem(job.id)}
+                        aria-label={`Select ${job.jobTitle || 'job'} at ${job.company || ''}`}
+                        style={{
+                          cursor: 'pointer',
+                          width: '16px',
+                          height: '16px',
+                          accentColor: '#AEAC78',
+                        }}
+                      />
+                    </td>
+
                     {/* [job title] */}
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -431,7 +582,7 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                             style={{
                               fontWeight: 700,
                               fontSize: '13.5px',
-                              color: 'var(--ink)',
+                              color: 'var(--text)',
                               lineHeight: 1.3,
                             }}
                           >
@@ -442,7 +593,7 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                           <span
                             style={{
                               fontSize: '11.5px',
-                              color: 'var(--muted)',
+                              color: 'var(--text-secondary)',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -457,7 +608,7 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
 
                     {/* [company] */}
                     <td>
-                      <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--ink)' }}>
+                      <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text)' }}>
                         {job.company || '—'}
                       </span>
                     </td>
@@ -478,7 +629,7 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                           {job.deadline}
                         </span>
                       ) : (
-                        <span style={{ color: 'var(--muted)', fontSize: '12px' }}>—</span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>—</span>
                       )}
                     </td>
 
@@ -494,9 +645,9 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                             }}
                             title="Open application form link"
                             style={{
-                              background: '#EAEBD9',
-                              border: '1px solid #AEAC78',
-                              color: '#4C4541',
+                              background: 'var(--hover)',
+                              border: '1px solid var(--border)',
+                              color: 'var(--text)',
                               borderRadius: '6px',
                               padding: '3px 8px',
                               fontSize: '11px',
@@ -518,9 +669,9 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                             onClick={(e) => handleCopy(e, job.applyEmail!, `email-${job.id}`)}
                             title={`Copy email: ${job.applyEmail}`}
                             style={{
-                              background: '#FCF0DA',
-                              border: '1px solid #AEAC78',
-                              color: '#4C4541',
+                              background: 'var(--hover)',
+                              border: '1px solid var(--border)',
+                              color: 'var(--text)',
                               borderRadius: '6px',
                               padding: '3px 8px',
                               fontSize: '11px',
@@ -546,9 +697,9 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                             onClick={(e) => handleCopy(e, job.applyPhone!, `phone-${job.id}`)}
                             title={`Copy phone: ${job.applyPhone}`}
                             style={{
-                              background: '#E0F2FE',
-                              border: '1px solid #7DD3FC',
-                              color: '#0369A1',
+                              background: 'var(--hover)',
+                              border: '1px solid var(--border)',
+                              color: 'var(--text)',
                               borderRadius: '6px',
                               padding: '3px 8px',
                               fontSize: '11px',
@@ -569,14 +720,14 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                         )}
 
                         {!job.formLink && !job.applyEmail && !job.applyPhone && (
-                          <span style={{ fontSize: '11px', color: 'var(--muted)' }}>No quick link</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>No quick link</span>
                         )}
                       </div>
                     </td>
 
                     {/* [time] */}
                     <td>
-                      <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                         {formatRelativeDate(job.createdAt)}
                       </span>
                     </td>
@@ -588,9 +739,9 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                         onClick={(e) => handleToggleStatus(e, job)}
                         title="Click to toggle status (To Apply / Review / Applied)"
                         style={{
-                          background: isApplied ? '#EAEBD9' : isReview ? '#FDF1D6' : '#FCF0DA',
-                          color: isApplied ? '#166534' : isReview ? '#B45309' : '#4C4541',
-                          border: `1px solid ${isApplied ? '#AEAC78' : isReview ? '#F2C46A' : 'rgba(76, 69, 65, 0.2)'}`,
+                          background: isApplied ? '#EAEBD9' : isReview ? '#FDF1D6' : 'var(--hover)',
+                          color: isApplied ? '#166534' : isReview ? '#B45309' : 'var(--text)',
+                          border: `1px solid ${isApplied ? '#AEAC78' : isReview ? '#F2C46A' : 'var(--border)'}`,
                           borderRadius: '999px',
                           padding: '3px 9px',
                           fontSize: '11px',
@@ -613,13 +764,13 @@ export const SavedJobsView: React.FC<SavedJobsViewProps> = ({
                             setSelectedJob(job);
                           }}
                           style={{
-                            background: '#FFFFFF',
-                            border: '1px solid rgba(76, 69, 65, 0.2)',
+                            background: 'var(--hover)',
+                            border: '1px solid var(--border)',
                             borderRadius: '6px',
                             padding: '4px 8px',
                             fontSize: '11.5px',
                             fontWeight: 700,
-                            color: '#4C4541',
+                            color: 'var(--text)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',

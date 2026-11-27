@@ -27,6 +27,12 @@
   --blob: 0.8;
   --line: #dadce0;
 
+  /* Distinct Navigation Category Colors */
+  --cat-track: #B45309;      /* Warm Amber / Ochre */
+  --cat-profile: #1D4ED8;    /* Slate Cobalt */
+  --cat-career: #4D7C0F;     /* Forest Sage */
+  --cat-docs: #92400E;       /* Warm Caramel Chestnut */
+
   --m-bg: #EAEBD9;
   --m-t: #46482D;
   --r-bg: #FDF1D6;
@@ -67,6 +73,12 @@
   --blob: 0.25;
   --line: rgba(255, 255, 255, 0.14);
 
+  /* Distinct Navigation Category Colors (Dark Mode) */
+  --cat-track: #F2C46A;      /* Honey Gold */
+  --cat-profile: #93C5FD;    /* Sky Blue */
+  --cat-career: #AEAC78;     /* Sage Olive */
+  --cat-docs: #FCD34D;       /* Soft Ochre */
+
   --m-bg: #1A2E24;
   --m-t: #8FE3BD;
   --r-bg: #382E14;
@@ -92,17 +104,32 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    --theme: #F2C46A;
+    --theme-bg: #0F0F11;
+    --surface: #18181B;
+    --border: rgba(255, 255, 255, 0.12);
+    --text: #F4F4F5;
+    --text-secondary: #A1A1AA;
+    --accent-active: #F2C46A;
+    --error: #f87171;
+    --hover: rgba(255, 255, 255, 0.08);
+
     --ink: #F4F4F5;
     --muted: #A1A1AA;
     --base: #0F0F11;
     --glass: rgba(24, 24, 27, 0.88);
     --edge: rgba(255, 255, 255, 0.16);
     --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
-    --btn: #F4F4F5;
-    --btn-t: #121214;
+    --btn: #27272A;
+    --btn-t: #F4F4F5;
     --soft: rgba(255, 255, 255, 0.1);
     --blob: 0.25;
     --line: rgba(255, 255, 255, 0.18);
+
+    --cat-track: #F2C46A;
+    --cat-profile: #93C5FD;
+    --cat-career: #AEAC78;
+    --cat-docs: #FCD34D;
 
     --m-bg: #1A2E24;
     --m-t: #8FE3BD;

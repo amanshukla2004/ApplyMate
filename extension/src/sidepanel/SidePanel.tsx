@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { Moon, Sun, Settings } from 'lucide-react';
 import { Backdrop } from '../components/ui/Backdrop';
 import { Button } from '../components/ui/Button';
 import { Pill } from '../components/ui/Pill';
 import { HapplyMateLogo } from '../components/ui/ApplyMateLogo';
 import { OnboardingWizard } from '../components/onboarding/OnboardingWizard';
+import { useTheme } from '../hooks/useTheme';
 import { DetectedField, WebsiteMetadata } from '../types/messaging';
 import { CANONICAL_FIELDS, ApplicationField } from '../types/canonicalFields';
 import { profileService } from '../services/profileService';
@@ -24,6 +26,7 @@ import {
 type TabKey = 'autofill' | 'copy' | 'resume' | 'ai' | 'answers';
 
 export const SidePanel: React.FC = () => {
+  const { isDarkMode, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabKey>('autofill');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [resumes, setResumes] = useState<ResumeRecord[]>([]);
@@ -59,6 +62,7 @@ export const SidePanel: React.FC = () => {
   const [clJobTitle, setClJobTitle] = useState('');
   const [clTone, setClTone] = useState<'Confident' | 'Technical' | 'Enthusiastic'>('Confident');
   const [clGenerated, setClGenerated] = useState('');
+  const [clSource, setClSource] = useState('');
   const [isGeneratingCl, setIsGeneratingCl] = useState(false);
 
   // ATS Job Match state
@@ -105,7 +109,7 @@ export const SidePanel: React.FC = () => {
       const res = await aiService.analyzeJobDescription(pageText, userSkillNames);
       setJobAnalysis(res);
     } catch (err) {
-      console.error('Job analysis failed:', err);
+      console.warn('Job analysis failed:', err);
     } finally {
       setIsAnalyzingJob(false);
     }
@@ -461,7 +465,26 @@ export const SidePanel: React.FC = () => {
       case 'FACEBOOK_URL':
         return (p.links as any)?.facebookUrl || (p.links as any)?.facebook || '';
       case 'TWITTER_URL':
-        return (p.links as any)?.twitterUrl || (p.links as any)?.twitter || '';
+      case 'X_URL':
+        return p.links?.xUrl || (p.links as any)?.twitterUrl || (p.links as any)?.twitter || '';
+      case 'BEHANCE_URL':
+        return p.links?.behanceUrl || '';
+      case 'DRIBBBLE_URL':
+        return p.links?.dribbbleUrl || '';
+      case 'LEETCODE_URL':
+        return p.links?.leetcodeUrl || '';
+      case 'CODEFORCES_URL':
+        return p.links?.codeforcesUrl || '';
+      case 'CODECHEF_URL':
+        return p.links?.codechefUrl || '';
+      case 'HACKERRANK_URL':
+        return p.links?.hackerrankUrl || '';
+      case 'KAGGLE_URL':
+        return p.links?.kaggleUrl || '';
+      case 'MEDIUM_URL':
+        return p.links?.mediumUrl || '';
+      case 'GFG_URL':
+        return p.links?.gfgUrl || '';
       case 'RESUME_URL':
         return p.links?.resumeDriveUrl || (p.links as any)?.resumeUrl || '';
       case 'COLLEGE':
@@ -607,7 +630,7 @@ export const SidePanel: React.FC = () => {
       setFieldValues((prev) => ({ ...prev, [field.id]: res.answer }));
       setSelectedIds((prev) => new Set(prev).add(field.id));
     } catch (err) {
-      console.error(err);
+      console.warn('AI answer draft warning:', err);
     } finally {
       setDraftingFieldId(null);
     }
@@ -648,12 +671,33 @@ export const SidePanel: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="ph">
-        <div className="brand">
-          <HapplyMateLogo size={28} />
-          <span style={{ fontWeight: 700, fontSize: '17px' }}>HapplyMate</span>
+      <div className="ph" style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+        <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <HapplyMateLogo size={24} />
+          <span
+            style={{
+              fontFamily: "'Caveat', cursive, sans-serif",
+              fontSize: '26px',
+              fontWeight: 700,
+              color: 'var(--text)',
+              lineHeight: 1,
+            }}
+          >
+            happlied
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Quick theme toggle */}
+          <button
+            type="button"
+            className="icon"
+            onClick={toggleTheme}
+            title={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
+            aria-label="Toggle Theme"
+            style={{ width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
+          >
+            {isDarkMode ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
           <button
             type="button"
             className="btn-tour-pill"
@@ -674,8 +718,9 @@ export const SidePanel: React.FC = () => {
                 chrome.runtime.openOptionsPage();
               }
             }}
+            style={{ width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer' }}
           >
-            ⚙
+            <Settings size={14} />
           </button>
         </div>
       </div>
@@ -1083,6 +1128,12 @@ export const SidePanel: React.FC = () => {
               { label: 'LinkedIn URL', val: profile?.links.linkedInUrl || '' },
               { label: 'GitHub URL', val: profile?.links.githubUrl || '' },
               { label: 'Portfolio URL', val: profile?.links.portfolioUrl || '' },
+              { label: 'LeetCode URL', val: profile?.links.leetcodeUrl || '' },
+              { label: 'Codeforces URL', val: profile?.links.codeforcesUrl || '' },
+              { label: 'CodeChef URL', val: profile?.links.codechefUrl || '' },
+              { label: 'X (Twitter) URL', val: profile?.links.xUrl || '' },
+              { label: 'Behance URL', val: profile?.links.behanceUrl || '' },
+              { label: 'Dribbble URL', val: profile?.links.dribbbleUrl || '' },
               { label: 'Street Address', val: profile?.address.addressLine1 || '' },
               { label: 'City, State, Zip', val: `${profile?.address.city || ''}, ${profile?.address.state || ''} ${profile?.address.postalCode || ''}`.trim() },
               { label: 'Current Company / Role', val: experienceList[0] ? `${experienceList[0].designation} at ${experienceList[0].companyName}` : '' },
@@ -1308,8 +1359,10 @@ export const SidePanel: React.FC = () => {
                           skills: skillsList,
                         });
                         setClGenerated(res.coverLetter);
+                        setClSource(res.groundedIn?.[0] || 'Profile Synthesis');
                       } catch {
                         setClGenerated('Failed to generate cover letter. Check settings or retry.');
+                        setClSource('');
                       } finally {
                         setIsGeneratingCl(false);
                       }
@@ -1323,7 +1376,10 @@ export const SidePanel: React.FC = () => {
               {clGenerated && (
                 <div className="fc">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <Pill variant="a">{clTone} Tone</Pill>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <Pill variant="a">{clTone} Tone</Pill>
+                      {clSource && <Pill variant="i">{clSource}</Pill>}
+                    </div>
                     <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
                       {clGenerated.split(/\s+/).filter(Boolean).length} words
                     </span>

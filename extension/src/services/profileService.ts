@@ -182,7 +182,8 @@ export class ProfileService {
     if (profile?.links?.githubUrl) score += 5;
 
     // Education (10%)
-    if (education?.length > 0) score += 10;
+    const hasRealEdu = education?.some(e => Boolean(e.institution && e.institution.trim() !== '' && e.institution.trim() !== 'N/A'));
+    if (hasRealEdu) score += 10;
 
     // Experience (15%)
     if (experience?.length > 0) score += 15;

@@ -37,7 +37,7 @@ export const Ring: React.FC<RingProps> = ({ percentage, size = 124, strokeWidth,
           cy={center}
           r={radius}
           fill="none"
-          stroke="rgba(255, 255, 255, 0.08)"
+          stroke="var(--border)"
           strokeWidth={sw}
         />
         <circle
@@ -62,8 +62,8 @@ export const Ring: React.FC<RingProps> = ({ percentage, size = 124, strokeWidth,
         style={{
           position: 'absolute',
           fontSize: size <= 64 ? '13px' : size <= 84 ? '17px' : '28px',
-          fontWeight: 700,
-          color: normalizedPercent === 100 && strokeColor === undefined ? '#10B981' : '#FFFFFF',
+          fontWeight: 800,
+          color: normalizedPercent === 100 && strokeColor === undefined ? '#10B981' : 'var(--text, #202124)',
           letterSpacing: '-0.5px',
         }}
       >

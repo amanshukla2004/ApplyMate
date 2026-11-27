@@ -139,68 +139,92 @@ function initFloatingWidget(): boolean {
   host.id = 'happlymate-shadow-host';
   host.style.all = 'initial';
   host.style.position = 'fixed';
-  host.style.right = '20px';
-  host.style.bottom = '20px';
+  host.style.right = '0';
+  host.style.top = '40%';
   host.style.zIndex = '2147483647';
+  host.style.touchAction = 'none';
 
   const shadow = host.attachShadow({ mode: 'open' });
 
   const style = document.createElement('style');
   style.textContent = `
-    * { box-sizing: border-box; margin: 0; font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .fab {
-      height: 44px;
-      padding: 0 20px;
-      border-radius: 99px;
-      border: 0;
-      background: #2B2340;
-      color: #ffffff;
-      font-weight: 600;
-      font-size: 14px;
+    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Dancing+Script:wght@600;700&display=swap');
+    * { box-sizing: border-box; margin: 0; font-family: 'Dancing Script', 'Caveat', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .fab-pill {
       display: flex;
-      gap: 8px;
+      flex-direction: column;
       align-items: center;
-      box-shadow: 0 10px 24px rgba(43, 35, 64, 0.35);
-      cursor: pointer;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 7px 14px;
+      min-width: 30px;
+      border-radius: 12px 0 0 12px;
+      border: 1px solid rgba(174, 172, 120, 0.45);
+      border-right: none;
+      background: #4C4541;
+      color: #FCF0DA;
+      box-shadow: -2px 6px 18px rgba(0, 0, 0, 0.32);
+      cursor: grab;
       user-select: none;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
     }
-    .fab:hover {
-      box-shadow: 0 14px 28px rgba(43, 35, 64, 0.45);
-      transform: translateY(-1px);
+    .fab-pill:active {
+      cursor: grabbing;
     }
-    .fab:active {
-      transform: scale(0.98);
+    .fab-pill:hover {
+      background: #3B3532;
+      box-shadow: -3px 8px 22px rgba(0, 0, 0, 0.4);
+      transform: translateX(-2px);
+    }
+    .fab-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .fab-text {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      font-family: 'Dancing Script', 'Caveat', cursive, sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      line-height: 1;
+      color: #FCF0DA;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     }
     .toast {
       position: absolute;
-      right: 0;
-      bottom: 56px;
-      padding: 10px 18px;
-      border-radius: 99px;
+      right: 42px;
+      top: 50%;
+      transform: translateY(-50%) translateX(10px);
+      padding: 8px 16px;
+      border-radius: 20px;
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13px;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #D5F5E6;
       color: #17684A;
-      box-shadow: 0 10px 24px rgba(23, 104, 74, 0.2);
+      box-shadow: 0 10px 24px rgba(23, 104, 74, 0.25);
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
       opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 0.3s ease, transform 0.3s ease;
+      transition: opacity 0.25s ease, transform 0.25s ease;
       white-space: nowrap;
       pointer-events: none;
     }
     .toast.show {
       opacity: 1;
-      transform: none;
+      transform: translateY(-50%) translateX(0);
       pointer-events: auto;
     }
     .toast.bad {
       background: #FFE3DA;
       color: #9A3E27;
-      box-shadow: 0 10px 24px rgba(154, 62, 39, 0.2);
+      box-shadow: 0 10px 24px rgba(154, 62, 39, 0.25);
     }
     .toast button {
       border: 0;
@@ -223,40 +247,84 @@ function initFloatingWidget(): boolean {
   toast.setAttribute('role', 'status');
   toast.setAttribute('aria-live', 'polite');
 
-  const fab = document.createElement('button');
-  fab.className = 'fab';
-  fab.title = 'HapplyMate 1-Click Autofill (Alt+A)';
+  const fab = document.createElement('div');
+  fab.className = 'fab-pill';
+  fab.title = 'happlied - Click to Autofill (Alt+A) • Drag to move';
+  fab.setAttribute('role', 'button');
+  fab.setAttribute('tabindex', '0');
 
   const svgNS = 'http://www.w3.org/2000/svg';
   const fabSvg = document.createElementNS(svgNS, 'svg');
-  fabSvg.setAttribute('width', '18');
-  fabSvg.setAttribute('height', '18');
+  fabSvg.setAttribute('width', '14');
+  fabSvg.setAttribute('height', '14');
   fabSvg.setAttribute('viewBox', '0 0 24 24');
   fabSvg.setAttribute('fill', 'none');
   fabSvg.setAttribute('aria-hidden', 'true');
+  fabSvg.className.baseVal = 'fab-icon';
 
   const p1 = document.createElementNS(svgNS, 'path');
-  p1.setAttribute('d', 'M12 3L3 21H7.5L9.5 16.5H14.5L16.5 21H21L12 3Z');
-  p1.setAttribute('fill', '#ffffff');
-
-  const p2 = document.createElementNS(svgNS, 'path');
-  p2.setAttribute('d', 'M12 8.5L13.8 13.5H10.2L12 8.5Z');
-  p2.setAttribute('fill', '#AEAC78');
-
-  const p3 = document.createElementNS(svgNS, 'path');
-  p3.setAttribute('d', 'M9.5 14.5L14.5 14.5L12 9.5Z');
-  p3.setAttribute('fill', '#ffffff');
-  p3.setAttribute('opacity', '0.9');
+  p1.setAttribute('d', 'M13 2L3 14H12L11 22L21 10H12L13 2Z');
+  p1.setAttribute('fill', '#AEAC78');
 
   fabSvg.appendChild(p1);
-  fabSvg.appendChild(p2);
-  fabSvg.appendChild(p3);
 
   const fabText = document.createElement('span');
-  fabText.textContent = 'HapplyMate Autofill';
+  fabText.className = 'fab-text';
+  fabText.textContent = 'happlied';
 
   fab.appendChild(fabSvg);
   fab.appendChild(fabText);
+
+  // Dragging support (vertical draggable along right screen edge)
+  let isDragging = false;
+  let startY = 0;
+  let startTop = 0;
+  let hasMoved = false;
+
+  const onPointerDown = (e: MouseEvent | TouchEvent) => {
+    isDragging = true;
+    hasMoved = false;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    startY = clientY;
+    startTop = host.getBoundingClientRect().top;
+
+    const onPointerMove = (moveEvt: MouseEvent | TouchEvent) => {
+      if (!isDragging) return;
+      const curY = 'touches' in moveEvt ? moveEvt.touches[0].clientY : (moveEvt as MouseEvent).clientY;
+      const deltaY = curY - startY;
+      if (Math.abs(deltaY) > 5) {
+        hasMoved = true;
+      }
+      const newTop = Math.max(10, Math.min(window.innerHeight - 120, startTop + deltaY));
+      host.style.top = `${newTop}px`;
+      host.style.bottom = 'auto';
+    };
+
+    const onPointerUp = () => {
+      isDragging = false;
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('mouseup', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+    };
+
+    window.addEventListener('mousemove', onPointerMove, { passive: false });
+    window.addEventListener('mouseup', onPointerUp);
+    window.addEventListener('touchmove', onPointerMove, { passive: false });
+    window.addEventListener('touchend', onPointerUp);
+  };
+
+  fab.addEventListener('mousedown', onPointerDown);
+  fab.addEventListener('touchstart', onPointerDown, { passive: true });
+
+  fab.addEventListener('click', async (e) => {
+    if (hasMoved) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    await executeAutofillFromProfile();
+  });
 
   const triggerToast = (msg: string, isError = false, onRetry?: () => void) => {
     clearTimeout(shadowToastTimeout);
@@ -556,27 +624,108 @@ function resolveCanonicalValue(
     case 'FACEBOOK_URL':
       return (profile.links as any)?.facebookUrl || (profile.links as any)?.facebook || '';
     case 'TWITTER_URL':
-      return (profile.links as any)?.twitterUrl || (profile.links as any)?.twitter || '';
+    case 'X_URL':
+      return profile.links?.xUrl || (profile.links as any)?.twitterUrl || (profile.links as any)?.twitter || '';
+    case 'BEHANCE_URL':
+      return profile.links?.behanceUrl || '';
+    case 'DRIBBBLE_URL':
+      return profile.links?.dribbbleUrl || '';
+    case 'LEETCODE_URL':
+      return profile.links?.leetcodeUrl || '';
+    case 'CODEFORCES_URL':
+      return profile.links?.codeforcesUrl || '';
+    case 'CODECHEF_URL':
+      return profile.links?.codechefUrl || '';
+    case 'HACKERRANK_URL':
+      return profile.links?.hackerrankUrl || '';
+    case 'KAGGLE_URL':
+      return profile.links?.kaggleUrl || '';
+    case 'MEDIUM_URL':
+      return profile.links?.mediumUrl || '';
+    case 'GFG_URL':
+      return profile.links?.gfgUrl || '';
     case 'RESUME_URL':
       return profile.links?.resumeDriveUrl || (profile.links as any)?.resumeUrl || '';
-    case 'COLLEGE':
-      return edu?.[0]?.institution || '';
-    case 'DEGREE':
-      return edu?.[0]?.degree || '';
-    case 'BRANCH':
-      return edu?.[0]?.fieldOfStudy || edu?.[0]?.branch || '';
-    case 'CGPA':
-      return edu?.[0]?.gpa || edu?.[0]?.cgpa || '';
-    case 'GRADUATION_YEAR':
-      return edu?.[0]?.endDate || edu?.[0]?.graduationYear?.toString() || '';
+    case 'COLLEGE': {
+      const ug = edu?.find((e: any) => e.level === 'ug') || edu?.find((e: any) => e.institution && e.institution !== 'N/A') || edu?.[0];
+      return ug?.institution && ug.institution !== 'N/A' ? ug.institution : '';
+    }
+    case 'DEGREE': {
+      const ug = edu?.find((e: any) => e.level === 'ug') || edu?.find((e: any) => e.degree && e.degree !== 'N/A') || edu?.[0];
+      return ug?.degree && ug.degree !== 'N/A' ? ug.degree : '';
+    }
+    case 'BRANCH': {
+      const ug = edu?.find((e: any) => e.level === 'ug') || edu?.find((e: any) => e.branch && e.branch !== 'N/A') || edu?.[0];
+      return ug?.fieldOfStudy || (ug?.branch && ug.branch !== 'N/A' ? ug.branch : '');
+    }
+    case 'CGPA': {
+      const ug = edu?.find((e: any) => e.level === 'ug') || edu?.find((e: any) => (e.cgpa && e.cgpa !== 'N/A') || (e.percentage && e.percentage !== 'N/A')) || edu?.[0];
+      return ug?.gpa || (ug?.cgpa && ug.cgpa !== 'N/A' ? ug.cgpa : ug?.percentage && ug.percentage !== 'N/A' ? ug.percentage : '');
+    }
+    case 'GRADUATION_YEAR': {
+      const ug = edu?.find((e: any) => e.level === 'ug') || edu?.[0];
+      return ug?.endDate || (ug?.graduationYear && ug.graduationYear !== 'N/A' ? ug.graduationYear.toString() : '');
+    }
     case 'START_MONTH':
       return edu?.[0]?.startMonth || '08';
-    case 'START_YEAR':
-      return edu?.[0]?.startYear?.toString() || '2023';
+    case 'START_YEAR': {
+      const ug = edu?.find((e: any) => e.level === 'ug') || edu?.[0];
+      return ug?.startYear && ug.startYear !== 'N/A' ? ug.startYear.toString() : '2023';
+    }
     case 'END_MONTH':
       return edu?.[0]?.endMonth || '06';
-    case 'END_YEAR':
-      return edu?.[0]?.graduationYear?.toString() || '2027';
+    case 'END_YEAR': {
+      const ug = edu?.find((e: any) => e.level === 'ug') || edu?.[0];
+      return ug?.graduationYear && ug.graduationYear !== 'N/A' ? ug.graduationYear.toString() : '2027';
+    }
+    case 'CLASS_10_PERCENTAGE': {
+      const rec = edu?.find((e: any) => e.level === '10th' || (e.degree && e.degree.toLowerCase().includes('10th')));
+      return rec?.percentage || rec?.cgpa || '';
+    }
+    case 'CLASS_10_BOARD': {
+      const rec = edu?.find((e: any) => e.level === '10th' || (e.degree && e.degree.toLowerCase().includes('10th')));
+      return rec?.board || '';
+    }
+    case 'CLASS_10_YEAR': {
+      const rec = edu?.find((e: any) => e.level === '10th' || (e.degree && e.degree.toLowerCase().includes('10th')));
+      return rec?.graduationYear || '';
+    }
+    case 'CLASS_10_SCHOOL': {
+      const rec = edu?.find((e: any) => e.level === '10th' || (e.degree && e.degree.toLowerCase().includes('10th')));
+      return rec?.institution || '';
+    }
+    case 'CLASS_12_PERCENTAGE': {
+      const rec = edu?.find((e: any) => e.level === '12th' || (e.degree && e.degree.toLowerCase().includes('12th')));
+      return rec?.percentage || rec?.cgpa || '';
+    }
+    case 'CLASS_12_BOARD': {
+      const rec = edu?.find((e: any) => e.level === '12th' || (e.degree && e.degree.toLowerCase().includes('12th')));
+      return rec?.board || '';
+    }
+    case 'CLASS_12_YEAR': {
+      const rec = edu?.find((e: any) => e.level === '12th' || (e.degree && e.degree.toLowerCase().includes('12th')));
+      return rec?.graduationYear || '';
+    }
+    case 'CLASS_12_SCHOOL': {
+      const rec = edu?.find((e: any) => e.level === '12th' || (e.degree && e.degree.toLowerCase().includes('12th')));
+      return rec?.institution || '';
+    }
+    case 'UG_ROLL_NO': {
+      const rec = edu?.find((e: any) => e.level === 'ug' || (e.degree && (e.degree.toLowerCase().includes('bachelor') || e.degree.toLowerCase().includes('b.tech'))));
+      return rec?.rollNo || '';
+    }
+    case 'PG_COLLEGE': {
+      const rec = edu?.find((e: any) => e.level === 'pg' || (e.degree && (e.degree.toLowerCase().includes('master') || e.degree.toLowerCase().includes('m.tech'))));
+      return rec?.institution || '';
+    }
+    case 'PG_PERCENTAGE': {
+      const rec = edu?.find((e: any) => e.level === 'pg' || (e.degree && (e.degree.toLowerCase().includes('master') || e.degree.toLowerCase().includes('m.tech'))));
+      return rec?.percentage || rec?.cgpa || '';
+    }
+    case 'PG_ROLL_NO': {
+      const rec = edu?.find((e: any) => e.level === 'pg' || (e.degree && (e.degree.toLowerCase().includes('master') || e.degree.toLowerCase().includes('m.tech'))));
+      return rec?.rollNo || '';
+    }
     case 'SKILLS':
       return skills?.map((s: any) => s.name).join(', ') || '';
     case 'EXPERIENCE':
@@ -623,8 +772,16 @@ function resolveCanonicalValue(
       return profile.preferences?.veteranStatus || 'I am not a protected veteran';
     case 'DISABILITY_STATUS':
       return profile.preferences?.disabilityStatus || 'No, I do not have a disability';
-    default:
+    default: {
+      if (canonical && profile.links?.otherLinks) {
+        const norm = canonical.toLowerCase();
+        const found = profile.links.otherLinks.find(
+          (l: any) => l.label && (norm.includes(l.label.toLowerCase()) || l.label.toLowerCase().includes(norm))
+        );
+        if (found) return found.url;
+      }
       return '';
+    }
   }
 }
 
